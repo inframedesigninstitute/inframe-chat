@@ -1,27 +1,22 @@
+import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  FlatList,
-  TouchableOpacity,
-  StyleSheet,
-  TextInput,
-  KeyboardAvoidingView,
-  Platform,
-  SafeAreaView,
-  Modal,
   Alert,
   Dimensions,
+  FlatList,
+  Modal,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
-import { useRoute, useNavigation } from '@react-navigation/native';
-import { RouteProp } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../navigation/types';
+import { ImageLibraryOptions, launchImageLibrary, MediaType } from 'react-native-image-picker';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import FontAwesome from 'react-native-vector-icons/FontAwesome';
-import { MediaType, ImageLibraryOptions, launchImageLibrary } from 'react-native-image-picker';
-import MarqueeText from '../components/MarqueeText';
+import { RootStackParamList } from '../navigation/types';
  
 const { width } = Dimensions.get('window');
 
@@ -38,6 +33,30 @@ interface Message {
   isSent: boolean;
   timestamp: string;
   status: 'sent' | 'delivered' | 'read';
+}
+
+interface Customer {
+  id: string;
+  name: string;
+  lastMessage: string;
+  timestamp: string;
+  unreadCount: number;
+  isOnline: boolean;
+  avatar?: string;
+}
+
+interface UserProfile {
+  name: string;
+  email: string;
+  ipAddress: string;
+  location: string;
+  browser: string;
+  resolution: string;
+  currentPage: string;
+  chatStatus: string;
+  operator: string;
+  department: string;
+  pageHistory: string;
 }
 
 const ChatScreen = () => {
@@ -59,14 +78,14 @@ const ChatScreen = () => {
     },
     {
       id: '2',
-      text: 'Hi!',
+      text: 'Hi!JNVH',
       isSent: true,
       timestamp: '10:10',
       status: 'read'
     },
     {
       id: '3',
-      text: 'No problem at all! I\'ll be there in about 15 minutes.',
+      text: 'No prob! I\'ll be there in about 15 minutes.',
       isSent: false,
       timestamp: '10:11',
       status: 'read'
@@ -95,7 +114,60 @@ const ChatScreen = () => {
   ]);
   
   const [newMessage, setNewMessage] = useState('');
-  const [showAttachments, setShowAttachments] = useState(false); // ✅ Correctly placed state
+  const [showAttachments, setShowAttachments] = useState(false);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string>('1');
+  const [showUserProfile, setShowUserProfile] = useState(false);
+  
+  // Sample customers data
+  const [customers] = useState<Customer[]>([
+    {
+      id: '1',
+      name: 'naru',
+      lastMessage: 'Hey, how are you',
+      timestamp: '12:46 AM',
+      unreadCount: 0,
+      isOnline: true,
+    },
+    {
+      id: '2', 
+      name: 'iiivds',
+      lastMessage: 'Thanks for the help!',
+      timestamp: '11:30 AM',
+      unreadCount: 5,
+      isOnline: false,
+    },
+    {
+      id: '3',
+      name: '123456',
+      lastMessage: 'Sure, we have mobile apps for both iPhone and Android devices.',
+      timestamp: '1:31 PM',
+      unreadCount: 0,
+      isOnline: true,
+    },
+    {
+      id: '4',
+      name: 'vjkngljkndfglnkxf',
+      lastMessage: 'I need some assistance',
+      timestamp: '2:15 PM', 
+      unreadCount: 8,
+      isOnline: true,
+    }
+  ]);
+
+  // Sample user profile data
+  const [userProfile] = useState<UserProfile>({
+    name: 'VIKRAM cHOUDHARY',
+    email: 'bgngfkj@.com',
+    ipAddress: '12345',
+    location: 'Unavailable',
+    browser: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:38.0) Gecko/20100101 Firefox/38.0',
+    resolution: '1440 x 900',
+    currentPage: 'https://www.chatstack.com/features',
+    chatStatus: 'Chatting',
+    operator: 'John Doe',
+    department: 'Sales',
+    pageHistory: '/; /features'
+  });
 
   const handleSendMessage = () => {
     if (newMessage.trim()) {
@@ -375,103 +447,197 @@ const ChatScreen = () => {
     </View>
   );
 
+  const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
+
+  const renderCustomerItem = ({ item }: { item: Customer }) => (
+    <TouchableOpacity 
+      style={[
+        styles.customerItem,
+        selectedCustomerId === item.id && styles.selectedCustomerItem
+      ]}
+      onPress={() => setSelectedCustomerId(item.id)}
+    >
+      <View style={styles.customerAvatar}>
+        <Text style={styles.customerAvatarText}>
+          {item.name.charAt(0).toUpperCase()}
+        </Text>
+        {item.isOnline && <View style={styles.onlineIndicator} />}
+      </View>
+      <View style={styles.customerInfo}>
+        <View style={styles.customerHeader}>
+          <Text style={styles.customerName}>{item.name}</Text>
+          <Text style={styles.customerTime}>{item.timestamp}</Text>
+        </View>
+        <Text style={styles.customerLastMessage} numberOfLines={1}>
+          {item.lastMessage}
+        </Text>
+      </View>
+      {item.unreadCount > 0 && (
+        <View style={styles.unreadBadge}>
+          <Text style={styles.unreadCount}>{item.unreadCount}</Text>
+        </View>
+      )}
+    </TouchableOpacity>
+  );
+
   return (
     <SafeAreaView style={styles.container}>
-      {/* Custom Header */}
-      <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Ionicons name="arrow-back" size={24} color="#000" />
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={styles.contactInfo} 
-          onPress={() => navigation.navigate('Profile' as never)} // Added 'as never' for safety since RootStackParamList wasn't provided
-        >
-          {/* ❌ REMOVED: import Ionicons from 'react-native-vector-icons/Ionicons'; - Cannot import inside JSX */}
-
-          <View style={styles.contactDetails}>
-            <Text style={styles.contactName}>{safeChannelName}</Text>
-            <Text style={styles.contactNumber}>(+91)8824536973 </Text>
+      <View style={styles.mainLayout}>
+        {/* Left Sidebar - Customer List */}
+        <View style={styles.leftSidebar}>
+          <View style={styles.sidebarHeader}>
+            <Text style={styles.sidebarTitle}>Students</Text>
+             <TouchableOpacity style={styles.navIcons}>
+              <Ionicons name="settings" size={20} color="#160909ff" />
+            </TouchableOpacity>
           </View>
-        </TouchableOpacity>
-        
-        <View style={styles.headerActions}>
-          <TouchableOpacity style={styles.actionButton} onPress={handleVideoCall}>
-            <Ionicons name="videocam" size={24} color="#040505ff" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton} onPress={handleCall}>
-            <Ionicons name="call" size={24} color="#080a0aff" />
-          </TouchableOpacity>
           
-        </View>
-      </View>
-
-      {/* Marquee Text */}
-      <MarqueeText 
-        text={`Chatting with ${safeChannelName} - Send messages, share files, and stay connected!`}
-        speed={50}
-        textStyle={{ color: '#2e7d32', fontSize: 14, fontWeight: '500' }}
-        containerStyle={{ backgroundColor: '#e8f5e8', marginVertical: 4 }}
-      />
-
-      {/* Messages */}
-      <KeyboardAvoidingView 
-        style={styles.messagesContainer}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        <FlatList
-          data={messages}
-          keyExtractor={(item) => item.id}
-          renderItem={renderMessage}
-          style={styles.messagesList}
-          contentContainerStyle={styles.messagesContent}
-          inverted // To show latest messages at the bottom
-        />
-
-        {/* Input Bar (Structure simplified to remove extra nested View) */}
-        <View style={styles.inputContainer}>
-          <TouchableOpacity 
-            style={styles.attachButton} 
-            onPress={() => setShowAttachments(!showAttachments)}
-          >
-            <Ionicons name="add" size={24} color="#080808ff" />
-          </TouchableOpacity>
-
-          <TextInput
-            style={styles.textInput}
-            placeholder="Type a message..."
-            placeholderTextColor="#666" // Added for better visibility
-            value={newMessage}
-            onChangeText={setNewMessage}
-            multiline
+          <FlatList
+            data={customers}
+            keyExtractor={(item) => item.id}
+            renderItem={renderCustomerItem}
+            style={styles.customersList}
+            showsVerticalScrollIndicator={false}
           />
 
-          <TouchableOpacity style={styles.cameraButton} onPress={handleOpenCamera}>
-            <Ionicons name="camera" size={20} color="#000000ff" />
-          </TouchableOpacity>
-          
-          {/* Conditional Send/Mic Button */}
-          {newMessage.trim().length > 0 ? (
-            <TouchableOpacity 
-              style={styles.sendButton} 
-              onPress={handleSendMessage}
-            >
-              <Ionicons name="send" size={20} color="#fff" />
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity 
-              style={styles.sendButton} 
-              onPress={handleAudio}  // yaha apka voice recording function
-            >
-              <Ionicons name="mic" size={20} color="#ffffffff" />
-            </TouchableOpacity>
-          )}
+        
 
+          {/* Navigation Icons */}
+          <View style={styles.navigationIcons}>
+            <TouchableOpacity style={styles.navIcon}>
+              <Ionicons name="chatbubbles-sharp" size={20} color="#000000ff" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.navIcon}>
+              <Ionicons name="people-sharp" size={20} color="#000000ff" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.navIcon}>
+              <Ionicons name="call" size={20} color="#000000ff" />
+            </TouchableOpacity>
+              <TouchableOpacity style={styles.navIcon}>
+              <Ionicons name="settings" size={20} color="#000000ff" />
+            </TouchableOpacity>
+          </View>
+
+          {/* User Profile at Bottom */}
+          <View style={styles.userProfile}>
+            <View style={styles.userAvatar}>
+              <Text style={styles.userAvatarText}>ND</Text>
+              <View style={styles.onlineIndicator} />
+            </View>
+            <Text style={styles.userName}>Vikram</Text>
+            <Text style={styles.userStatus}>Online</Text>
+          </View>
         </View>
-      </KeyboardAvoidingView>
+
+        {/* Center - Chat Area */}
+        <View style={styles.centerArea}>
+          {/* Chat Header */}
+          <View style={styles.chatHeader}>
+            <TouchableOpacity 
+              style={styles.contactInfo}
+              onPress={() => setShowUserProfile(true)}
+            >
+              <Text style={styles.contactName}>
+                {selectedCustomer?.name || 'Select a customer'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Messages */}
+          <View style={styles.messagesContainer}>
+            <FlatList
+              data={messages}
+              keyExtractor={(item) => item.id}
+              renderItem={renderMessage}
+              style={styles.messagesList}
+              contentContainerStyle={styles.messagesContent}
+              inverted
+            />
+
+            {/* Input Bar */}
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={styles.textInput}
+                placeholder="Type a message..."
+                placeholderTextColor="#666"
+                value={newMessage}
+                onChangeText={setNewMessage}
+                multiline
+              />
+              
+              <TouchableOpacity 
+                style={styles.sendButton} 
+                onPress={handleSendMessage}
+              >
+                <Text style={styles.sendButtonText}>SEND AS INTERNAL MESSAGE</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+
+        {/* Right Panel - User Profile */}
+        {showUserProfile && (
+          <View style={styles.rightPanel}>
+            <View style={styles.rightPanelHeader}>
+              <TouchableOpacity 
+                style={styles.closeButton}
+                onPress={() => setShowUserProfile(false)}
+              >
+                <Ionicons name="close" size={20} color="#666" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.profileSection}>
+              <View style={styles.profileAvatar}>
+                <Text style={styles.profileAvatarText}>
+                  {userProfile.name.charAt(0)}
+                </Text>
+              </View>
+              <Text style={styles.profileName}>{userProfile.name}</Text>
+              
+              <TouchableOpacity style={styles.initiateChatButton}>
+                <Text style={styles.initiateChatText}>Student</Text>
+              </TouchableOpacity>
+
+              
+             
+            </View>
+
+            <ScrollView style={styles.profileDetails}>
+              <View style={styles.detailItem}>
+                <Ionicons name="mail" size={16} color="#000000ff" />
+                <Text style={styles.detailLabel}>BIO</Text>
+                <Text style={styles.detailValue}>{userProfile.email}</Text>
+              </View>
+
+           
+            
+
+              <View style={styles.detailItem}>
+                <Ionicons name="desktop" size={16} color="#000000ff" />
+                <Text style={styles.detailLabel}>Father_Name</Text>
+                <Text style={styles.detailValue}>{userProfile.browser}</Text>
+              </View>
+
+             
+              <View style={styles.detailItem}>
+                <Ionicons name="person" size={16} color="#050505ff" />
+                <Text style={styles.detailLabel}>OPERATOR</Text>
+                <Text style={styles.detailValue}>{userProfile.operator}</Text>
+              </View>
+
+            
+           
+            </ScrollView>
+
+            {/* Delete Button */}
+            <TouchableOpacity style={styles.deleteButton}>
+              <Ionicons name="trash" size={16} color="#fff" />
+              <Text style={styles.deleteButtonText}>Delete Customer</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
 
       {/* Attachment Options Modal */}
       <Modal
@@ -490,9 +656,7 @@ const ChatScreen = () => {
             </View>
 
             <View style={styles.attachmentGrid}>
-              {/* Row 1 */}
               <View style={styles.attachmentRow}>
-                {/* Gallery */}
                 <TouchableOpacity style={styles.attachmentItem} onPress={handleGallery}>
                   <View style={[styles.attachmentIcon, { backgroundColor: '#9C27B0' }]}>
                     <Ionicons name="images" size={24} color="#fff" />
@@ -500,7 +664,6 @@ const ChatScreen = () => {
                   <Text style={styles.attachmentLabel}>Gallery</Text>
                 </TouchableOpacity>
 
-                {/* Camera */}
                 <TouchableOpacity style={styles.attachmentItem} onPress={handleCamera}>
                   <View style={[styles.attachmentIcon, { backgroundColor: '#FF5722' }]}>
                     <Ionicons name="camera" size={24} color="#fff" />
@@ -508,62 +671,33 @@ const ChatScreen = () => {
                   <Text style={styles.attachmentLabel}>Camera</Text>
                 </TouchableOpacity>
 
-                {/* Location */}
                 <TouchableOpacity style={styles.attachmentItem} onPress={handleLocation}>
                   <View style={[styles.attachmentIcon, { backgroundColor: '#4CAF50' }]}>
                     <Ionicons name="location" size={24} color="#fff" />
                   </View>
                   <Text style={styles.attachmentLabel}>Location</Text>
                 </TouchableOpacity>
-
-                {/* Contact */}
-                {/* <TouchableOpacity style={styles.attachmentItem} onPress={handleContact}>
-                  <View style={[styles.attachmentIcon, { backgroundColor: '#2196F3' }]}>
-                    <Ionicons name="person" size={24} color="#fff" />
-                  </View>
-                  <Text style={styles.attachmentLabel}>Contact</Text>
-                </TouchableOpacity> */}
               </View>
 
-              {/* Row 2 */}
               <View style={styles.attachmentRow}>
-                {/* Document */}
                 <TouchableOpacity style={styles.attachmentItem} onPress={handleDocument}>
                   <View style={[styles.attachmentIcon, { backgroundColor: '#673AB7' }]}>
-                    <Ionicons name="document" size={24} color="#fff" />
+                    <Ionicons name="Document" size={24} color="#fff" />
                   </View>
                   <Text style={styles.attachmentLabel}>Document</Text>
                 </TouchableOpacity>
 
-                {/* Audio */}
                 <TouchableOpacity style={styles.attachmentItem} onPress={handleAudio}>
                   <View style={[styles.attachmentIcon, { backgroundColor: '#FF9800' }]}>
                     <Ionicons name="mic" size={24} color="#fff" />
                   </View>
                   <Text style={styles.attachmentLabel}>Audio</Text>
                 </TouchableOpacity>
-
-                {/* Optional Poll - Restored placeholders */}
-                {/* <TouchableOpacity style={styles.attachmentItem} onPress={handlePoll}>
-                  <View style={[styles.attachmentIcon, { backgroundColor: '#607D8B' }]}>
-                    <MaterialIcons name="poll" size={24} color="#fff" />
-                  </View>
-                  <Text style={styles.attachmentLabel}>Poll</Text>
-                </TouchableOpacity> */}
-
-                {/* Optional Event - Restored placeholders */}
-                {/* <TouchableOpacity style={styles.attachmentItem} onPress={handleEvent}>
-                  <View style={[styles.attachmentIcon, { backgroundColor: '#0e0907ff' }]}>
-                    <Ionicons name="calendar" size={24} color="#fff" />
-                  </View>
-                  <Text style={styles.attachmentLabel}>Event</Text>
-                </TouchableOpacity> */}
               </View>
             </View>
           </View>
         </TouchableOpacity>
       </Modal>
-
     </SafeAreaView>
   );
 };
@@ -571,77 +705,191 @@ const ChatScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-    marginBottom:35,
-    marginTop:35
+    backgroundColor: '#f5f5f5',
   },
-  header: {
+  mainLayout: {
+    flex: 1,
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#fff',
-    borderBottomWidth: 0.5,
-    borderBottomColor: '#e0e0e0',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
   },
-  backButton: {
-    marginRight: 16,
-    padding: 4,
+  
+  // Left Sidebar Styles
+  leftSidebar: {
+    width: 300,
+    backgroundColor: '#ffffffff',
+    borderRightWidth: 1,
+    borderRightColor: '#000000ff',
   },
-  contactInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  sidebarHeader: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#000000ff',
+  },
+  sidebarTitle: {
+    color: '#000000ff',
+    fontSize: 24,
+    fontWeight: '600',
+    letterSpacing: 1,
+  },
+  sidebarSubtitle: {
+    color: '#000000ff',
+    fontSize: 10,
+    fontWeight: '600',
+    letterSpacing: 1,
+    marginBottom: 8,
+  },
+  customersList: {
     flex: 1,
   },
-  avatar: {
+  customerItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#000000ff',
+    color:"#000"
+  },
+  selectedCustomerItem: {
+    backgroundColor: '#c9c9c9ff',
+  },
+  customerAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#8f9196ff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+    position: 'relative',
+  },
+  customerAvatarText: {
+    color: '#ffffffff',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  onlineIndicator: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#2ecc71',
+    borderWidth: 2,
+    borderColor: '#2c3e50',
+  },
+  customerInfo: {
+    flex: 1,
+  },
+  customerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  customerName: {
+    color: '#000000ff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  customerTime: {
+    color: '#000000ff',
+    fontSize: 11,
+  },
+  customerLastMessage: {
+    color: '#000000ff',
+    fontSize: 12,
+  },
+  unreadBadge: {
+    backgroundColor: '#a39795ff',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  unreadCount: {
+    color: '#000000ff',
+    fontSize: 11,
+    fontWeight: 'bold',
+  },
+  sidebarFooter: {
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#292222ff',
+  },
+  navigationIcons: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#ffffffff',
+  },
+  navIcon: {
+    padding: 8,
+  },
+  navIcons:{
+    marginLeft:250,
+    marginTop:-25
+  },
+  userProfile: {
+    alignItems: 'center',
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#34495e',
+  },
+  userAvatar: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#050507ff',
+    backgroundColor: '#3498db',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 10,
-    marginLeft:-10
+    marginBottom: 8,
+    position: 'relative',
   },
-  avatarText: {
+  userAvatarText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
   },
-  contactDetails: {
-    flex: 1,
-  },
-  contactName: {
-    fontSize: 15,
+  userName: {
+    color: '#000000ff',
+    fontSize: 14,
     fontWeight: '600',
-    color: '#000',
   },
-  contactNumber: {
+  userStatus: {
+    color: '#384b40ff',
     fontSize: 12,
-    color: '#524f4fff',
-    marginTop: 2,
   },
-  headerActions: {
-    flexDirection: 'row',
+
+  // Center Area Styles
+  centerArea: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  chatHeader: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+    backgroundColor: '#fff',
+  },
+  contactInfo: {
     alignItems: 'center',
   },
-  actionButton: {
-    marginLeft: 15,
-    padding: 4,
+  contactName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2c3e50',
   },
   messagesContainer: {
     flex: 1,
   },
   messagesList: {
     flex: 1,
+    paddingHorizontal: 16,
   },
   messagesContent: {
-    paddingHorizontal: 16,
     paddingVertical: 8,
   },
   messageContainer: {
@@ -654,29 +902,28 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   messageBubble: {
-    maxWidth: '80%',
+    maxWidth: '70%',
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 18,
   },
   sentBubble: {
-    backgroundColor: '#f3ebebff',
+    backgroundColor: '#ecf1f1ff',
     borderBottomRightRadius: 4,
   },
   receivedBubble: {
-    backgroundColor: '#f3ebebff',
+    backgroundColor: '#ecf0f1',
     borderBottomLeftRadius: 4,
-    borderColor:'#6b5e5eff'
   },
   messageText: {
-    fontSize: 16,
-    lineHeight: 20,
+    fontSize: 14,
+    lineHeight: 18,
   },
   sentText: {
-    color: '#020202ff',
+    color: '#000000ff',
   },
   receivedText: {
-    color: '#000',
+    color: '#2c3e50',
   },
   messageFooter: {
     flexDirection: 'row',
@@ -684,68 +931,146 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   timestamp: {
-    fontSize: 12,
+    fontSize: 11,
   },
   sentTimestamp: {
-    color: '#040704ff',
+    color: '#000000ff',
+    opacity: 0.7,
   },
   receivedTimestamp: {
-    color: '#0e0d0dff',
+    color: '#000000ff',
   },
   statusIcon: {
     marginLeft: 4,
   },
   inputContainer: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#fff',
-    borderTopWidth: 0.5,
-    borderTopColor: '#e0e0e0',
-    // ⚠️ Corrected 'bottom' style: It was causing UI issues by pushing the bar down.
-    // If you need spacing, adjust padding/margin of the parent view.
-  },
-  attachButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#f5ededff',
-    justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
-    color:'#fff'
+    padding: 16,
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
   },
   textInput: {
     flex: 1,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#f8f9fa',
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 10,
-    fontSize: 16,
+    fontSize: 14,
     maxHeight: 100,
-    marginRight: 8,
-    color:"#000000ff"
-  },
-  cameraButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#f0f0f0',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 8, // Added margin for spacing with send/mic button
+    marginRight: 12,
+    color: '#000000ff',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
   },
   sendButton: {
-    width: 40,
-    height: 40,
+    backgroundColor: '#dfd9d9ff',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: '#0d0c0eff',
+  },
+  sendButtonText: {
+    color: '#000000ff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+
+  // Right Panel Styles
+  rightPanel: {
+    width: 300,
+    backgroundColor: '#fff',
+    borderLeftWidth: 1,
+    borderLeftColor: '#e0e0e0',
+  },
+  rightPanelHeader: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  closeButton: {
+    padding: 4,
+  },
+  profileSection: {
+    alignItems: 'center',
+    padding: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  profileAvatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#e0d8d8ff',
     justifyContent: 'center',
     alignItems: 'center',
-    // ⚠️ Corrected 'top' style: This was causing the button to overlap the input area.
-    // Adjusted positioning by removing 'top: 20'
+    marginBottom: 16,
   },
+  profileAvatarText: {
+    color: '#000000ff',
+    fontSize: 32,
+    fontWeight: 'bold',
+  },
+  profileName: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#2c3e50',
+    marginBottom: 16,
+  },
+  initiateChatButton: {
+    backgroundColor: '#3498db',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+  },
+  initiateChatText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  profileDetails: {
+    flex: 1,
+    padding: 16,
+  },
+  detailItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+  detailLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#000000ff',
+    letterSpacing: 0.5,
+    marginLeft: 8,
+    marginRight: 8,
+    minWidth: 80,
+  },
+  detailValue: {
+    fontSize: 15,
+    color: '#2c3e50',
+    flex: 1,
+    lineHeight: 16,
+  },
+  deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#030202ff',
+    margin: 16,
+    paddingVertical: 12,
+    borderRadius: 6,
+  },
+  deleteButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+
+  // Modal Styles
   attachmentOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',

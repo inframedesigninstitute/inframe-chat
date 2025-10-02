@@ -2,13 +2,13 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useState } from 'react';
 import {
-    FlatList,
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  FlatList,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { RootStackParamList } from '../navigation/types';
@@ -128,7 +128,7 @@ const [activeTab, setActiveTab] = useState<'new' | 'old'>('new');
 export default LoginScreen;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20,backgroundColor:'#fff' ,marginTop:35},
+  container: { flex: 1, padding: 29,backgroundColor:'#fff' ,marginTop:35, margin:20,},
   logo: { width: 420, height: 280, alignSelf: 'center', marginBottom: 20, backgroundColor: '#fff',marginLeft:50, },
   title: { fontSize: 24, fontWeight: 'bold', width: '100%', marginBottom: 20, textAlign: 'center',  },
   listItem: { marginHorizontal:0, width:350, alignSelf:"center",padding: 20,top:29, borderBottomWidth: 1, borderColor: '#ccc',borderRadius:20,borderEndWidth:1, borderLeftWidth:1, borderRightWidth:1, borderTopWidth:1, },

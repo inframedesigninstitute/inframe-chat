@@ -15,3 +15,4 @@ try {
   console.error('❌ Web build failed:', error.message);
   process.exit(1);
 }
+

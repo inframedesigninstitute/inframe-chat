@@ -108,3 +108,4 @@ The project includes `eas.json` for building with Expo Application Services:
 - No manual platform switching required
 - All existing code in `src/mobile/` and `src/web/` remains unchanged
 - EAS configuration is ready for production builds
+

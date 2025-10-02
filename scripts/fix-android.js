@@ -28,3 +28,4 @@ try {
   console.log('2. Use Expo Go app with QR code');
   console.log('3. Test on web first: npx expo start --web');
 }
+
