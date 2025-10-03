@@ -6,8 +6,6 @@ import {
   Dimensions,
   FlatList,
   Modal,
-  SafeAreaView,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -16,7 +14,11 @@ import {
 } from 'react-native';
 import { ImageLibraryOptions, launchImageLibrary, MediaType } from 'react-native-image-picker';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import BackButton from '../components/BackButton';
+import ChatList, { Customer } from '../components/ChatList';
+import LeftSidebarNav from '../navigation/LeftSidebarNav';
 import { RootStackParamList } from '../navigation/types';
+import ProfileScreen from './ProfileScreen';
  
 const { width } = Dimensions.get('window');
 
@@ -35,15 +37,7 @@ interface Message {
   status: 'sent' | 'delivered' | 'read';
 }
 
-interface Customer {
-  id: string;
-  name: string;
-  lastMessage: string;
-  timestamp: string;
-  unreadCount: number;
-  isOnline: boolean;
-  avatar?: string;
-}
+// Using Customer type from components/ChatList
 
 interface UserProfile {
   name: string;
@@ -449,195 +443,76 @@ const ChatScreen = () => {
 
   const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
 
-  const renderCustomerItem = ({ item }: { item: Customer }) => (
-    <TouchableOpacity 
-      style={[
-        styles.customerItem,
-        selectedCustomerId === item.id && styles.selectedCustomerItem
-      ]}
-      onPress={() => setSelectedCustomerId(item.id)}
-    >
-      <View style={styles.customerAvatar}>
-        <Text style={styles.customerAvatarText}>
-          {item.name.charAt(0).toUpperCase()}
-        </Text>
-        {item.isOnline && <View style={styles.onlineIndicator} />}
-      </View>
-      <View style={styles.customerInfo}>
-        <View style={styles.customerHeader}>
-          <Text style={styles.customerName}>{item.name}</Text>
-          <Text style={styles.customerTime}>{item.timestamp}</Text>
-        </View>
-        <Text style={styles.customerLastMessage} numberOfLines={1}>
-          {item.lastMessage}
-        </Text>
-      </View>
-      {item.unreadCount > 0 && (
-        <View style={styles.unreadBadge}>
-          <Text style={styles.unreadCount}>{item.unreadCount}</Text>
-        </View>
-      )}
-    </TouchableOpacity>
-  );
-
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.mainLayout}>
-        {/* Left Sidebar - Customer List */}
-        <View style={styles.leftSidebar}>
-          <View style={styles.sidebarHeader}>
-            <Text style={styles.sidebarTitle}>Students</Text>
-             <TouchableOpacity style={styles.navIcons}>
-              <Ionicons name="settings" size={20} color="#160909ff" />
-            </TouchableOpacity>
-          </View>
-          
+    <View style={styles.rowLayout}>
+      <LeftSidebarNav active={'Chat'} />
+      <ChatList
+        title="Inbox"
+        customers={customers}
+        selectedId={selectedCustomerId}
+        onSelect={setSelectedCustomerId}
+      />
+
+      <View style={styles.centerArea}>
+        {/* Chat Header */}
+        <View style={styles.chatHeader}>
+          <BackButton />
+          <TouchableOpacity 
+            style={styles.contactInfo}
+            onPress={() => setShowUserProfile(true)}
+          >
+            <Text style={styles.contactName}>
+              {selectedCustomer?.name || 'Select a customer'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Messages */}
+        <View style={styles.messagesContainer}>
           <FlatList
-            data={customers}
+            data={messages}
             keyExtractor={(item) => item.id}
-            renderItem={renderCustomerItem}
-            style={styles.customersList}
-            showsVerticalScrollIndicator={false}
+            renderItem={renderMessage}
+            style={styles.messagesList}
+            contentContainerStyle={styles.messagesContent}
+            inverted
           />
 
-        
-
-          {/* Navigation Icons */}
-          <View style={styles.navigationIcons}>
-            <TouchableOpacity style={styles.navIcon}>
-              <Ionicons name="chatbubbles-sharp" size={20} color="#000000ff" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.navIcon}>
-              <Ionicons name="people-sharp" size={20} color="#000000ff" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.navIcon}>
-              <Ionicons name="call" size={20} color="#000000ff" />
-            </TouchableOpacity>
-              <TouchableOpacity style={styles.navIcon}>
-              <Ionicons name="settings" size={20} color="#000000ff" />
-            </TouchableOpacity>
-          </View>
-
-          {/* User Profile at Bottom */}
-          <View style={styles.userProfile}>
-            <View style={styles.userAvatar}>
-              <Text style={styles.userAvatarText}>ND</Text>
-              <View style={styles.onlineIndicator} />
-            </View>
-            <Text style={styles.userName}>Vikram</Text>
-            <Text style={styles.userStatus}>Online</Text>
-          </View>
-        </View>
-
-        {/* Center - Chat Area */}
-        <View style={styles.centerArea}>
-          {/* Chat Header */}
-          <View style={styles.chatHeader}>
-            <TouchableOpacity 
-              style={styles.contactInfo}
-              onPress={() => setShowUserProfile(true)}
-            >
-              <Text style={styles.contactName}>
-                {selectedCustomer?.name || 'Select a customer'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Messages */}
-          <View style={styles.messagesContainer}>
-            <FlatList
-              data={messages}
-              keyExtractor={(item) => item.id}
-              renderItem={renderMessage}
-              style={styles.messagesList}
-              contentContainerStyle={styles.messagesContent}
-              inverted
+          {/* Input Bar */}
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.textInput}
+              placeholder="Type a message..."
+              placeholderTextColor="#666"
+              value={newMessage}
+              onChangeText={setNewMessage}
+              multiline
             />
-
-            {/* Input Bar */}
-            <View style={styles.inputContainer}>
-              <TextInput
-                style={styles.textInput}
-                placeholder="Type a message..."
-                placeholderTextColor="#666"
-                value={newMessage}
-                onChangeText={setNewMessage}
-                multiline
-              />
-              
-              <TouchableOpacity 
-                style={styles.sendButton} 
-                onPress={handleSendMessage}
-              >
-                <Text style={styles.sendButtonText}>SEND AS INTERNAL MESSAGE</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-
-        {/* Right Panel - User Profile */}
-        {showUserProfile && (
-          <View style={styles.rightPanel}>
-            <View style={styles.rightPanelHeader}>
-              <TouchableOpacity 
-                style={styles.closeButton}
-                onPress={() => setShowUserProfile(false)}
-              >
-                <Ionicons name="close" size={20} color="#666" />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.profileSection}>
-              <View style={styles.profileAvatar}>
-                <Text style={styles.profileAvatarText}>
-                  {userProfile.name.charAt(0)}
-                </Text>
-              </View>
-              <Text style={styles.profileName}>{userProfile.name}</Text>
-              
-              <TouchableOpacity style={styles.initiateChatButton}>
-                <Text style={styles.initiateChatText}>Student</Text>
-              </TouchableOpacity>
-
-              
-             
-            </View>
-
-            <ScrollView style={styles.profileDetails}>
-              <View style={styles.detailItem}>
-                <Ionicons name="mail" size={16} color="#000000ff" />
-                <Text style={styles.detailLabel}>BIO</Text>
-                <Text style={styles.detailValue}>{userProfile.email}</Text>
-              </View>
-
-           
             
-
-              <View style={styles.detailItem}>
-                <Ionicons name="desktop" size={16} color="#000000ff" />
-                <Text style={styles.detailLabel}>Father_Name</Text>
-                <Text style={styles.detailValue}>{userProfile.browser}</Text>
-              </View>
-
-             
-              <View style={styles.detailItem}>
-                <Ionicons name="person" size={16} color="#050505ff" />
-                <Text style={styles.detailLabel}>OPERATOR</Text>
-                <Text style={styles.detailValue}>{userProfile.operator}</Text>
-              </View>
-
-            
-           
-            </ScrollView>
-
-            {/* Delete Button */}
-            <TouchableOpacity style={styles.deleteButton}>
-              <Ionicons name="trash" size={16} color="#fff" />
-              <Text style={styles.deleteButtonText}>Delete Customer</Text>
+            <TouchableOpacity 
+              style={styles.sendButton} 
+              onPress={handleSendMessage}
+            >
+              <Text style={styles.sendButtonText}>SEND AS INTERNAL MESSAGE</Text>
             </TouchableOpacity>
           </View>
-        )}
+        </View>
       </View>
+
+      {showUserProfile && (
+        <ProfileScreen 
+          onClose={() => setShowUserProfile(false)}
+          userProfile={{
+            name: userProfile.name,
+            email: userProfile.email,
+            phone: userProfile.ipAddress,
+            bio: userProfile.browser,
+            fatherName: userProfile.browser,
+            operator: userProfile.operator,
+            department: userProfile.department,
+          }}
+        />
+      )}
 
       {/* Attachment Options Modal */}
       <Modal
@@ -698,172 +573,16 @@ const ChatScreen = () => {
           </View>
         </TouchableOpacity>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  mainLayout: {
+  rowLayout: {
     flex: 1,
     flexDirection: 'row',
+    backgroundColor: '#fff',
   },
-  
-  // Left Sidebar Styles
-  leftSidebar: {
-    width: 300,
-    backgroundColor: '#ffffffff',
-    borderRightWidth: 1,
-    borderRightColor: '#000000ff',
-  },
-  sidebarHeader: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#000000ff',
-  },
-  sidebarTitle: {
-    color: '#000000ff',
-    fontSize: 24,
-    fontWeight: '600',
-    letterSpacing: 1,
-  },
-  sidebarSubtitle: {
-    color: '#000000ff',
-    fontSize: 10,
-    fontWeight: '600',
-    letterSpacing: 1,
-    marginBottom: 8,
-  },
-  customersList: {
-    flex: 1,
-  },
-  customerItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#000000ff',
-    color:"#000"
-  },
-  selectedCustomerItem: {
-    backgroundColor: '#c9c9c9ff',
-  },
-  customerAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#8f9196ff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-    position: 'relative',
-  },
-  customerAvatarText: {
-    color: '#ffffffff',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  onlineIndicator: {
-    position: 'absolute',
-    bottom: -2,
-    right: -2,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#2ecc71',
-    borderWidth: 2,
-    borderColor: '#2c3e50',
-  },
-  customerInfo: {
-    flex: 1,
-  },
-  customerHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  customerName: {
-    color: '#000000ff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  customerTime: {
-    color: '#000000ff',
-    fontSize: 11,
-  },
-  customerLastMessage: {
-    color: '#000000ff',
-    fontSize: 12,
-  },
-  unreadBadge: {
-    backgroundColor: '#a39795ff',
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 8,
-  },
-  unreadCount: {
-    color: '#000000ff',
-    fontSize: 11,
-    fontWeight: 'bold',
-  },
-  sidebarFooter: {
-    padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#292222ff',
-  },
-  navigationIcons: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#ffffffff',
-  },
-  navIcon: {
-    padding: 8,
-  },
-  navIcons:{
-    marginLeft:250,
-    marginTop:-25
-  },
-  userProfile: {
-    alignItems: 'center',
-    padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#34495e',
-  },
-  userAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#3498db',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-    position: 'relative',
-  },
-  userAvatarText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  userName: {
-    color: '#000000ff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  userStatus: {
-    color: '#384b40ff',
-    fontSize: 12,
-  },
-
-  // Center Area Styles
   centerArea: {
     flex: 1,
     backgroundColor: '#fff',
@@ -976,99 +695,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
-  // Right Panel Styles
-  rightPanel: {
-    width: 300,
-    backgroundColor: '#fff',
-    borderLeftWidth: 1,
-    borderLeftColor: '#e0e0e0',
-  },
-  rightPanelHeader: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  closeButton: {
-    padding: 4,
-  },
-  profileSection: {
-    alignItems: 'center',
-    padding: 24,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  profileAvatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#e0d8d8ff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  profileAvatarText: {
-    color: '#000000ff',
-    fontSize: 32,
-    fontWeight: 'bold',
-  },
-  profileName: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#2c3e50',
-    marginBottom: 16,
-  },
-  initiateChatButton: {
-    backgroundColor: '#3498db',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
-  },
-  initiateChatText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  profileDetails: {
-    flex: 1,
-    padding: 16,
-  },
-  detailItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 16,
-  },
-  detailLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#000000ff',
-    letterSpacing: 0.5,
-    marginLeft: 8,
-    marginRight: 8,
-    minWidth: 80,
-  },
-  detailValue: {
-    fontSize: 15,
-    color: '#2c3e50',
-    flex: 1,
-    lineHeight: 16,
-  },
-  deleteButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#030202ff',
-    margin: 16,
-    paddingVertical: 12,
-    borderRadius: 6,
-  },
-  deleteButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
 
   // Modal Styles
   attachmentOverlay: {

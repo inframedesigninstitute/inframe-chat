@@ -1,16 +1,16 @@
+import { useNavigation, useRoute } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
   Alert,
   KeyboardAvoidingView,
   Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useNavigation, useRoute } from '@react-navigation/native';
 import { RootStackParamList } from '../navigation/types';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'OtpVerification'>;
@@ -35,8 +35,13 @@ const OtpVerificationScreen = () => {
     setTimeout(() => {
       setIsVerifying(false);
       Alert.alert('Success', `Email ${email} verified`);
-      navigation.navigate('MainTabs'); // ✅ Navigate to MainTabs after OTP verified
-    }, 100);
+
+      // ✅ Reset navigation so user cannot go back to Login/OTP
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'LeftSidebar' }],
+      });
+    }, 500);
   };
 
   return (
@@ -77,10 +82,37 @@ export default OtpVerificationScreen;
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
   content: { flex: 1, paddingHorizontal: 24, justifyContent: 'center' },
-  title: { fontSize: 28, fontWeight: 'bold', color: '#212121', marginBottom: 8, textAlign: 'center' },
-  subtitle: { fontSize: 16, color: '#757575', textAlign: 'center', marginBottom: 32 },
-  input: { backgroundColor: '#f5f5f5', borderRadius: 8, paddingHorizontal: 16, paddingVertical: 14, fontSize: 16, color: '#212121', marginBottom: 20, borderWidth: 1, borderColor: '#e0e0e0' },
-  verifyButton: { backgroundColor: '#4a90e2', borderRadius: 8, paddingVertical: 14, alignItems: 'center', marginBottom: 16 },
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#212121',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#757575',
+    textAlign: 'center',
+    marginBottom: 32,
+  },
+  input: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    color: '#212121',
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  verifyButton: {
+    backgroundColor: '#4a90e2',
+    borderRadius: 8,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginBottom: 16,
+  },
   verifyButtonDisabled: { backgroundColor: '#b0bec5' },
   verifyButtonText: { fontSize: 16, fontWeight: '600', color: '#fff' },
 });

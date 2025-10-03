@@ -27,7 +27,6 @@ import StudentSignupScreen from '../screens/StudentSignupScreen';
 import TeacherSignupScreen from '../screens/TeacherSignupScreen';
 import TermsScreen from '../screens/TermsScreen';
 import VideoCallScreen from '../screens/VideoCallScreen';
-import MainTabs from './MainTabs';
 import { RootStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -39,7 +38,6 @@ const RootNavigator = () => {
       <Stack.Screen name="AdvancedLogin" component={AdvancedLoginScreen} />
       <Stack.Screen name="OtpVerification" component={OtpVerificationScreen} />
 
-      <Stack.Screen name="MainTabs" component={MainTabs} />
 
       <Stack.Screen name="Chat" component={ChatScreen} options={{ presentation: 'modal', headerShown: false }} />
       <Stack.Screen name="GroupChat" component={GroupChatScreen} options={{ presentation: 'modal', headerShown: false }} />

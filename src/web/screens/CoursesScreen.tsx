@@ -1,14 +1,15 @@
 import React from "react";
 import {
-  View,
-  Text,
-  FlatList,
-  TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
-  Linking,
-  Alert,
+    Alert,
+    FlatList,
+    Linking,
+    SafeAreaView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
+import BackButton from "../components/BackButton";
 
 const data = [
   { id: "c1", name: "Fashion Design", link: "https://www.google.com" },
@@ -40,7 +41,10 @@ const CoursesScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>My Courses</Text>
+      <View style={{ flexDirection:'row', alignItems:'center', paddingHorizontal:12 }}>
+        <BackButton />
+        <Text style={styles.title}>My Courses</Text>
+      </View>
       <FlatList
         data={data}
         keyExtractor={(item) => item.id}

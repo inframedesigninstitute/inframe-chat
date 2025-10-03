@@ -1,19 +1,20 @@
+import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import { CompositeNavigationProp, useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  FlatList,
-  TouchableOpacity,
-  StyleSheet,
-  TextInput,
+    FlatList,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
-import { useNavigation, CompositeNavigationProp } from '@react-navigation/native';
-import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList, MainTabsParamList } from '../navigation/types';
-import TopBar from '../components/TopBar';
-import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import BackButton from '../components/BackButton';
+import LeftSidebarNav from '../navigation/LeftSidebarNav';
+import { MainTabsParamList, RootStackParamList } from '../navigation/types';
 
 type GroupsNavigationProp = CompositeNavigationProp<
   BottomTabNavigationProp<MainTabsParamList, 'Groups'>,
@@ -107,10 +108,13 @@ const GroupsScreen = () => {
   };
 
   return (
-    <View style={styles.container}>
-      {/* TopBar */}
-      <TopBar onAddGroup={handleAddGroup} onOpenCamera={handleOpenCamera} />
-
+    <View style={styles.rowLayout}>
+      <LeftSidebarNav active={'Groups'} />
+      <View style={styles.container}>
+        <View style={styles.headerRow}>
+          <BackButton />
+          <Text style={styles.headerTitle}>Groups</Text>
+        </View>
       {/* Search Bar */}
       <View style={styles.searchContainer}>
         <MaterialIcons name="search" size={20} color="#666" style={styles.searchIcon} />
@@ -165,13 +169,14 @@ const GroupsScreen = () => {
       />
       
       {/* Floating Action Buttons */}
-      <View style={styles.fabContainer}>
+        <View style={styles.fabContainer}>
         <TouchableOpacity style={styles.smallFab}>
           <Ionicons name="people" size={20} color="#fff" />
         </TouchableOpacity>
         <TouchableOpacity style={styles.mainFab}>
           <Ionicons name="add" size={24} color="#fff" />
         </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -180,11 +185,25 @@ const GroupsScreen = () => {
 export default GroupsScreen;
 
 const styles = StyleSheet.create({
+  rowLayout: {
+    flex: 1,
+    flexDirection: 'row',
+    backgroundColor: '#fff'
+  },
   container: { 
     flex: 1, 
     backgroundColor: '#fff' ,
     
   },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#e0e0e0',
+  },
+  headerTitle: { fontSize: 16, fontWeight: '600', color: '#111827', marginLeft: 6 },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',

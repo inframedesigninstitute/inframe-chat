@@ -3,15 +3,14 @@ import { CompositeNavigationProp, useNavigation } from '@react-navigation/native
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React from 'react';
 import {
-  FlatList,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
+    FlatList,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import TopBar from '../components/TopBar';
 import { MainTabsParamList, RootStackParamList } from '../navigation/types';
 
 type SettingsNavigationProp = CompositeNavigationProp<
@@ -144,9 +143,6 @@ const SettingsScreen = () => {
 
   return (
     <View style={styles.container}>
-      {/* TopBar */}
-      <TopBar onAddGroup={handleAddGroup} onOpenCamera={handleOpenCamera} />
-
       {/* Profile Section */}
       <View style={styles.profileSection}>
         <View style={styles.profileLeft}>
@@ -158,14 +154,6 @@ const SettingsScreen = () => {
             <Text style={styles.profileStatus}>Available</Text>
           </View>
         </View>
-        {/* <View style={styles.profileRight}>
-          <TouchableOpacity style={styles.profileButton}>
-            <MaterialIcons name="qr-code" size={20} color="#666" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.profileButton}>
-            <Ionicons name="add-circle" size={20} color="#25D366" />
-          </TouchableOpacity>
-        </View> */}
       </View>
 
       {/* Settings List */}
