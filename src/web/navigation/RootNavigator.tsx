@@ -7,6 +7,7 @@ import AppInfoScreen from '../screens/AppInfoScreen';
 import AttendanceScreen from '../screens/AttendanceScreen';
 import AudioCallScreen from '../screens/AudioCallScreen';
 import CameraScreen from '../screens/CameraScreen';
+import ChatLayoutScreen from '../screens/ChatLayoutScreen';
 import ChatScreen from '../screens/ChatScreen';
 import CourseDetailsScreen from '../screens/CourseDetailsScreen';
 import CoursesScreen from '../screens/CoursesScreen';
@@ -41,6 +42,7 @@ const RootNavigator = () => {
 
       {/* Main App with Tabs */}
       <Stack.Screen name="MainTabs" component={MainTabs} />
+      <Stack.Screen name="ChatLayout" component={ChatLayoutScreen} />
 
       <Stack.Screen name="Chat" component={ChatScreen} options={{ presentation: 'modal' }} />
       <Stack.Screen name="GroupChat" component={GroupChatScreen} options={{ presentation: 'modal' }} />

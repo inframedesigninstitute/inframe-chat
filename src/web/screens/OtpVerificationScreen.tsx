@@ -36,10 +36,11 @@ const OtpVerificationScreen = () => {
       setIsVerifying(false);
       Alert.alert('Success', `Email ${email} verified`);
 
+
       // ✅ Reset navigation so user cannot go back to Login/OTP
       navigation.reset({
         index: 0,
-        routes: [{ name: 'LeftSidebar' }],
+        routes: [{ name: 'MainTabs' }],
       });
     }, 500);
   };

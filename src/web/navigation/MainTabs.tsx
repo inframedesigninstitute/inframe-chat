@@ -16,6 +16,15 @@ const MainTabs = () => {
     <Tab.Navigator  
       screenOptions={({ route }) => ({
         headerShown: false,
+        tabBarStyle: {
+          backgroundColor: '#fff',
+          borderTopWidth: 0.5,
+          borderTopColor: '#fff',
+          paddingTop: 5,
+          paddingBottom: 5,
+          height: 60,
+          marginBottom:40,
+        },
         tabBarIcon: ({ focused, color, size }) => {
           let iconName = 'ellipse';
 
@@ -45,15 +54,6 @@ const MainTabs = () => {
         },
         tabBarActiveTintColor: '#000000ff',
         tabBarInactiveTintColor: '#080707ff',
-        tabBarStyle: {
-          backgroundColor: '#fff',
-          borderTopWidth: 0.5,
-          borderTopColor: '#fff',
-          paddingTop: 5,
-          paddingBottom: 5,
-          height: 60,
-          marginBottom:40,
-        },
         tabBarLabelStyle: {
           fontSize: 12,
           fontWeight: '500',

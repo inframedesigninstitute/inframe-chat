@@ -4,16 +4,13 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useState } from 'react';
 import {
   FlatList,
+  Image,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import MainLayout from '../components/MainLayout';
-import WebBackButton from '../components/WebBackButton';
 import { MainTabsParamList, RootStackParamList } from '../navigation/types';
 
 type CallsNavigationProp = CompositeNavigationProp<
@@ -25,219 +22,203 @@ type Call = {
   id: string; 
   name: string; 
   time: string; 
-  type: 'incoming' | 'outgoing';
+  type: 'incoming' | 'outgoing' | 'missed';
   callType: 'voice' | 'video';
   duration?: string;
+  avatar: string;
 };
 
 const initialCalls: Call[] = [
   { 
     id: '1', 
-    name: 'Bhavesh', 
-    time: '13 March, 11:45 am',
-    type: 'outgoing',
-    callType: 'video',
-    duration: '5:32'
+    name: 'Richard', 
+    time: '06:38 PM',
+    type: 'missed',
+    callType: 'voice',
+    duration: '0s',
+    avatar: 'https://via.placeholder.com/40'
   },
   { 
     id: '2', 
-    name: 'Pravin Kumar My Hostel Jodhpur', 
-    time: '02 jun, 10:49 am',
-    type: 'outgoing',
-    callType: 'voice',
-    duration: '6:33'
-  }, { 
-    id: '9', 
-    name: 'Space ', 
-    time: '17 feb, 4:39 am',
-    type: 'outgoing',
-    callType: 'voice',
-    duration: '6:33'
-  },
-  { 
-    id: '9', 
-    name: 'gorav', 
-    time: '1 sec, 12:23 pm',
+    name: 'Charlotte', 
+    time: '06:34 PM',
     type: 'incoming',
     callType: 'voice',
-    duration: '6:33'
-  }, { 
-    id: '9', 
-    name: 'asif', 
-    time: '10 March, 09:45 am',
-    type: 'outgoing',
-    callType: 'voice',
-    duration: '6:33'
-  }, { 
-    id: '9', 
-    name: 'naru', 
-    time: '16 jan, 1:23 pm',
-    type: 'outgoing',
-    callType: 'voice',
-    duration: '6:33'
-  }, { 
-    id: '9', 
-    name: 'Pravin',
-    time: '10 March, 10 am',
-    type: 'outgoing',
-    callType: 'voice',
-    duration: '6:33'
-  }, { 
-    id: '9', 
-    name: 'suresh', 
-    time: '10 March, 10 am',
-    type: 'outgoing',
-    callType: 'voice',
-    duration: '6:33'
-  }, { 
-    id: '9', 
-    name: 'vishal',
-    time: '12 jan, 2:34 am',
-    type: 'outgoing',
-    callType: 'voice',
-    duration: '6:33'
-  }, { 
-    id: '9', 
-    name: 'sinil bro ',
-    time: '10 dec, 10 am',
-    type: 'outgoing',
-    callType: 'voice',
-    duration: '6:33'
-  }, { 
-    id: '9', 
-    name: 'mahender kumar ', 
-    time: '10 March, 10 am',
-    type: 'outgoing',
-    callType: 'voice',
-    duration: '6:33'
+    duration: '0s',
+    avatar: 'https://via.placeholder.com/40'
   },
   { 
-    id: '9', 
-    name: 'interview date ', 
-    time: '10 March, 10 am',
-    type: 'outgoing',
+    id: '3', 
+    name: 'Charlotte', 
+    time: '06:32 PM',
+    type: 'missed',
     callType: 'voice',
-    duration: '6:33',
-  }, { 
-    id: '9', 
-    name: 'dipak', 
-    time: '20',
-    type: 'outgoing',
-    callType: 'voice',
-    duration: '6:33'
+    duration: '0s',
+    avatar: 'https://via.placeholder.com/40'
   },
-
+  { 
+    id: '4', 
+    name: 'Richard', 
+    time: '06:37 PM',
+    type: 'incoming',
+    callType: 'voice',
+    duration: '2:15',
+    avatar: 'https://via.placeholder.com/40'
+  },
+  { 
+    id: '5', 
+    name: 'Charlotte', 
+    time: '06:24 PM',
+    type: 'missed',
+    callType: 'voice',
+    duration: '0s',
+    avatar: 'https://via.placeholder.com/40'
+  },
+  { 
+    id: '6', 
+    name: 'Charlotte', 
+    time: '06:08 PM',
+    type: 'incoming',
+    callType: 'voice',
+    duration: '1:30',
+    avatar: 'https://via.placeholder.com/40'
+  }
 ];
 
 const CallsScreen = () => {
   const navigation = useNavigation<CallsNavigationProp>();
   const [calls] = useState(initialCalls);
-  const [searchText, setSearchText] = useState('');
+  const [selectedCall, setSelectedCall] = useState<Call | null>(null);
 
-  const filteredCalls = calls.filter(c =>
-    c.name.toLowerCase().includes(searchText.toLowerCase())
-  );
-
-  const handleAddGroup = () => {
-    console.log('Navigate to Create Group Screen');
+  const handleCallSelect = (call: Call) => {
+    setSelectedCall(call);
   };
 
-  const handleOpenCamera = () => {
-    console.log('Open Camera');
+  const handleAudioCall = () => {
+    if (selectedCall) {
+      navigation.navigate('AudioCall', { 
+        contactName: selectedCall.name, 
+        contactNumber: selectedCall.id 
+      });
+    }
   };
 
-  const handleCall = (call: Call) => {
-    if (call.callType === 'video') {
-      navigation.navigate('VideoCall', { contactName: call.name, contactNumber: call.id });
-    } else {
-      navigation.navigate('AudioCall', { contactName: call.name, contactNumber: call.id });
+  const handleVideoCall = () => {
+    if (selectedCall) {
+      navigation.navigate('VideoCall', { 
+        contactName: selectedCall.name, 
+        contactNumber: selectedCall.id 
+      });
     }
   };
 
   return (
-    <MainLayout activeTab="Calls">
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <WebBackButton />
-          <Text style={styles.headerTitle}>Calls</Text>
-        </View>
-        
-        {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <MaterialIcons name="search" size={20} color="#666" style={styles.searchIcon} />
-          <TextInput
-            placeholder="Search calls"
-            value={searchText}
-            onChangeText={setSearchText}
-            style={styles.searchInput}
-          />
+    <View style={styles.container}>
+      {/* Left Panel - Calls List */}
+      <View style={styles.callsList}>
+        <View style={styles.callsHeader}>
+          <Text style={styles.callsTitle}>Calls</Text>
         </View>
 
-        {/* Calls List */}
         <FlatList
-          data={filteredCalls}
-          keyExtractor={item => item.id}
+          data={calls}
+          keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
             <TouchableOpacity
-              style={styles.callItem}
-              onPress={() => handleCall(item)}
-              onLongPress={() => navigation.navigate('Chat', { channelId: item.id, channelName: item.name })}
+              style={[
+                styles.callItem,
+                selectedCall?.id === item.id && styles.selectedCallItem
+              ]}
+              onPress={() => handleCallSelect(item)}
             >
-              <View style={styles.row}>
-                <View style={styles.avatarContainer}>
-                  <View style={styles.avatar}>
-                    <Text style={styles.avatarText}>
-                      {item.name.charAt(0).toUpperCase()}
-                    </Text>
-                  </View>
+              <Image source={{ uri: item.avatar }} style={styles.callAvatar} />
+              <View style={styles.callInfo}>
+                <Text style={[
+                  styles.callName,
+                  item.type === 'missed' && styles.missedCallName
+                ]}>
+                  {item.name}
+                </Text>
+                <View style={styles.callStatusRow}>
+                  <Ionicons 
+                    name={item.type === 'missed' ? 'call' : 'call-received'} 
+                    size={14} 
+                    color={item.type === 'missed' ? '#ff4444' : '#666'} 
+                  />
+                  <Text style={styles.callStatus}>
+                    {item.type === 'missed' ? 'Missed call' : 'Incoming call'}
+                  </Text>
                 </View>
-                <View style={styles.callInfo}>
-                  <View style={styles.callHeader}>
-                    <Text style={styles.callName}>{item.name}</Text>
-                    <View style={styles.rightSection}>
-                      <Text style={styles.time}>{item.time}</Text>
-                      <TouchableOpacity 
-                        style={styles.callButton}
-                        onPress={() => handleCall(item)}
-                      >
-                        {item.callType === 'video' ? (
-                          <Ionicons 
-                            name="videocam" 
-                            size={20} 
-                            color={item.type === 'outgoing' ? '#25D366' : '#666'} 
-                          />
-                        ) : (
-                          <Ionicons 
-                            name="call" 
-                            size={20} 
-                            color={item.type === 'outgoing' ? '#25D366' : '#666'} 
-                          />
-                        )}
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                  <View style={styles.callDetails}>
-                    <Ionicons 
-                      name={item.type === 'outgoing' ? 'call' : 'call-received'} 
-                      size={16} 
-                      color={item.type === 'outgoing' ? '#25D366' : '#FF5722'} 
-                    />
-                    <Text style={styles.callType}>
-                      {item.type === 'outgoing' ? 'Outgoing' : 'Incoming'} • {item.duration}
-                    </Text>
-                  </View>
-                </View>
+              </View>
+              <View style={styles.callMeta}>
+                <Text style={styles.callTime}>{item.time}</Text>
+                <TouchableOpacity style={styles.infoButton}>
+                  <Ionicons name="information-circle" size={16} color="#666" />
+                </TouchableOpacity>
               </View>
             </TouchableOpacity>
           )}
         />
-        
-        {/* Floating Action Button */}
-        <TouchableOpacity style={styles.fab} onPress={() => navigation.navigate('AddContact')}>
-          <Ionicons name="add" size={24} color="#fff" />
-        </TouchableOpacity>
       </View>
-    </MainLayout>
+
+      {/* Right Panel - Call Detail */}
+      <View style={styles.callDetail}>
+        {selectedCall ? (
+          <>
+            {/* Header */}
+            <View style={styles.detailHeader}>
+              <TouchableOpacity style={styles.backButton}>
+                <Ionicons name="arrow-back" size={20} color="#8e24aa" />
+              </TouchableOpacity>
+              <Text style={styles.detailTitle}>Call Detail</Text>
+            </View>
+
+            {/* Contact Info */}
+            <View style={styles.contactInfo}>
+              <Image source={{ uri: selectedCall.avatar }} style={styles.detailAvatar} />
+              <Text style={styles.detailName}>{selectedCall.name}</Text>
+            </View>
+
+            {/* Action Buttons */}
+            <View style={styles.actionButtons}>
+              <TouchableOpacity style={styles.actionButton} onPress={handleAudioCall}>
+                <Ionicons name="call" size={20} color="#8e24aa" />
+                <Text style={styles.actionButtonText}>Audio call</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.actionButton} onPress={handleVideoCall}>
+                <Ionicons name="videocam" size={20} color="#8e24aa" />
+                <Text style={styles.actionButtonText}>Video call</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Call Log */}
+            <View style={styles.callLog}>
+              <Text style={styles.logDate}>yesterday</Text>
+              <View style={styles.logEntry}>
+                <Text style={styles.logTime}>{selectedCall.time} {selectedCall.type === 'missed' ? 'Missed call' : 'Incoming call'}</Text>
+                <Text style={styles.logDuration}>{selectedCall.duration}</Text>
+              </View>
+            </View>
+
+            {/* Expandable Sections */}
+            <View style={styles.expandableSections}>
+              <TouchableOpacity style={styles.expandableSection}>
+                <Text style={styles.sectionText}>Participants</Text>
+                <Text style={styles.sectionValue}>2 {">"}</Text>
+                </TouchableOpacity>
+              <TouchableOpacity style={styles.expandableSection}>
+                <Text style={styles.sectionText}>History</Text>
+                <Ionicons name="chevron-forward" size={16} color="#666" />
+              </TouchableOpacity>
+            </View>
+          </>
+        ) : (
+          <View style={styles.emptyDetail}>
+            <Text style={styles.emptyDetailText}>Select a call to view details</Text>
+          </View>
+        )}
+      </View>
+    </View>
   );
 };
 
@@ -246,117 +227,179 @@ export default CallsScreen;
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: '#fff' 
-  },
-  header: {
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    backgroundColor: '#f5f5f5',
+  },
+  callsList: {
+    width: '35%',
+    backgroundColor: '#fff',
+    borderRightWidth: 1,
+    borderRightColor: '#e0e0e0',
+  },
+  callsHeader: {
+    padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
-    backgroundColor: '#fff',
   },
-  headerTitle: { 
-    fontSize: 18, 
-    fontWeight: '600', 
-    color: '#075E54', 
-    marginLeft: 8 
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f0f0f0',
-    marginHorizontal: 16,
-    marginVertical: 8,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  searchIcon: {
-    marginRight: 12,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    color: '#000',
+  callsTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
   },
   callItem: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: 0.5,
-    borderBottomColor: '#e0e0e0',
-  },
-  row: { 
-    flexDirection: 'row', 
-    alignItems: 'center' 
-  },
-  avatarContainer: {
-    marginRight: 12,
-  },
-  avatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#075E54',
-    justifyContent: 'center',
+    flexDirection: 'row',
     alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
   },
-  avatarText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
+  selectedCallItem: {
+    backgroundColor: '#e1bee7',
+  },
+  callAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 12,
   },
   callInfo: {
     flex: 1,
   },
-  callHeader: {
+  callName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 4,
+  },
+  missedCallName: {
+    color: '#ff4444',
+  },
+  callStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  callStatus: {
+    fontSize: 12,
+    color: '#666',
+    marginLeft: 4,
+  },
+  callMeta: {
+    alignItems: 'flex-end',
+  },
+  callTime: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 4,
+  },
+  infoButton: {
+    padding: 4,
+  },
+  callDetail: {
+    flex: 1,
+    backgroundColor: '#e1bee7',
+  },
+  detailHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#d1c4e9',
+  },
+  backButton: {
+    marginRight: 12,
+  },
+  detailTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  contactInfo: {
+    alignItems: 'center',
+    padding: 32,
+  },
+  detailAvatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    marginBottom: 16,
+  },
+  detailName: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#8e24aa',
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingHorizontal: 32,
+    marginBottom: 32,
+  },
+  actionButton: {
+    backgroundColor: '#e1bee7',
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    minWidth: 120,
+    justifyContent: 'center',
+  },
+  actionButtonText: {
+    fontSize: 14,
+    color: '#8e24aa',
+    marginLeft: 8,
+    fontWeight: '500',
+  },
+  callLog: {
+    paddingHorizontal: 32,
+    marginBottom: 32,
+  },
+  logDate: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 8,
+  },
+  logEntry: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    paddingVertical: 8,
   },
-  callName: { 
-    fontSize: 16, 
-    fontWeight: '500',
-    color: '#000',
-    flex: 1,
-  },
-  rightSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  time: { 
-    fontSize: 12, 
-    color: '#666',
-    marginRight: 12,
-  },
-  callButton: {
-    padding: 8,
-  },
-  callDetails: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  callType: {
+  logTime: {
     fontSize: 14,
     color: '#666',
-    marginLeft: 6,
   },
-  fab: {
-    position: 'absolute',
-    bottom: 80,
-    right: 16,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#25D366',
+  logDuration: {
+    fontSize: 14,
+    color: '#666',
+  },
+  expandableSections: {
+    paddingHorizontal: 32,
+  },
+  expandableSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#d1c4e9',
+  },
+  sectionText: {
+    fontSize: 16,
+    color: '#333',
+    fontWeight: '500',
+  },
+  sectionValue: {
+    fontSize: 16,
+    color: '#666',
+  },
+  emptyDetail: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
+  },
+  emptyDetailText: {
+    fontSize: 16,
+    color: '#666',
   },
 });
