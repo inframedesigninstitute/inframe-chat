@@ -4,8 +4,8 @@ import { StyleSheet, Text, View } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import CallsScreen from '../screens/CallsScreen';
 import ChatsScreen from '../screens/ChatsScreen';
+import EnhancedSettingsScreen from '../screens/EnhancedSettingsScreen';
 import GroupsScreen from '../screens/GroupsScreen';
-import SettingsScreen from '../screens/SettingsScreen';
 import { MainTabsParamList } from './types';
 
 const Tab = createBottomTabNavigator<MainTabsParamList>();
@@ -34,7 +34,7 @@ const MainTabs = () => {
               <Ionicons name={iconName} size={size} color={color} />
               {route.name === 'Chats' && (
                 <View style={styles.badge}>
-                  <Text style={styles.badgeText}>20</Text>
+                  <Text style={styles.badgeText}>12</Text>
                 </View>
               )}
               {route.name === 'Groups' && (
@@ -83,7 +83,7 @@ const MainTabs = () => {
       />
       <Tab.Screen 
         name="Settings" 
-        component={SettingsScreen}
+        component={EnhancedSettingsScreen}
         options={{
           tabBarLabel: 'Settings',
         }}

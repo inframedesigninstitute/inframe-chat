@@ -74,7 +74,7 @@ const AdvancedLoginScreen = () => {
     setTimeout(() => {
       setIsVerifying(false);
       Alert.alert('Success', `Email ${email} verified`);
-      navigation.navigate('LeftSidebar');
+      navigation.navigate('MainTabs');
     }, 300);
   };
 

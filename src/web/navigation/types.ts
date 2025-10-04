@@ -2,7 +2,7 @@ export type RootStackParamList = {
   Login: undefined;
   AdvancedLogin: { emailPrefill?: string; admin?: boolean } | undefined;
   OtpVerification: { email: string };
-  LeftSidebar: undefined;
+  MainTabs: undefined;
   Chat: { channelId: string; channelName: string; recipientRole?: 'student' | 'faculty' | 'admin' };
   GroupChat: { groupId: string; groupName: string; isTeacher: boolean };
   AudioCall: { contactName: string; contactNumber: string };

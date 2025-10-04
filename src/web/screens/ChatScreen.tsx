@@ -14,11 +14,11 @@ import {
 } from 'react-native';
 import { ImageLibraryOptions, launchImageLibrary, MediaType } from 'react-native-image-picker';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import BackButton from '../components/BackButton';
 import ChatList, { Customer } from '../components/ChatList';
+import WebBackButton from '../components/WebBackButton';
 import LeftSidebarNav from '../navigation/LeftSidebar';
 import { RootStackParamList } from '../navigation/types';
-import ProfileScreen from './ProfileScreen';
+import UserProfileScreen from './UserProfileScreen';
  
 const { width } = Dimensions.get('window');
 
@@ -35,6 +35,8 @@ interface Message {
   isSent: boolean;
   timestamp: string;
   status: 'sent' | 'delivered' | 'read';
+  image?: string;
+  shared?: boolean;
 }
 
 // Using Customer type from components/ChatList
@@ -218,17 +220,18 @@ const ChatScreen = () => {
             console.log('Selected Image URI:', selectedImage);
 
             const message: Message = {
-                id: Date.now().toString(),
-                text: `🖼 Image shared`,
-                isSent: true,
-                timestamp: new Date().toLocaleTimeString('en-US', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: true,
-                }),
-                status: 'sent',
-            };
-
+              id: Date.now().toString(),
+              text: "🖼 Image shared",
+              isSent: true,
+              timestamp: new Date().toLocaleTimeString('en-US', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  hour12: true,
+              }),
+              status: 'sent',
+              image: selectedImage, // <-- add the selected image URI
+              shared: true // <-- ensure this exists in Message type
+          };
             // Add image URI to message if needed
             setMessages(prevMessages => [...prevMessages, message]);
         }
@@ -445,7 +448,7 @@ const ChatScreen = () => {
 
   return (
     <View style={styles.rowLayout}>
-      <LeftSidebarNav active={'Chat'} />
+      <LeftSidebarNav active={'Chats'} />
       <ChatList
         title="Inbox"
         customers={customers}
@@ -456,7 +459,7 @@ const ChatScreen = () => {
       <View style={styles.centerArea}>
         {/* Chat Header */}
         <View style={styles.chatHeader}>
-          <BackButton />
+          <WebBackButton />
           <TouchableOpacity 
             style={styles.contactInfo}
             onPress={() => setShowUserProfile(true)}
@@ -500,7 +503,7 @@ const ChatScreen = () => {
       </View>
 
       {showUserProfile && (
-        <ProfileScreen 
+        <UserProfileScreen 
           onClose={() => setShowUserProfile(false)}
           userProfile={{
             name: userProfile.name,

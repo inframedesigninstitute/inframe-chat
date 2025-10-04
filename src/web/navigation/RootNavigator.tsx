@@ -27,7 +27,7 @@ import StudentSignupScreen from '../screens/StudentSignupScreen';
 import TeacherSignupScreen from '../screens/TeacherSignupScreen';
 import TermsScreen from '../screens/TermsScreen';
 import VideoCallScreen from '../screens/VideoCallScreen';
-import LeftSidebar from './LeftSidebar';
+import MainTabs from './MainTabs';
 import { RootStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -39,10 +39,8 @@ const RootNavigator = () => {
       <Stack.Screen name="AdvancedLogin" component={AdvancedLoginScreen} />
       <Stack.Screen name="OtpVerification" component={OtpVerificationScreen} />
 
-      {/* Updated LeftSidebar Screen */}
-      <Stack.Screen name="LeftSidebar">
-        {() => <LeftSidebar active="Chats" />}
-      </Stack.Screen>
+      {/* Main App with Tabs */}
+      <Stack.Screen name="MainTabs" component={MainTabs} />
 
       <Stack.Screen name="Chat" component={ChatScreen} options={{ presentation: 'modal' }} />
       <Stack.Screen name="GroupChat" component={GroupChatScreen} options={{ presentation: 'modal' }} />

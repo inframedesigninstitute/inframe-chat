@@ -1,15 +1,15 @@
 import React from "react";
 import {
-    Alert,
-    FlatList,
-    Linking,
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  FlatList,
+  Linking,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import BackButton from "../components/BackButton";
+import WebBackButton from "../components/WebBackButton";
 
 const data = [
   { id: "c1", name: "Fashion Design", link: "https://www.google.com" },
@@ -42,7 +42,7 @@ const CoursesScreen = () => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={{ flexDirection:'row', alignItems:'center', paddingHorizontal:12 }}>
-        <BackButton />
+        <WebBackButton />
         <Text style={styles.title}>My Courses</Text>
       </View>
       <FlatList

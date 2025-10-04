@@ -2,19 +2,22 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useState } from 'react';
 import {
-    Alert,
-    Image,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  Image,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import MainLayout from '../components/MainLayout';
+import WebBackButton from '../components/WebBackButton';
 import { useUser } from '../context/UserContext';
 import { RootStackParamList } from '../navigation/types';
+import UserProfileScreen from './UserProfileScreen';
 
 type SettingsNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Settings'>;
 
@@ -29,10 +32,10 @@ const EnhancedSettingsScreen = () => {
 
   // Chat Settings
   const [selectedTheme, setSelectedTheme] = useState('default');
+  const [showUserProfile, setShowUserProfile] = useState(false);
 
   const handleEditProfile = () => {
-    // Navigation to profile edit screen would go here
-    Alert.alert('Edit Profile', 'Profile editing functionality will be implemented');
+    setShowUserProfile(true);
   };
 
   const handleEditPicture = () => {
@@ -95,15 +98,35 @@ const EnhancedSettingsScreen = () => {
     </TouchableOpacity>
   );
 
+  const userProfile = user ? {
+    name: user.name || 'Your Name',
+    email: user.email || 'your.email@example.com',
+    phone: user.phoneNumber || '+91 98765 43210',
+    bio: user.bio || 'This is a sample bio for the user profile.',
+    fatherName: user.fatherName || 'Father Name',
+    operator: 'John Doe', // Default operator since not in User interface
+    department: user.department || 'Sales',
+    profilePicture: user.profilePicture,
+  } : null;
+
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="#075E54" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Settings</Text>
-        <View style={{ width: 24 }} />
-      </View>
+    <MainLayout
+      activeTab="Settings"
+      showRightContent={showUserProfile}
+      rightContent={userProfile ? (
+        <UserProfileScreen
+          userProfile={userProfile}
+          onClose={() => setShowUserProfile(false)}
+        />
+      ) : null}
+      onRightContentClose={() => setShowUserProfile(false)}
+    >
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <WebBackButton />
+          <Text style={styles.headerTitle}>Settings</Text>
+          <View style={{ width: 24 }} />
+        </View>
 
       <ScrollView style={styles.scrollView}>
         {/* Profile Section */}
@@ -309,7 +332,8 @@ const EnhancedSettingsScreen = () => {
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </SafeAreaView>
+      </SafeAreaView>
+    </MainLayout>
   );
 };
 

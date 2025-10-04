@@ -16,7 +16,7 @@ type NavItem = {
 };
 
 const items: NavItem[] = [
-  { key: 'Chats', icon: 'chatbubbles-sharp', label: 'Chats' },
+  { key: 'Chats', icon: 'chatbubbles-sharp', label: 'Chat' },
   { key: 'Groups', icon: 'people-sharp', label: 'Groups' },
   { key: 'Calls', icon: 'call', label: 'Calls' },
   { key: 'Settings', icon: 'settings', label: 'Settings' },
@@ -26,7 +26,7 @@ const LeftSidebarNav = ({ active }: { active: NavKey }) => {
   const navigation = useNavigation<NavigationProp>();
 
   const handleNavigation = (screen: NavKey) => {
-    navigation.navigate(screen as keyof MainTabsParamList);
+    navigation.navigate(screen); // Directly navigate to screen name
   };
 
   return (

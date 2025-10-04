@@ -12,8 +12,8 @@ import {
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import BackButton from '../components/BackButton';
-import LeftSidebarNav from '../navigation/LeftSidebar';
+import MainLayout from '../components/MainLayout';
+import WebBackButton from '../components/WebBackButton';
 import { MainTabsParamList, RootStackParamList } from '../navigation/types';
 
 type GroupsNavigationProp = CompositeNavigationProp<
@@ -108,102 +108,102 @@ const GroupsScreen = () => {
   };
 
   return (
-    <View style={styles.rowLayout}>
-      <LeftSidebarNav active={'Groups'} />
+    <MainLayout activeTab="Groups">
       <View style={styles.container}>
-        <View style={styles.headerRow}>
-          <BackButton />
+        <View style={styles.header}>
+          <WebBackButton />
           <Text style={styles.headerTitle}>Groups</Text>
         </View>
-      {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <MaterialIcons name="search" size={20} color="#666" style={styles.searchIcon} />
-        <TextInput
-          placeholder="Search groups"
-          value={searchText}
-          onChangeText={setSearchText}
-          style={styles.searchInput}
-        />
-      </View>
+        
+        {/* Search Bar */}
+        <View style={styles.searchContainer}>
+          <MaterialIcons name="search" size={20} color="#666" style={styles.searchIcon} />
+          <TextInput
+            placeholder="Search groups"
+            value={searchText}
+            onChangeText={setSearchText}
+            style={styles.searchInput}
+          />
+        </View>
 
-      {/* Groups List */}
-      <FlatList
-        data={filteredGroups}
-        keyExtractor={item => item.id}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.groupItem}
-            onPress={() =>
-              navigation.navigate('Chat', { channelId: item.id, channelName: item.name })
-            }
-          >
-            <View style={styles.row}>
-              <View style={styles.avatarContainer}>
-                <View style={styles.groupAvatar}>
-                  <Ionicons name="people" size={24} color="#fff" />
-                </View>
-                {item.isAdmin && (
-                  <View style={styles.adminBadge}>
-                    <MaterialIcons name="star" size={12} color="#fff" />
+        {/* Groups List */}
+        <FlatList
+          data={filteredGroups}
+          keyExtractor={item => item.id}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={styles.groupItem}
+              onPress={() =>
+                navigation.navigate('Chat', { channelId: item.id, channelName: item.name })
+              }
+            >
+              <View style={styles.row}>
+                <View style={styles.avatarContainer}>
+                  <View style={styles.groupAvatar}>
+                    <Ionicons name="people" size={24} color="#fff" />
                   </View>
-                )}
-              </View>
-              <View style={styles.groupInfo}>
-                <View style={styles.groupHeader}>
-                  <Text style={styles.groupName}>{item.name}</Text>
-                  <View style={styles.rightSection}>
-                    <Text style={styles.time}>{item.time}</Text>
-                    {item.unread ? (
-                      <View style={styles.unreadBadge}>
-                        <Text style={styles.unreadText}>{item.unread}</Text>
-                      </View>
-                    ) : null}
-                  </View>
+                  {item.isAdmin && (
+                    <View style={styles.adminBadge}>
+                      <MaterialIcons name="star" size={12} color="#fff" />
+                    </View>
+                  )}
                 </View>
-                <Text style={styles.lastMessage}>{item.lastMessage}</Text>
-                <Text style={styles.memberCount}>{item.members} members</Text>
+                <View style={styles.groupInfo}>
+                  <View style={styles.groupHeader}>
+                    <Text style={styles.groupName}>{item.name}</Text>
+                    <View style={styles.rightSection}>
+                      <Text style={styles.time}>{item.time}</Text>
+                      {item.unread ? (
+                        <View style={styles.unreadBadge}>
+                          <Text style={styles.unreadText}>{item.unread}</Text>
+                        </View>
+                      ) : null}
+                    </View>
+                  </View>
+                  <Text style={styles.lastMessage}>{item.lastMessage}</Text>
+                  <Text style={styles.memberCount}>{item.members} members</Text>
+                </View>
               </View>
-            </View>
-          </TouchableOpacity>
-        )}
-      />
-      
-      {/* Floating Action Buttons */}
+            </TouchableOpacity>
+          )}
+        />
+        
+        {/* Floating Action Buttons */}
         <View style={styles.fabContainer}>
-        <TouchableOpacity style={styles.smallFab}>
-          <Ionicons name="people" size={20} color="#fff" />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.mainFab}>
-          <Ionicons name="add" size={24} color="#fff" />
-        </TouchableOpacity>
+          <TouchableOpacity style={styles.smallFab}>
+            <Ionicons name="people" size={20} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.mainFab}>
+            <Ionicons name="add" size={24} color="#fff" />
+          </TouchableOpacity>
         </View>
       </View>
-    </View>
+    </MainLayout>
   );
 };
 
 export default GroupsScreen;
 
 const styles = StyleSheet.create({
-  rowLayout: {
-    flex: 1,
-    flexDirection: 'row',
-    backgroundColor: '#fff'
-  },
   container: { 
     flex: 1, 
-    backgroundColor: '#fff' ,
-    
+    backgroundColor: '#fff',
   },
-  headerRow: {
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderBottomWidth: 0.5,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
+    backgroundColor: '#fff',
   },
-  headerTitle: { fontSize: 16, fontWeight: '600', color: '#111827', marginLeft: 6 },
+  headerTitle: { 
+    fontSize: 18, 
+    fontWeight: '600', 
+    color: '#075E54', 
+    marginLeft: 8 
+  },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -337,4 +337,3 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
   },
 });
-

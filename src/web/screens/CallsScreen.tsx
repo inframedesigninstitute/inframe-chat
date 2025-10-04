@@ -12,8 +12,8 @@ import {
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import BackButton from '../components/BackButton';
-import LeftSidebarNav from '../navigation/LeftSidebar';
+import MainLayout from '../components/MainLayout';
+import WebBackButton from '../components/WebBackButton';
 import { MainTabsParamList, RootStackParamList } from '../navigation/types';
 
 type CallsNavigationProp = CompositeNavigationProp<
@@ -155,114 +155,114 @@ const CallsScreen = () => {
   };
 
   return (
-    <View style={styles.rowLayout}>
-      <LeftSidebarNav active={'Calls'} />
-
+    <MainLayout activeTab="Calls">
       <View style={styles.container}>
-        <View style={styles.headerRow}>
-          <BackButton />
+        <View style={styles.header}>
+          <WebBackButton />
           <Text style={styles.headerTitle}>Calls</Text>
         </View>
-      {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <MaterialIcons name="search" size={20} color="#666" style={styles.searchIcon} />
-        <TextInput
-          placeholder="Search calls"
-          value={searchText}
-          onChangeText={setSearchText}
-          style={styles.searchInput}
-        />
-      </View>
+        
+        {/* Search Bar */}
+        <View style={styles.searchContainer}>
+          <MaterialIcons name="search" size={20} color="#666" style={styles.searchIcon} />
+          <TextInput
+            placeholder="Search calls"
+            value={searchText}
+            onChangeText={setSearchText}
+            style={styles.searchInput}
+          />
+        </View>
 
-      {/* Calls List */}
+        {/* Calls List */}
         <FlatList
-        data={filteredCalls}
-        keyExtractor={item => item.id}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.callItem}
-            onPress={() => handleCall(item)}
-            onLongPress={() => navigation.navigate('Chat', { channelId: item.id, channelName: item.name })}
-          >
-            <View style={styles.row}>
-              <View style={styles.avatarContainer}>
-                <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>
-                    {item.name.charAt(0).toUpperCase()}
-                  </Text>
-                </View>
-              </View>
-              <View style={styles.callInfo}>
-                <View style={styles.callHeader}>
-                  <Text style={styles.callName}>{item.name}</Text>
-                  <View style={styles.rightSection}>
-                    <Text style={styles.time}>{item.time}</Text>
-                    <TouchableOpacity 
-                      style={styles.callButton}
-                      onPress={() => handleCall(item)}
-                    >
-                      {item.callType === 'video' ? (
-                        <Ionicons 
-                          name="videocam" 
-                          size={20} 
-                          color={item.type === 'outgoing' ? '#25D366' : '#666'} 
-                        />
-                      ) : (
-                        <Ionicons 
-                          name="call" 
-                          size={20} 
-                          color={item.type === 'outgoing' ? '#25D366' : '#666'} 
-                        />
-                      )}
-                    </TouchableOpacity>
+          data={filteredCalls}
+          keyExtractor={item => item.id}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={styles.callItem}
+              onPress={() => handleCall(item)}
+              onLongPress={() => navigation.navigate('Chat', { channelId: item.id, channelName: item.name })}
+            >
+              <View style={styles.row}>
+                <View style={styles.avatarContainer}>
+                  <View style={styles.avatar}>
+                    <Text style={styles.avatarText}>
+                      {item.name.charAt(0).toUpperCase()}
+                    </Text>
                   </View>
                 </View>
-                <View style={styles.callDetails}>
-                  <Ionicons 
-                    name={item.type === 'outgoing' ? 'call' : 'call-received'} 
-                    size={16} 
-                    color={item.type === 'outgoing' ? '#25D366' : '#FF5722'} 
-                  />
-                  <Text style={styles.callType}>
-                    {item.type === 'outgoing' ? 'Outgoing' : 'Incoming'} • {item.duration}
-                  </Text>
+                <View style={styles.callInfo}>
+                  <View style={styles.callHeader}>
+                    <Text style={styles.callName}>{item.name}</Text>
+                    <View style={styles.rightSection}>
+                      <Text style={styles.time}>{item.time}</Text>
+                      <TouchableOpacity 
+                        style={styles.callButton}
+                        onPress={() => handleCall(item)}
+                      >
+                        {item.callType === 'video' ? (
+                          <Ionicons 
+                            name="videocam" 
+                            size={20} 
+                            color={item.type === 'outgoing' ? '#25D366' : '#666'} 
+                          />
+                        ) : (
+                          <Ionicons 
+                            name="call" 
+                            size={20} 
+                            color={item.type === 'outgoing' ? '#25D366' : '#666'} 
+                          />
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                  <View style={styles.callDetails}>
+                    <Ionicons 
+                      name={item.type === 'outgoing' ? 'call' : 'call-received'} 
+                      size={16} 
+                      color={item.type === 'outgoing' ? '#25D366' : '#FF5722'} 
+                    />
+                    <Text style={styles.callType}>
+                      {item.type === 'outgoing' ? 'Outgoing' : 'Incoming'} • {item.duration}
+                    </Text>
+                  </View>
                 </View>
               </View>
-            </View>
-          </TouchableOpacity>
-        )}
+            </TouchableOpacity>
+          )}
         />
-      
-      {/* Floating Action Button */}
+        
+        {/* Floating Action Button */}
         <TouchableOpacity style={styles.fab} onPress={() => navigation.navigate('AddContact')}>
-        <Ionicons name="add" size={24} color="#fff" />
+          <Ionicons name="add" size={24} color="#fff" />
         </TouchableOpacity>
       </View>
-    </View>
+    </MainLayout>
   );
 };
 
 export default CallsScreen;
 
 const styles = StyleSheet.create({
-  rowLayout: {
-    flex: 1,
-    flexDirection: 'row',
-    backgroundColor: '#fff'
-  },
   container: { 
     flex: 1, 
     backgroundColor: '#fff' 
   },
-  headerRow: {
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderBottomWidth: 0.5,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
+    backgroundColor: '#fff',
   },
-  headerTitle: { fontSize: 16, fontWeight: '600', color: '#111827', marginLeft: 6 },
+  headerTitle: { 
+    fontSize: 18, 
+    fontWeight: '600', 
+    color: '#075E54', 
+    marginLeft: 8 
+  },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',

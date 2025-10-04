@@ -5,6 +5,7 @@ import React, { useMemo, useState } from 'react';
 import {
   FlatList,
   StyleSheet,
+  Text,
   TextInput,
   TouchableOpacity,
   View
@@ -12,10 +13,12 @@ import {
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import ChannelItemWithLongPress from '../components/ChannelItemWithLongPress';
+import MainLayout from '../components/MainLayout';
 import MarqueeText from '../components/MarqueeText';
-import TopBar from '../components/TopBar';
 import TopTabNavigation from '../components/TopTabNavigation';
+import WebBackButton from '../components/WebBackButton';
 import { MainTabsParamList, RootStackParamList } from '../navigation/types';
+import UserProfileScreen from './UserProfileScreen';
 
 type ChatsNavigationProp = CompositeNavigationProp<
   BottomTabNavigationProp<MainTabsParamList, 'Chats'>,
@@ -52,6 +55,8 @@ const ChatsScreen = () => {
   const [channels, setChannels] = useState(initialChannels);
   const [searchText, setSearchText] = useState('');
   const [activeTab, setActiveTab] = useState('All');
+  const [showUserProfile, setShowUserProfile] = useState(false);
+  const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
 
   const filteredChannels = useMemo(() => {
     let filtered = channels;
@@ -92,61 +97,119 @@ const ChatsScreen = () => {
     console.log('Open Camera');
   };
 
+  const handleChannelPress = (channel: Channel) => {
+    setSelectedChannel(channel);
+    setShowUserProfile(true);
+  };
+  type UserProfile = {
+    name: string;
+    email: string;
+    phone: string;
+    bio: string;
+    fatherName: string;
+    operator: string;
+    department: string;
+};
+
+  const userProfile: UserProfile | null = selectedChannel ? {
+    name: selectedChannel.name,
+    email: `${selectedChannel.name.toLowerCase().replace(' ', '.')}@example.com`,
+    phone: '+91 98765 43210',
+    bio: 'This is a sample bio for the user profile.',
+    fatherName: 'Father Name',
+    operator: 'John Doe',
+    department: 'Sales',
+} : null;
+
+
   return (
-    <View style={styles.container}>
-      <TopBar onAddGroup={handleAddGroup} onOpenCamera={handleOpenCamera} />
-
-      <View style={styles.searchContainer}>
-        <MaterialIcons name="search" size={20} color="#666" style={styles.searchIcon} />
-        <TextInput
-          placeholder="Ask Meta AI or Search"
-          value={searchText}
-          onChangeText={setSearchText}
-          style={styles.searchInput}
+    <MainLayout
+      activeTab="Chats"
+      showRightContent={showUserProfile}
+      rightContent={userProfile ? (
+        <UserProfileScreen
+          userProfile={userProfile}
+          onClose={() => setShowUserProfile(false)}
         />
-        <TouchableOpacity style={styles.qrButton} onPress={() => navigation.navigate('QRScanner')}>
-          <Ionicons name="qr-code" size={20} color="#1a1b1bff" />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.cameraButton} onPress={() => navigation.navigate('Camera')}>
-          <Ionicons name="camera" size={20} color="#0a0a0aff" />
-        </TouchableOpacity>
-      </View>
+      ) : null}
+      onRightContentClose={() => setShowUserProfile(false)}
+    >
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <WebBackButton />
+          <Text style={styles.headerTitle}>Chats</Text>
+        </View>
 
- <MarqueeText 
-        text={`Chatting with - Send messages, share files, and stay connected!`}
-        speed={80}
-        textStyle={{ color: '#2e7d32', fontSize: 10, fontWeight: '500' }}
-        containerStyle={{ backgroundColor: '#e8f5e8', marginVertical: 4 }}
-      />
-      <TopTabNavigation onTabChange={handleTabChange} />
-
-      <FlatList
-        data={filteredChannels}
-        keyExtractor={item => item.id}
-        renderItem={({ item }) => (
-          <ChannelItemWithLongPress
-            channel={{
-              id: item.id,
-              name: item.name,
-              lastMessage: item.lastMessage,
-              timestamp: item.time,
-              unread: item.unread,
-              isGroup: item.type === 'group',
-              isPinned: item.isPinned,
-            }}
-            onPress={() => navigation.navigate('Chat', { channelId: item.id, channelName: item.name })}
-            onUpdate={() => setChannels([...channels])}
+        <View style={styles.searchContainer}>
+          <MaterialIcons name="search" size={20} color="#666" style={styles.searchIcon} />
+          <TextInput
+            placeholder="Ask Meta AI or Search"
+            value={searchText}
+            onChangeText={setSearchText}
+            style={styles.searchInput}
           />
-        )}
-      />
-    </View>
+          <TouchableOpacity style={styles.qrButton} onPress={() => navigation.navigate('QRScanner')}>
+            <Ionicons name="qr-code" size={20} color="#1a1b1bff" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.cameraButton} onPress={() => navigation.navigate('Camera')}>
+            <Ionicons name="camera" size={20} color="#0a0a0aff" />
+          </TouchableOpacity>
+        </View>
+
+        <MarqueeText 
+  text="Chatting with - Send messages, share files, and stay connected!"
+  speed={80}
+  textStyle={{ color: '#2e7d32', fontSize: 10, fontWeight: '500' }}
+  containerStyle={{ backgroundColor: '#e8f5e8', marginVertical: 4 }}
+/>
+
+        <TopTabNavigation onTabChange={handleTabChange} />
+
+        <FlatList
+          data={filteredChannels}
+          keyExtractor={item => item.id}
+          renderItem={({ item }) => (
+            <ChannelItemWithLongPress
+              channel={{
+                id: item.id,
+                name: item.name,
+                lastMessage: item.lastMessage,
+                timestamp: item.time,
+                unread: item.unread,
+                isGroup: item.type === 'group',
+                isPinned: item.isPinned,
+              }}
+              onPress={() => handleChannelPress(item)}
+              onUpdate={() => setChannels([...channels])}
+            />
+          )}
+        />
+      </View>
+    </MainLayout>
   );
 };
 
 export default ChatsScreen;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fbfdfdff' },
+  container: { 
+    flex: 1, 
+    backgroundColor: '#fbfdfdff' 
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+    backgroundColor: '#fff',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#075E54',
+  },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -156,10 +219,22 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 8,
-    
   },
-  searchIcon: { marginRight: 12, color:'#000' },
-  searchInput: { flex: 1, fontSize: 16, color: '#000' },
-  qrButton: { marginLeft: 12, padding: 4 },
-  cameraButton: { marginLeft: 8, padding: 4 },
+  searchIcon: { 
+    marginRight: 12, 
+    color: '#000' 
+  },
+  searchInput: { 
+    flex: 1, 
+    fontSize: 16, 
+    color: '#000' 
+  },
+  qrButton: { 
+    marginLeft: 12, 
+    padding: 4 
+  },
+  cameraButton: { 
+    marginLeft: 8, 
+    padding: 4 
+  },
 });
