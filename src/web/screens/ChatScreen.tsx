@@ -16,7 +16,7 @@ import { ImageLibraryOptions, launchImageLibrary, MediaType } from 'react-native
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import BackButton from '../components/BackButton';
 import ChatList, { Customer } from '../components/ChatList';
-import LeftSidebarNav from '../navigation/LeftSidebarNav';
+import LeftSidebarNav from '../navigation/LeftSidebar';
 import { RootStackParamList } from '../navigation/types';
 import ProfileScreen from './ProfileScreen';
  

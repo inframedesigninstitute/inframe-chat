@@ -27,6 +27,7 @@ import StudentSignupScreen from '../screens/StudentSignupScreen';
 import TeacherSignupScreen from '../screens/TeacherSignupScreen';
 import TermsScreen from '../screens/TermsScreen';
 import VideoCallScreen from '../screens/VideoCallScreen';
+import LeftSidebar from './LeftSidebar';
 import { RootStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -38,33 +39,36 @@ const RootNavigator = () => {
       <Stack.Screen name="AdvancedLogin" component={AdvancedLoginScreen} />
       <Stack.Screen name="OtpVerification" component={OtpVerificationScreen} />
 
+      {/* Updated LeftSidebar Screen */}
+      <Stack.Screen name="LeftSidebar">
+        {() => <LeftSidebar active="Chats" />}
+      </Stack.Screen>
 
-      <Stack.Screen name="Chat" component={ChatScreen} options={{ presentation: 'modal', headerShown: false }} />
-      <Stack.Screen name="GroupChat" component={GroupChatScreen} options={{ presentation: 'modal', headerShown: false }} />
-      <Stack.Screen name="AudioCall" component={AudioCallScreen} options={{ presentation: 'fullScreenModal', headerShown: false }} />
-      <Stack.Screen name="VideoCall" component={VideoCallScreen} options={{ presentation: 'fullScreenModal', headerShown: false }} />
-      <Stack.Screen name="Camera" component={CameraScreen} options={{ presentation: 'fullScreenModal', headerShown: false }} />
-      <Stack.Screen name="QRScanner" component={QRScannerScreen} options={{ presentation: 'fullScreenModal', headerShown: false }} />
-      <Stack.Screen name="CreateGroup" component={CreateGroupScreen} options={{ presentation: 'modal', headerShown: false }} />
-      <Stack.Screen name="AddContact" component={AddContactScreen} options={{ presentation: 'modal', headerShown: false }} />
+      <Stack.Screen name="Chat" component={ChatScreen} options={{ presentation: 'modal' }} />
+      <Stack.Screen name="GroupChat" component={GroupChatScreen} options={{ presentation: 'modal' }} />
+      <Stack.Screen name="AudioCall" component={AudioCallScreen} options={{ presentation: 'fullScreenModal' }} />
+      <Stack.Screen name="VideoCall" component={VideoCallScreen} options={{ presentation: 'fullScreenModal' }} />
+      <Stack.Screen name="Camera" component={CameraScreen} options={{ presentation: 'fullScreenModal' }} />
+      <Stack.Screen name="QRScanner" component={QRScannerScreen} options={{ presentation: 'fullScreenModal' }} />
+      <Stack.Screen name="CreateGroup" component={CreateGroupScreen} options={{ presentation: 'modal' }} />
+      <Stack.Screen name="AddContact" component={AddContactScreen} options={{ presentation: 'modal' }} />
 
-      <Stack.Screen name="StudentSignup" component={StudentSignupScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="TeacherSignup" component={TeacherSignupScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} options={{ headerShown: false }} />
-
-      <Stack.Screen name="Profile" component={ProfileScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="Courses" component={CoursesScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="CourseDetails" component={CourseDetailsScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="Attendance" component={AttendanceScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="Help" component={HelpScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="StarredMessages" component={StarredMessagesScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="Settings" component={EnhancedSettingsScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="Gallery" component={GalleryScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="Terms" component={TermsScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="Privacy" component={PrivacyScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="AppInfo" component={AppInfoScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="Status" component={StatusScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="StudentSignup" component={StudentSignupScreen} />
+      <Stack.Screen name="TeacherSignup" component={TeacherSignupScreen} />
+      <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
+      <Stack.Screen name="Profile" component={ProfileScreen} />
+      <Stack.Screen name="Courses" component={CoursesScreen} />
+      <Stack.Screen name="CourseDetails" component={CourseDetailsScreen} />
+      <Stack.Screen name="Attendance" component={AttendanceScreen} />
+      <Stack.Screen name="Notifications" component={NotificationsScreen} />
+      <Stack.Screen name="Help" component={HelpScreen} />
+      <Stack.Screen name="StarredMessages" component={StarredMessagesScreen} />
+      <Stack.Screen name="Settings" component={EnhancedSettingsScreen} />
+      <Stack.Screen name="Gallery" component={GalleryScreen} />
+      <Stack.Screen name="Terms" component={TermsScreen} />
+      <Stack.Screen name="Privacy" component={PrivacyScreen} />
+      <Stack.Screen name="AppInfo" component={AppInfoScreen} />
+      <Stack.Screen name="Status" component={StatusScreen} />
     </Stack.Navigator>
   );
 };

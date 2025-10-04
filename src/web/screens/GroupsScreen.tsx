@@ -3,17 +3,17 @@ import { CompositeNavigationProp, useNavigation } from '@react-navigation/native
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useState } from 'react';
 import {
-    FlatList,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  FlatList,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import BackButton from '../components/BackButton';
-import LeftSidebarNav from '../navigation/LeftSidebarNav';
+import LeftSidebarNav from '../navigation/LeftSidebar';
 import { MainTabsParamList, RootStackParamList } from '../navigation/types';
 
 type GroupsNavigationProp = CompositeNavigationProp<

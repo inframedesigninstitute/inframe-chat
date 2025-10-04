@@ -2,9 +2,7 @@ export type RootStackParamList = {
   Login: undefined;
   AdvancedLogin: { emailPrefill?: string; admin?: boolean } | undefined;
   OtpVerification: { email: string };
-  
-  LeftSidebar:undefined;
-  
+  LeftSidebar: undefined;
   Chat: { channelId: string; channelName: string; recipientRole?: 'student' | 'faculty' | 'admin' };
   GroupChat: { groupId: string; groupName: string; isTeacher: boolean };
   AudioCall: { contactName: string; contactNumber: string };
@@ -28,7 +26,7 @@ export type RootStackParamList = {
   StarredMessages: undefined;
   Settings: undefined;
   Gallery: undefined;
-  Status:undefined;
+  Status: undefined;
 };
 
 export type MainTabsParamList = {
