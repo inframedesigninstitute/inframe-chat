@@ -269,6 +269,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fbfdfdff",
+    
   },
   header: {
     flexDirection: "row",
@@ -278,11 +279,13 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#e0e0e0",
     backgroundColor: "#fff",
+    
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: "600",
     color: "#075E54",
+
   },
   searchContainer: {
     flexDirection: "row",
@@ -293,6 +296,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 8,
+    
   },
   searchIcon: {
     marginRight: 12,

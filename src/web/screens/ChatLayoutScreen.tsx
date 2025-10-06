@@ -378,7 +378,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
   },
   leftSidebar: {
-    width: 60,
+    width: 90,
     backgroundColor: '#2c3e50',
     alignItems: 'center',
     paddingTop: 20,

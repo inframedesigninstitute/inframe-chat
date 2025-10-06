@@ -11,6 +11,8 @@ import {
   View
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import WebBackButton from '../components/WebBackButton';
+import LeftSidebarNav from '../navigation/LeftSidebar';
 import { MainTabsParamList, RootStackParamList } from '../navigation/types';
 
 type CallsNavigationProp = CompositeNavigationProp<
@@ -18,10 +20,10 @@ type CallsNavigationProp = CompositeNavigationProp<
   NativeStackNavigationProp<RootStackParamList>
 >;
 
-type Call = { 
-  id: string; 
-  name: string; 
-  time: string; 
+type Call = {
+  id: string;
+  name: string;
+  time: string;
   type: 'incoming' | 'outgoing' | 'missed';
   callType: 'voice' | 'video';
   duration?: string;
@@ -29,54 +31,54 @@ type Call = {
 };
 
 const initialCalls: Call[] = [
-  { 
-    id: '1', 
-    name: 'Richard', 
+  {
+    id: '1',
+    name: 'Richard',
     time: '06:38 PM',
     type: 'missed',
     callType: 'voice',
     duration: '0s',
     avatar: 'https://via.placeholder.com/40'
   },
-  { 
-    id: '2', 
-    name: 'Charlotte', 
+  {
+    id: '2',
+    name: 'Charlotte',
     time: '06:34 PM',
     type: 'incoming',
     callType: 'voice',
     duration: '0s',
     avatar: 'https://via.placeholder.com/40'
   },
-  { 
-    id: '3', 
-    name: 'Charlotte', 
+  {
+    id: '3',
+    name: 'Charlotte',
     time: '06:32 PM',
     type: 'missed',
     callType: 'voice',
     duration: '0s',
     avatar: 'https://via.placeholder.com/40'
   },
-  { 
-    id: '4', 
-    name: 'Richard', 
+  {
+    id: '4',
+    name: 'Richard',
     time: '06:37 PM',
     type: 'incoming',
     callType: 'voice',
     duration: '2:15',
     avatar: 'https://via.placeholder.com/40'
   },
-  { 
-    id: '5', 
-    name: 'Charlotte', 
+  {
+    id: '5',
+    name: 'Charlotte',
     time: '06:24 PM',
     type: 'missed',
     callType: 'voice',
     duration: '0s',
     avatar: 'https://via.placeholder.com/40'
   },
-  { 
-    id: '6', 
-    name: 'Charlotte', 
+  {
+    id: '6',
+    name: 'Charlotte',
     time: '06:08 PM',
     type: 'incoming',
     callType: 'voice',
@@ -96,33 +98,40 @@ const CallsScreen = () => {
 
   const handleAudioCall = () => {
     if (selectedCall) {
-      navigation.navigate('AudioCall', { 
-        contactName: selectedCall.name, 
-        contactNumber: selectedCall.id 
+      navigation.navigate('AudioCall', {
+        contactName: selectedCall.name,
+        contactNumber: selectedCall.id
       });
     }
   };
 
   const handleVideoCall = () => {
     if (selectedCall) {
-      navigation.navigate('VideoCall', { 
-        contactName: selectedCall.name, 
-        contactNumber: selectedCall.id 
+      navigation.navigate('VideoCall', {
+        contactName: selectedCall.name,
+        contactNumber: selectedCall.id
       });
     }
   };
 
   return (
     <View style={styles.container}>
-      {/* Left Panel - Calls List */}
+      {/* Left Sidebar */}
+      <View style={styles.leftSidebar}>
+        <LeftSidebarNav active={'Calls'} />
+      </View>
+
+      {/* Middle Panel - Calls List */}
       <View style={styles.callsList}>
         <View style={styles.callsHeader}>
+           <WebBackButton />
           <Text style={styles.callsTitle}>Calls</Text>
         </View>
 
         <FlatList
           data={calls}
           keyExtractor={(item) => item.id}
+          contentContainerStyle={{ paddingBottom: 10 }}
           renderItem={({ item }) => (
             <TouchableOpacity
               style={[
@@ -133,17 +142,19 @@ const CallsScreen = () => {
             >
               <Image source={{ uri: item.avatar }} style={styles.callAvatar} />
               <View style={styles.callInfo}>
-                <Text style={[
-                  styles.callName,
-                  item.type === 'missed' && styles.missedCallName
-                ]}>
+                <Text
+                  style={[
+                    styles.callName,
+                    item.type === 'missed' && styles.missedCallName
+                  ]}
+                >
                   {item.name}
                 </Text>
                 <View style={styles.callStatusRow}>
-                  <Ionicons 
-                    name={item.type === 'missed' ? 'call' : 'call-received'} 
-                    size={14} 
-                    color={item.type === 'missed' ? '#ff4444' : '#666'} 
+                  <Ionicons
+                    name={item.type === 'missed' ? 'call' : 'call-received'}
+                    size={14}
+                    color={item.type === 'missed' ? '#ff4444' : '#666'}
                   />
                   <Text style={styles.callStatus}>
                     {item.type === 'missed' ? 'Missed call' : 'Incoming call'}
@@ -166,26 +177,35 @@ const CallsScreen = () => {
         {selectedCall ? (
           <>
             {/* Header */}
-            <View style={styles.detailHeader}>
+            {/* <View style={styles.detailHeader}>
               <TouchableOpacity style={styles.backButton}>
                 <Ionicons name="arrow-back" size={20} color="#8e24aa" />
               </TouchableOpacity>
               <Text style={styles.detailTitle}>Call Detail</Text>
-            </View>
+            </View> */}
 
             {/* Contact Info */}
             <View style={styles.contactInfo}>
-              <Image source={{ uri: selectedCall.avatar }} style={styles.detailAvatar} />
+              <Image
+                source={{ uri: selectedCall.avatar }}
+                style={styles.detailAvatar}
+              />
               <Text style={styles.detailName}>{selectedCall.name}</Text>
             </View>
 
             {/* Action Buttons */}
             <View style={styles.actionButtons}>
-              <TouchableOpacity style={styles.actionButton} onPress={handleAudioCall}>
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={handleAudioCall}
+              >
                 <Ionicons name="call" size={20} color="#8e24aa" />
                 <Text style={styles.actionButtonText}>Audio call</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.actionButton} onPress={handleVideoCall}>
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={handleVideoCall}
+              >
                 <Ionicons name="videocam" size={20} color="#8e24aa" />
                 <Text style={styles.actionButtonText}>Video call</Text>
               </TouchableOpacity>
@@ -193,9 +213,14 @@ const CallsScreen = () => {
 
             {/* Call Log */}
             <View style={styles.callLog}>
-              <Text style={styles.logDate}>yesterday</Text>
+              <Text style={styles.logDate}>Yesterday</Text>
               <View style={styles.logEntry}>
-                <Text style={styles.logTime}>{selectedCall.time} {selectedCall.type === 'missed' ? 'Missed call' : 'Incoming call'}</Text>
+                <Text style={styles.logTime}>
+                  {selectedCall.time}{' '}
+                  {selectedCall.type === 'missed'
+                    ? 'Missed call'
+                    : 'Incoming call'}
+                </Text>
                 <Text style={styles.logDuration}>{selectedCall.duration}</Text>
               </View>
             </View>
@@ -205,7 +230,7 @@ const CallsScreen = () => {
               <TouchableOpacity style={styles.expandableSection}>
                 <Text style={styles.sectionText}>Participants</Text>
                 <Text style={styles.sectionValue}>2 {">"}</Text>
-                </TouchableOpacity>
+              </TouchableOpacity>
               <TouchableOpacity style={styles.expandableSection}>
                 <Text style={styles.sectionText}>History</Text>
                 <Ionicons name="chevron-forward" size={16} color="#666" />
@@ -214,7 +239,9 @@ const CallsScreen = () => {
           </>
         ) : (
           <View style={styles.emptyDetail}>
-            <Text style={styles.emptyDetailText}>Select a call to view details</Text>
+            <Text style={styles.emptyDetailText}>
+              Select a call to view details
+            </Text>
           </View>
         )}
       </View>
@@ -225,156 +252,171 @@ const CallsScreen = () => {
 export default CallsScreen;
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
+  container: {
+    flex: 1,
     flexDirection: 'row',
     backgroundColor: '#f5f5f5',
+    alignItems: 'stretch'
   },
-  callsList: {
-    width: '35%',
+  leftSidebar: {
+ 
+   
     backgroundColor: '#fff',
     borderRightWidth: 1,
-    borderRightColor: '#e0e0e0',
+    borderRightColor: '#e0e0e0'
+  },
+  callsList: {
+    width: 600,
+    maxWidth: 450,
+    minWidth: 260,
+    backgroundColor: '#fff',
+    borderRightWidth: 1,
+    borderRightColor: '#e0e0e0'
   },
   callsHeader: {
     padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
+    marginTop: 0
   },
   callsTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#000000ff',
+    alignSelf:'center',
+    marginTop:-35,
+    marginRight:280
+
   },
   callItem: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: '#f0f0f0'
   },
   selectedCallItem: {
-    backgroundColor: '#e1bee7',
+    backgroundColor: '#e1bee7'
   },
   callAvatar: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    marginRight: 12,
+    marginRight: 12
   },
   callInfo: {
-    flex: 1,
+    flex: 1
   },
   callName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
-    marginBottom: 4,
+    color: '#000000ff',
+    marginBottom: 4
   },
   missedCallName: {
-    color: '#ff4444',
+    color: '#000000ff'
   },
   callStatusRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'center'
   },
   callStatus: {
     fontSize: 12,
-    color: '#666',
-    marginLeft: 4,
+    color: '#000000ff',
+    marginLeft: 4
   },
   callMeta: {
-    alignItems: 'flex-end',
+    alignItems: 'flex-end'
   },
   callTime: {
     fontSize: 12,
-    color: '#666',
-    marginBottom: 4,
+    color: '#000000ff',
+    marginBottom: 4
   },
   infoButton: {
-    padding: 4,
+    padding: 4
   },
   callDetail: {
     flex: 1,
-    backgroundColor: '#e1bee7',
+    backgroundColor: '#f1f1f1ff'
   },
   detailHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#d1c4e9',
+    borderBottomColor: '#fdfdfdff'
   },
   backButton: {
-    marginRight: 12,
+    marginRight: 12
   },
   detailTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#000000ff'
   },
   contactInfo: {
     alignItems: 'center',
-    padding: 32,
+    padding: 32
   },
   detailAvatar: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    marginBottom: 16,
+    marginBottom: 16
   },
   detailName: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#8e24aa',
+    color: '#000000ff'
   },
   actionButtons: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     paddingHorizontal: 32,
-    marginBottom: 32,
+    marginBottom: 32
   },
   actionButton: {
-    backgroundColor: '#e1bee7',
+    backgroundColor: '#ffffffff',
     borderRadius: 8,
     paddingVertical: 12,
     paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
     minWidth: 120,
-    justifyContent: 'center',
+    justifyContent: 'center'
   },
   actionButtonText: {
     fontSize: 14,
-    color: '#8e24aa',
+    color: '#000000ff',
     marginLeft: 8,
-    fontWeight: '500',
+    fontWeight: '500'
   },
   callLog: {
     paddingHorizontal: 32,
-    marginBottom: 32,
+    marginBottom: 32
   },
   logDate: {
     fontSize: 14,
-    color: '#666',
-    marginBottom: 8,
+    color: '#000000ff',
+    marginBottom: 8
   },
   logEntry: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 8
   },
   logTime: {
     fontSize: 14,
-    color: '#666',
+    color: '#000000ff'
   },
   logDuration: {
     fontSize: 14,
-    color: '#666',
+    color: '#000000ff'
   },
   expandableSections: {
-    paddingHorizontal: 32,
+    paddingHorizontal: 32
   },
   expandableSection: {
     flexDirection: 'row',
@@ -382,24 +424,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#d1c4e9',
+    borderBottomColor: '#d1c4e9'
   },
   sectionText: {
     fontSize: 16,
-    color: '#333',
-    fontWeight: '500',
+    color: '#000000ff',
+    fontWeight: '500'
   },
   sectionValue: {
     fontSize: 16,
-    color: '#666',
+    color: '#000000ff'
   },
   emptyDetail: {
     flex: 1,
     justifyContent: 'center',
-    alignItems: 'center',
+    alignItems: 'center'
   },
   emptyDetailText: {
     fontSize: 16,
-    color: '#666',
-  },
+    color: '#000000ff'
+  }
 });

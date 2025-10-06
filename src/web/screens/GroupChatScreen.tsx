@@ -1,22 +1,16 @@
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  SafeAreaView,
-  TouchableOpacity,
-  TextInput,
-  FlatList,
   Alert,
+  FlatList,
   Modal,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { RootStackParamList } from '../navigation/types';
-
-type GroupChatScreenRouteProp = RouteProp<RootStackParamList, 'GroupChat'>;
-type GroupChatScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'GroupChat'>;
 
 type Message = {
   id: string;
@@ -26,11 +20,13 @@ type Message = {
   isTeacherMessage: boolean;
 };
 
-const GroupChatScreen = () => {
-  const navigation = useNavigation<GroupChatScreenNavigationProp>();
-  const route = useRoute<GroupChatScreenRouteProp>();
-  const { groupId, groupName, isTeacher } = route.params;
+type GroupChatScreenProps = {
+  groupId: string;
+  groupName: string;
+  isTeacher: boolean;
+};
 
+const GroupChatScreen = ({ groupId, groupName, isTeacher }: GroupChatScreenProps) => {
   const [messages, setMessages] = useState<Message[]>([
     { id: '1', text: 'Hello everyone! Welcome to the group.', sender: 'Teacher', timestamp: '10:00 AM', isTeacherMessage: true },
     { id: '2', text: 'Hi Teacher!', sender: 'Student A', timestamp: '10:01 AM', isTeacherMessage: false },
@@ -49,7 +45,7 @@ const GroupChatScreen = () => {
       const message: Message = {
         id: String(messages.length + 1),
         text: newMessage.trim(),
-        sender: 'Teacher', // Assuming current user is teacher if sending
+        sender: 'Teacher',
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         isTeacherMessage: true,
       };
@@ -80,21 +76,17 @@ const GroupChatScreen = () => {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#000" />
-        </TouchableOpacity>
         <Text style={styles.groupName}>{groupName}</Text>
         {isTeacher && (
           <TouchableOpacity onPress={handleAddMember} style={styles.addMemberButton}>
             <Ionicons name="person-add" size={24} color="#075E54" />
           </TouchableOpacity>
         )}
-        {!isTeacher && <View style={styles.addMemberButtonPlaceholder} />}
       </View>
 
       {/* Messages List */}
       <FlatList
-        data={messages}
+        data={messages.slice().reverse()}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <View style={[
@@ -118,12 +110,12 @@ const GroupChatScreen = () => {
           placeholderTextColor="#999"
           value={newMessage}
           onChangeText={setNewMessage}
-          editable={isTeacher} // Only editable by teacher
+          editable={isTeacher}
         />
         <TouchableOpacity
           style={[styles.sendButton, !isTeacher && styles.sendButtonDisabled]}
           onPress={handleSendMessage}
-          disabled={!isTeacher} // Only enabled for teacher
+          disabled={!isTeacher}
         >
           <Ionicons name="send" size={24} color="#fff" />
         </TouchableOpacity>
@@ -170,10 +162,7 @@ const GroupChatScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
+  container: { flex: 1, backgroundColor: '#f5f5f5' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -184,138 +173,28 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
-  backButton: {
-    padding: 8,
-  },
-  groupName: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000',
-    flex: 1,
-    textAlign: 'center',
-  },
-  addMemberButton: {
-    padding: 8,
-  },
-  addMemberButtonPlaceholder: {
-    width: 40,
-  },
-  messagesList: {
-    flex: 1,
-    paddingHorizontal: 16,
-  },
-  messageBubble: {
-    maxWidth: '80%',
-    padding: 12,
-    marginVertical: 4,
-    borderRadius: 12,
-  },
-  teacherMessage: {
-    alignSelf: 'flex-end',
-    backgroundColor: '#075E54',
-  },
-  studentMessage: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  messageSender: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginBottom: 4,
-    color: '#666',
-  },
-  messageText: {
-    fontSize: 16,
-    marginBottom: 4,
-    color: '#000',
-  },
-  messageTimestamp: {
-    fontSize: 11,
-    color: '#999',
-    alignSelf: 'flex-end',
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-  },
-  textInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    marginRight: 12,
-    fontSize: 16,
-    backgroundColor: '#f5f5f5',
-  },
-  sendButton: {
-    backgroundColor: '#075E54',
-    borderRadius: 20,
-    padding: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  sendButtonDisabled: {
-    backgroundColor: '#ccc',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 20,
-    width: '80%',
-    maxWidth: 300,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  modalInput: {
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16,
-    marginBottom: 20,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  modalButton: {
-    flex: 0.45,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  modalCancelButton: {
-    backgroundColor: '#f0f0f0',
-  },
-  modalConfirmButton: {
-    backgroundColor: '#075E54',
-  },
-  modalButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000',
-  },
+  groupName: { fontSize: 18, fontWeight: '600', color: '#000', flex: 1, textAlign: 'center' },
+  addMemberButton: { padding: 8 },
+  messagesList: { flex: 1, paddingHorizontal: 16 },
+  messageBubble: { maxWidth: '80%', padding: 12, marginVertical: 4, borderRadius: 12 },
+  teacherMessage: { alignSelf: 'flex-end', backgroundColor: '#075E54' },
+  studentMessage: { alignSelf: 'flex-start', backgroundColor: '#fff', borderWidth: 1, borderColor: '#e0e0e0' },
+  messageSender: { fontSize: 12, fontWeight: '600', marginBottom: 4, color: '#666' },
+  messageText: { fontSize: 16, marginBottom: 4, color: '#000' },
+  messageTimestamp: { fontSize: 11, color: '#999', alignSelf: 'flex-end' },
+  inputContainer: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#e0e0e0' },
+  textInput: { flex: 1, borderWidth: 1, borderColor: '#e0e0e0', borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10, marginRight: 12, fontSize: 16, backgroundColor: '#f5f5f5' },
+  sendButton: { backgroundColor: '#075E54', borderRadius: 20, padding: 10, justifyContent: 'center', alignItems: 'center' },
+  sendButtonDisabled: { backgroundColor: '#ccc' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.5)', justifyContent: 'center', alignItems: 'center' },
+  modalContent: { backgroundColor: '#fff', borderRadius: 12, padding: 20, width: '80%', maxWidth: 300 },
+  modalTitle: { fontSize: 18, fontWeight: '600', color: '#000', marginBottom: 16, textAlign: 'center' },
+  modalInput: { borderWidth: 1, borderColor: '#e0e0e0', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 16, marginBottom: 20 },
+  modalButtons: { flexDirection: 'row', justifyContent: 'space-between' },
+  modalButton: { flex: 0.45, paddingVertical: 12, borderRadius: 8, alignItems: 'center' },
+  modalCancelButton: { backgroundColor: '#f0f0f0' },
+  modalConfirmButton: { backgroundColor: '#075E54' },
+  modalButtonText: { fontSize: 16, fontWeight: '600', color: '#000' },
 });
 
 export default GroupChatScreen;

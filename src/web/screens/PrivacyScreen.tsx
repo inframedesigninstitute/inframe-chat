@@ -1,9 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
+import { SafeAreaView, ScrollView, StyleSheet, Text } from 'react-native';
+import WebBackButton from '../components/WebBackButton';
 
 export default function PrivacyScreen() {
   return (
     <SafeAreaView style={styles.container}>
+       <WebBackButton />
       <ScrollView contentContainerStyle={{ padding: 16 }}>
         <Text style={styles.title}>Privacy Policy</Text>
         <Text style={styles.text}>This is a sample privacy policy describing how data is used.</Text>

@@ -43,7 +43,7 @@ const LeftSidebarNav = ({ active }: { active: NavKey }) => {
               <Ionicons
                 name={item.icon as any}
                 size={22}
-                color={active === item.key ? '#fff' : '#fff'}
+                color={active === item.key ? '#000000ff' : '#000000ff'}
               />
 
               {/* Chats badge */}
@@ -70,9 +70,11 @@ const LeftSidebarNav = ({ active }: { active: NavKey }) => {
 
 const styles = StyleSheet.create({
   leftSidebar: {
-    width: 60,
-    backgroundColor: '#2c3e50',
+    width: 90,
+    backgroundColor: '#ffffffff',
     alignItems: 'center',
+    alignSelf:"center",
+    height:"100%"
   },
   topSpace: { height: 16 },
   bottomSpace: { height: 16 },
@@ -90,21 +92,21 @@ const styles = StyleSheet.create({
     minWidth: 50,
   },
   activeNavIcon: {
-    backgroundColor: '#3498db',
+    backgroundColor: '#f1e9e9de',
   },
   navLabel: {
     fontSize: 10,
-    color: '#fff',
+    color: '#000000ff',
     marginTop: 4,
     textAlign: 'center',
   },
-  activeNavLabel: { color: '#fff' },
+  activeNavLabel: { color: '#000000ff' },
 
   badge: {
     position: 'absolute',
     top: -6,
     right: -10,
-    backgroundColor: '#522727ff',
+    backgroundColor: '#d3d1d1ff',
     borderRadius: 10,
     minWidth: 18,
     height: 18,
@@ -113,7 +115,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   badgeText: {
-    color: '#fff',
+    color: '#000000ff',
     fontSize: 9,
     fontWeight: 'bold',
   },
