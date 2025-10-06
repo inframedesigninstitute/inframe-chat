@@ -20,6 +20,7 @@ import WebBackButton from "../components/WebBackButton"
 import { useUser } from "../context/UserContext"
 import LeftSidebarNav from "../navigation/LeftSidebar"
 import type { RootStackParamList } from "../navigation/types"
+import CalendarScreen from "./CalendarScreen"
 import CoursesScreen from "./CoursesScreen"
 import HelpScreen from "./HelpScreen"
 import NotificationsScreen from "./NotificationsScreen"
@@ -114,18 +115,10 @@ const EnhancedSettingsScreen = () => {
             <Text style={styles.detailContent}>Keyboard shortcuts coming soon.</Text>
           </View>
         )
-      case "Background Picture":
-        return (
-          <View style={styles.emptyDetail}>
-            <Text style={styles.detailContent}>Background customization coming soon.</Text>
-          </View>
-        )
-      case "ERP Panel":
-        return (
-          <View style={styles.emptyDetail}>
-            <Text style={styles.detailContent}>ERP panel integration coming soon.</Text>
-          </View>
-        )
+      case "Calendar":
+        return <CalendarScreen />
+      case "Starred":
+        return <StarredMessagesScreen/>
       case "Alumnus App":
         return (
           <View style={styles.emptyDetail}>
@@ -148,7 +141,6 @@ const EnhancedSettingsScreen = () => {
         )
       case "My Couses":
         return <CoursesScreen />
-
       default:
         return (
           <View style={styles.emptyDetail}>
@@ -219,8 +211,8 @@ const EnhancedSettingsScreen = () => {
             <SettingItem icon="keypad" title="Keyboard shortcuts" subtitle="Quick actions" />
             <SettingItem icon="help-circle" title="Help" subtitle="Help center, contact us, privacy policy" />
             <SettingItem icon="star" title="Starred Messages" subtitle="Important messages you've starred" />
-            <SettingItem icon="image" title="Background Picture" subtitle="Customize your chat background" />
-            <SettingItem icon="desktop" title="ERP Panel" subtitle="Connect to institutional ERP system" />
+            <SettingItem icon="calendar" title="Calendar" subtitle="View and manage your schedule" />
+            <SettingItem icon="Starred" title="Starred" subtitle="Connect to institutional ERP system" />
             <SettingItem icon="people-circle" title="Alumnus App" subtitle="Connect with alumni network" />
             {user?.role === "admin" && (
               <SettingItem icon="settings" title="Admin Dashboard" subtitle="Manage approvals & settings" />
@@ -259,6 +251,7 @@ const EnhancedSettingsScreen = () => {
     </View>
   )
 }
+
 
 const styles = StyleSheet.create({
   container: {

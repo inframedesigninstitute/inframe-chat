@@ -1,119 +1,61 @@
-import React, { useState } from 'react';
+import { useNavigation } from "@react-navigation/native";
+import React from "react";
 import {
-  View,
-  Text,
-  FlatList,
-  TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
   Alert,
-} from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import Ionicons from 'react-native-vector-icons/Ionicons';
-
-interface StarredMessage {
-  id: string;
-  text: string;
-  senderName: string;
-  timestamp: Date;
-  chatName: string;
-  type: 'text' | 'file' | 'image';
-}
+  FlatList,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import Ionicons from "react-native-vector-icons/Ionicons";
+import { StarredMessage, useStarredMessages } from "../context/StarredMessagesContext";
 
 const StarredMessagesScreen = () => {
   const navigation = useNavigation();
-  
-  const [starredMessages] = useState<StarredMessage[]>([
-    {
-      id: '1',
-      text: 'Important assignment deadline is tomorrow at 11:59 PM',
-      senderName: 'Dr. Sharma',
-      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-      chatName: 'Computer Science Class',
-      type: 'text',
-    },
-    {
-      id: '2',
-      text: 'Meeting scheduled for project discussion on Friday 3 PM',
-      senderName: 'Prof. Gupta',
-      timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000),
-      chatName: 'Research Group',
-      type: 'text',
-    },
-    {
-      id: '3',
-      text: 'Lab report template attached. Please follow this format.',
-      senderName: 'Dr. Patel',
-      timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
-      chatName: 'Physics Lab',
-      type: 'file',
-    },
-  ]);
+  const { starredMessages, removeStarredMessage } = useStarredMessages();
 
   const formatTimestamp = (date: Date) => {
     const now = new Date();
     const diffInDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
-    
-    if (diffInDays === 0) return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    if (diffInDays === 1) return 'Yesterday';
-    if (diffInDays < 7) return date.toLocaleDateString([], { weekday: 'long' });
-    return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    if (diffInDays === 0) return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    if (diffInDays === 1) return "Yesterday";
+    if (diffInDays < 7) return date.toLocaleDateString([], { weekday: "long" });
+    return date.toLocaleDateString([], { month: "short", day: "numeric" });
   };
 
   const handleUnstar = (messageId: string) => {
-    Alert.alert(
-      'Remove Star',
-      'Remove this message from starred messages?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Remove', onPress: () => console.log('Unstar:', messageId) },
-      ]
-    );
+    removeStarredMessage(messageId);
   };
 
   const handleMessagePress = (message: StarredMessage) => {
     Alert.alert(
-      'Navigate to Chat',
+      "Navigate to Chat",
       `Go to ${message.chatName} chat?`,
       [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Go', onPress: () => console.log('Navigate to:', message.chatName) },
+        { text: "Cancel", style: "cancel" },
+        { text: "Go", onPress: () => console.log("Navigate to:", message.chatName) },
       ]
     );
   };
 
   const renderStarredMessage = ({ item }: { item: StarredMessage }) => (
-    <TouchableOpacity
-      style={styles.messageItem}
-      onPress={() => handleMessagePress(item)}
-    >
+    <TouchableOpacity style={styles.messageItem} onPress={() => handleMessagePress(item)}>
       <View style={styles.messageHeader}>
-        <View style={styles.senderInfo}>
+        <View>
           <Text style={styles.senderName}>{item.senderName}</Text>
           <Text style={styles.chatName}>{item.chatName}</Text>
         </View>
         <View style={styles.messageActions}>
           <Text style={styles.timestamp}>{formatTimestamp(item.timestamp)}</Text>
-          <TouchableOpacity
-            style={styles.unstarButton}
-            onPress={() => handleUnstar(item.id)}
-          >
+          <TouchableOpacity style={styles.unstarButton} onPress={() => handleUnstar(item.id)}>
             <Ionicons name="star" size={16} color="#FFD700" />
           </TouchableOpacity>
         </View>
       </View>
-      
+
       <View style={styles.messageContent}>
-        {item.type === 'file' && (
-          <View style={styles.fileIndicator}>
-            <Ionicons name="document" size={16} color="#075E54" />
-          </View>
-        )}
-        {item.type === 'image' && (
-          <View style={styles.fileIndicator}>
-            <Ionicons name="image" size={16} color="#075E54" />
-          </View>
-        )}
         <Text style={styles.messageText} numberOfLines={2}>
           {item.text}
         </Text>
@@ -135,9 +77,6 @@ const StarredMessagesScreen = () => {
         <View style={styles.emptyState}>
           <Ionicons name="star-outline" size={64} color="#ccc" />
           <Text style={styles.emptyStateText}>No starred messages</Text>
-          <Text style={styles.emptyStateSubtext}>
-            Star important messages to find them easily later
-          </Text>
         </View>
       ) : (
         <FlatList
@@ -145,112 +84,97 @@ const StarredMessagesScreen = () => {
           renderItem={renderStarredMessage}
           keyExtractor={(item) => item.id}
           style={styles.messagesList}
-          showsVerticalScrollIndicator={false}
         />
       )}
     </SafeAreaView>
   );
 };
 
+export default StarredMessagesScreen;
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: "#f5f5f5",
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: "#e0e0e0",
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#075E54',
+    fontWeight: "600",
+    color: "#075E54",
   },
   messagesList: {
     flex: 1,
     padding: 16,
   },
   messageItem: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 8,
     padding: 12,
     marginBottom: 12,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
   },
   messageHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
     marginBottom: 8,
-  },
-  senderInfo: {
-    flex: 1,
   },
   senderName: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#075E54',
+    fontWeight: "600",
+    color: "#075E54",
   },
   chatName: {
     fontSize: 12,
-    color: '#666',
+    color: "#666",
     marginTop: 2,
   },
   messageActions: {
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
   },
   timestamp: {
     fontSize: 11,
-    color: '#999',
+    color: "#999",
     marginBottom: 4,
   },
   unstarButton: {
     padding: 4,
   },
   messageContent: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  fileIndicator: {
-    marginRight: 8,
-    marginTop: 2,
+    flexDirection: "row",
+    alignItems: "flex-start",
   },
   messageText: {
     fontSize: 14,
-    color: '#000',
+    color: "#000",
     lineHeight: 20,
     flex: 1,
   },
   emptyState: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingHorizontal: 32,
   },
   emptyStateText: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#666',
+    fontWeight: "600",
+    color: "#666",
     marginTop: 16,
-    textAlign: 'center',
-  },
-  emptyStateSubtext: {
-    fontSize: 14,
-    color: '#999',
-    marginTop: 8,
-    textAlign: 'center',
-    lineHeight: 20,
+    textAlign: "center",
   },
 });
-
-export default StarredMessagesScreen;

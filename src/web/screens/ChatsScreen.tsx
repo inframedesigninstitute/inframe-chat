@@ -10,7 +10,6 @@ import MaterialIcons from "react-native-vector-icons/MaterialIcons"
 import ChannelItemWithLongPress from "../components/ChannelItemWithLongPress"
 import ChatThread from "../components/ChatThread"
 import MainLayout from "../components/MainLayout"
-import MarqueeText from "../components/MarqueeText"
 import TopTabNavigation from "../components/TopTabNavigation"
 import WebBackButton from "../components/WebBackButton"
 import type { MainTabsParamList, RootStackParamList } from "../navigation/types"
@@ -213,12 +212,12 @@ const ChatsScreen = () => {
               </TouchableOpacity>
             </View>
 
-            <MarqueeText
+            {/* <MarqueeText
               text="Chatting with - Send messages, share files, and stay connected!"
               speed={80}
               textStyle={{ color: "#2e7d32", fontSize: 10, fontWeight: "500" }}
               containerStyle={{ backgroundColor: "#e8f5e8", marginVertical: 4 }}
-            />
+            /> */}
 
             <TopTabNavigation onTabChange={handleTabChange} />
 
@@ -279,13 +278,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#e0e0e0",
     backgroundColor: "#fff",
-    
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: "600",
     color: "#075E54",
-
+    
   },
   searchContainer: {
     flexDirection: "row",
@@ -296,7 +294,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 8,
-    
   },
   searchIcon: {
     marginRight: 12,
@@ -320,8 +317,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
   },
   listColumn: {
-    width: 300, // narrower list like the reference
-    maxWidth: 360,
+    width: 600,
+    maxWidth: 450,
     minWidth: 260,
     borderRightWidth: 1,
     borderRightColor: "#e5e7eb",

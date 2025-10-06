@@ -176,14 +176,6 @@ const CallsScreen = () => {
       <View style={styles.callDetail}>
         {selectedCall ? (
           <>
-            {/* Header */}
-            {/* <View style={styles.detailHeader}>
-              <TouchableOpacity style={styles.backButton}>
-                <Ionicons name="arrow-back" size={20} color="#8e24aa" />
-              </TouchableOpacity>
-              <Text style={styles.detailTitle}>Call Detail</Text>
-            </View> */}
-
             {/* Contact Info */}
             <View style={styles.contactInfo}>
               <Image
@@ -239,6 +231,9 @@ const CallsScreen = () => {
           </>
         ) : (
           <View style={styles.emptyDetail}>
+            <Image
+                              source={{ uri: 'https://cdn-icons-png.flaticon.com/512/893/893292.png' }}
+                            />
             <Text style={styles.emptyDetailText}>
               Select a call to view details
             </Text>
@@ -338,7 +333,7 @@ const styles = StyleSheet.create({
   },
   callDetail: {
     flex: 1,
-    backgroundColor: '#f1f1f1ff'
+    backgroundColor: '#ffffffff'
   },
   detailHeader: {
     flexDirection: 'row',

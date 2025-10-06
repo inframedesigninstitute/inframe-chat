@@ -7,7 +7,8 @@ import AppInfoScreen from '../screens/AppInfoScreen';
 import AttendanceScreen from '../screens/AttendanceScreen';
 import AudioCallScreen from '../screens/AudioCallScreen';
 import CameraScreen from '../screens/CameraScreen';
-import ChatLayoutScreen from '../screens/ChatLayoutScreen';
+// import ChatLayoutScreen from '../screens/ChatLayoutScreen';
+import CalendarScreen from '../screens/CalendarScreen';
 import ChatScreen from '../screens/ChatScreen';
 import CourseDetailsScreen from '../screens/CourseDetailsScreen';
 import CoursesScreen from '../screens/CoursesScreen';
@@ -30,7 +31,6 @@ import TermsScreen from '../screens/TermsScreen';
 import VideoCallScreen from '../screens/VideoCallScreen';
 import MainTabs from './MainTabs';
 import { RootStackParamList } from './types';
-
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const RootNavigator = () => {
@@ -42,7 +42,7 @@ const RootNavigator = () => {
 
       {/* Main App with Tabs */}
       <Stack.Screen name="MainTabs" component={MainTabs} />
-      <Stack.Screen name="ChatLayout" component={ChatLayoutScreen} />
+      {/* <Stack.Screen name="ChatLayout" component={ChatLayoutScreen} /> */}
 
       <Stack.Screen name="Chat" component={ChatScreen} options={{ presentation: 'modal' }} />
       <Stack.Screen name="GroupChat" component={GroupChatScreen} options={{ presentation: 'modal' }} />
@@ -52,7 +52,7 @@ const RootNavigator = () => {
       <Stack.Screen name="QRScanner" component={QRScannerScreen} options={{ presentation: 'fullScreenModal' }} />
       <Stack.Screen name="CreateGroup" component={CreateGroupScreen} options={{ presentation: 'modal' }} />
       <Stack.Screen name="AddContact" component={AddContactScreen} options={{ presentation: 'modal' }} />
-
+      <Stack.Screen name="Calendar" component={CalendarScreen} />
       <Stack.Screen name="StudentSignup" component={StudentSignupScreen} />
       <Stack.Screen name="TeacherSignup" component={TeacherSignupScreen} />
       <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
