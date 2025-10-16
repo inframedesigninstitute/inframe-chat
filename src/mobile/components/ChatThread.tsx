@@ -5,30 +5,30 @@ import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useState } from 'react';
 import {
-    Alert,
-    Dimensions,
-    FlatList,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  Alert,
+  Dimensions,
+  FlatList,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { openDocumentPicker } from "../components/DocumentPicker";
+import { openGallery } from "../components/GalleryPicker";
+import LocationModal from '../components/LocationModal';
+import MarqueeText from '../components/MarqueeText';
 import { useStarredMessages } from "../context/StarredMessagesContext";
 import { RootStackParamList } from '../navigation/types';
 import BackButton from './BackButton';
-import { openDocumentPicker } from "./DocumentPicker";
-import { openGallery } from "./GalleryPicker";
-import LocationModal from './LocationModal';
-import MarqueeText from './MarqueeText';
 import MessageOptionsModal from './MessageOptionsModal';
-import QuizPollModal from "./QuizPollModal"; // correct path use karo
+import QuizPollModal from "./QuizPollModal";
 
 const { width } = Dimensions.get('window');
 

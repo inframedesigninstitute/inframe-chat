@@ -13,7 +13,6 @@ import {
 } from 'react-native';
 import { RootStackParamList } from '../navigation/types';
 
-
 type StudentSignupScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
   'StudentSignup'
@@ -38,22 +37,11 @@ const StudentSignupScreen = () => {
   };
 
   const validateForm = () => {
-    if (!formData.name.trim()) {
-      Alert.alert('Error', 'Name is required');
-      return false;
-    }
-    if (!formData.fatherName.trim()) {
-      Alert.alert('Error', 'Father Name is required');
-      return false;
-    }
-    if (!formData.batch.trim()) {
-      Alert.alert('Error', 'Batch is required');
-      return false;
-    }
-    if (!formData.courseName.trim()) {
-      Alert.alert('Error', 'Course Name is required');
-      return false;
-    }
+    if (!formData.name.trim()) return Alert.alert('Error', 'Name is required');
+    if (!formData.fatherName.trim()) return Alert.alert('Error', 'Father Name is required');
+    if (!formData.batch.trim()) return Alert.alert('Error', 'Batch is required');
+    if (!formData.courseName.trim()) return Alert.alert('Error', 'Course Name is required');
+    if (!formData.department.trim()) return Alert.alert('Error', 'Gender is required');
     return true;
   };
 
@@ -62,21 +50,34 @@ const StudentSignupScreen = () => {
 
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise<void>(resolve => setTimeout(() => resolve(), 1000));
+      const response = await fetch('http://localhost:5200/web/student/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
 
-      Alert.alert(
-        'Registration Successful',
-        'Your registration has been completed. Admin will approve your account soon. Please proceed to login.',
-        [
-          {
-            text: 'OK',
-            onPress: () => navigation.navigate('Login'),
-          },
-        ]
-      );
-    } catch (error) {
-      Alert.alert('Error', 'Failed to submit. Please try again.');
+      const result = await response.json();
+
+      if (response.ok) {
+        Alert.alert(
+          'Registration Successful',
+          result?.message ||
+            'Your registration has been completed. Admin will approve your account soon. Please proceed to login.',
+          [
+            {
+              text: 'OK',
+              onPress: () => navigation.navigate('Login'),
+            },
+          ]
+        );
+      } else {
+        Alert.alert('Error', result?.message || 'Failed to register. Please try again.');
+      }
+    } catch (error: any) {
+      console.error(error);
+      Alert.alert('Error', 'Something went wrong. Please check your network or try again.');
     } finally {
       setLoading(false);
     }
@@ -84,9 +85,6 @@ const StudentSignupScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
-      {/*  */}
-
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.formContainer}>
           <Text style={styles.formTitle}>Student Registration</Text>
@@ -101,7 +99,6 @@ const StudentSignupScreen = () => {
               placeholder="Enter your full name"
               value={formData.name}
               onChangeText={value => handleInputChange('name', value)}
-              autoCapitalize="words"
             />
           </View>
 
@@ -112,7 +109,6 @@ const StudentSignupScreen = () => {
               placeholder="Enter your father's name"
               value={formData.fatherName}
               onChangeText={value => handleInputChange('fatherName', value)}
-              autoCapitalize="words"
             />
           </View>
 
@@ -120,7 +116,7 @@ const StudentSignupScreen = () => {
             <Text style={styles.label}>Batch *</Text>
             <TextInput
               style={styles.input}
-              placeholder="e.g., 2024, 2023, etc."
+              placeholder="e.g., 2024, 2023"
               value={formData.batch}
               onChangeText={value => handleInputChange('batch', value)}
               keyboardType="numeric"
@@ -131,20 +127,19 @@ const StudentSignupScreen = () => {
             <Text style={styles.label}>Course Name *</Text>
             <TextInput
               style={styles.input}
-              placeholder="e.g., Computer Science, Engineering, etc."
+              placeholder="e.g., Computer Science"
               value={formData.courseName}
               onChangeText={value => handleInputChange('courseName', value)}
-              autoCapitalize="words"
             />
           </View>
+
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Gender *</Text>
             <TextInput
               style={styles.input}
-              placeholder="e.g., male, female, etc."
+              placeholder="e.g., Male, Female"
               value={formData.department}
               onChangeText={value => handleInputChange('department', value)}
-              autoCapitalize="words"
             />
           </View>
 
@@ -164,20 +159,8 @@ const StudentSignupScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff', marginTop:35 ,marginBottom:150},
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 0.5,
-    borderBottomColor: '#e0e0e0',
-  },
-  backButton: { padding: 4 },
-  headerTitle: { fontSize: 18, fontWeight: '600', color: '#000' },
-  placeholder: { width: 32 },
-  content: { flex: 1, marginTop:-39 },
+  container: { flex: 1, backgroundColor: '#fff', marginTop: 3, marginBottom: 190 },
+  content: { flex: 1, marginTop: -39 },
   formContainer: { padding: 20 },
   formTitle: { fontSize: 24, fontWeight: 'bold', color: '#000', textAlign: 'center', marginBottom: 8 },
   formSubtitle: { fontSize: 16, color: '#666', textAlign: 'center', marginBottom: 32 },

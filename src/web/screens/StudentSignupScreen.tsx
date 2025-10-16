@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useState } from 'react';
@@ -13,7 +14,6 @@ import {
 } from 'react-native';
 import { RootStackParamList } from '../navigation/types';
 
-
 type StudentSignupScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
   'StudentSignup'
@@ -22,11 +22,12 @@ type StudentSignupScreenNavigationProp = NativeStackNavigationProp<
 const StudentSignupScreen = () => {
   const navigation = useNavigation<StudentSignupScreenNavigationProp>();
   const [formData, setFormData] = useState({
-    name: '',
-    fatherName: '',
-    batch: '',
-    courseName: '',
-    department: '',
+    studentName: '',
+    studentFatherName: '',
+    studentEmail: '',
+    studentBatch: '',
+    studentDepartment: '',
+    studentGender: '',
   });
   const [loading, setLoading] = useState(false);
 
@@ -38,22 +39,11 @@ const StudentSignupScreen = () => {
   };
 
   const validateForm = () => {
-    if (!formData.name.trim()) {
-      Alert.alert('Error', 'Name is required');
-      return false;
-    }
-    if (!formData.fatherName.trim()) {
-      Alert.alert('Error', 'Father Name is required');
-      return false;
-    }
-    if (!formData.batch.trim()) {
-      Alert.alert('Error', 'Batch is required');
-      return false;
-    }
-    if (!formData.courseName.trim()) {
-      Alert.alert('Error', 'Course Name is required');
-      return false;
-    }
+    if (!formData.studentName.trim()) return Alert.alert('Error', 'Name is required');
+    if (!formData.studentFatherName.trim()) return Alert.alert('Error', 'Father Name is required');
+    if (!formData.studentBatch.trim()) return Alert.alert('Error', 'Batch is required');
+    if (!formData.studentDepartment.trim()) return Alert.alert('Error', 'Course Name is required');
+    if (!formData.studentGender.trim()) return Alert.alert('Error', 'Gender is required');
     return true;
   };
 
@@ -61,32 +51,57 @@ const StudentSignupScreen = () => {
     if (!validateForm()) return;
 
     setLoading(true);
+    const studentData = formData
+
     try {
-      // Simulate API call
-      await new Promise<void>(resolve => setTimeout(() => resolve(), 1000));
+      const API_URL = 'http://localhost:5200/web/student/register'; // Replace with your API
+
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(studentData),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        // Success
+        Alert.alert(
+          'Success 🎉',
+          'Your data has been added successfully! Admin will approve your account in 4 hours.',
+          [{ text: 'OK', onPress: () => navigation.navigate('Login') }]
+        );
+
+        setFormData({ studentName: '', studentFatherName: '', studentEmail: '', studentBatch: '', studentDepartment: '', studentGender: '' });
+      } else {
+        // API responded with error
+        throw new Error(result?.message || 'API registration failed');
+      }
+    } catch (error) {
+      console.error(error);
+
+      // Save data locally if API/network fails
+      try {
+        const existingData = await AsyncStorage.getItem('studentRegistrations');
+        const registrations = existingData ? JSON.parse(existingData) : [];
+        registrations.push(formData);
+        await AsyncStorage.setItem('studentRegistrations', JSON.stringify(registrations));
+      } catch (storageError) {
+        console.error('AsyncStorage error:', storageError);
+      }
 
       Alert.alert(
-        'Registration Successful',
-        'Your registration has been completed. Admin will approve your account soon. Please proceed to login.',
-        [
-          {
-            text: 'OK',
-            onPress: () => navigation.navigate('Login'),
-          },
-        ]
+        'Failed ❌',
+        'Your data could not be submitted to the server. It has been saved locally. Try again later.',
+        [{ text: 'OK', onPress: () => navigation.navigate('Login') }]
       );
-    } catch (error) {
-      Alert.alert('Error', 'Failed to submit. Please try again.');
     } finally {
-      setLoading(false);
+      setLoading(false); // Stop showing "Submitting..."
     }
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
-      {/*  */}
-
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.formContainer}>
           <Text style={styles.formTitle}>Student Registration</Text>
@@ -99,9 +114,8 @@ const StudentSignupScreen = () => {
             <TextInput
               style={styles.input}
               placeholder="Enter your full name"
-              value={formData.name}
-              onChangeText={value => handleInputChange('name', value)}
-              autoCapitalize="words"
+              value={formData.studentName}
+              onChangeText={value => handleInputChange('studentName', value)}
             />
           </View>
 
@@ -110,9 +124,20 @@ const StudentSignupScreen = () => {
             <TextInput
               style={styles.input}
               placeholder="Enter your father's name"
-              value={formData.fatherName}
-              onChangeText={value => handleInputChange('fatherName', value)}
-              autoCapitalize="words"
+              value={formData.studentFatherName}
+              onChangeText={value => handleInputChange('studentFatherName', value)}
+            />
+          </View>
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Email *</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter your email"
+              value={formData.studentEmail}
+              onChangeText={value => handleInputChange('studentEmail', value)}
+              keyboardType="email-address"
+              autoCapitalize="none"
             />
           </View>
 
@@ -120,9 +145,9 @@ const StudentSignupScreen = () => {
             <Text style={styles.label}>Batch *</Text>
             <TextInput
               style={styles.input}
-              placeholder="e.g., 2024, 2023, etc."
-              value={formData.batch}
-              onChangeText={value => handleInputChange('batch', value)}
+              placeholder="e.g., 2024, 2023"
+              value={formData.studentBatch}
+              onChangeText={value => handleInputChange('studentBatch', value)}
               keyboardType="numeric"
             />
           </View>
@@ -131,20 +156,19 @@ const StudentSignupScreen = () => {
             <Text style={styles.label}>Course Name *</Text>
             <TextInput
               style={styles.input}
-              placeholder="e.g., Computer Science, Engineering, etc."
-              value={formData.courseName}
-              onChangeText={value => handleInputChange('courseName', value)}
-              autoCapitalize="words"
+              placeholder="e.g., Computer Science"
+              value={formData.studentDepartment}
+              onChangeText={value => handleInputChange('studentDepartment', value)}
             />
           </View>
+
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Gender *</Text>
             <TextInput
               style={styles.input}
-              placeholder="e.g., male, female, etc."
-              value={formData.department}
-              onChangeText={value => handleInputChange('department', value)}
-              autoCapitalize="words"
+              placeholder="e.g., Male, Female"
+              value={formData.studentGender}
+              onChangeText={value => handleInputChange('studentGender', value)}
             />
           </View>
 
@@ -164,20 +188,8 @@ const StudentSignupScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff', marginTop:35 ,marginBottom:150},
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 0.5,
-    borderBottomColor: '#e0e0e0',
-  },
-  backButton: { padding: 4 },
-  headerTitle: { fontSize: 18, fontWeight: '600', color: '#000' },
-  placeholder: { width: 32 },
-  content: { flex: 1, marginTop:-39 },
+  container: { flex: 1, backgroundColor: '#fff', marginTop: 3, marginBottom: 190 },
+  content: { flex: 1, marginTop: -39 },
   formContainer: { padding: 20 },
   formTitle: { fontSize: 24, fontWeight: 'bold', color: '#000', textAlign: 'center', marginBottom: 8 },
   formSubtitle: { fontSize: 16, color: '#666', textAlign: 'center', marginBottom: 32 },

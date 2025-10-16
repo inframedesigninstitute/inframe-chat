@@ -1,16 +1,14 @@
 import React from 'react';
 import { Platform } from 'react-native';
 
-// Platform-specific App imports
-import MobileApp from '../src/mobile/App';
-import WebApp from '../src/web/App';
-
+// Use platform-conditional requires to avoid evaluating web/native code on the wrong platform
 const App = () => {
-  // Determine which App component to use based on platform
   if (Platform.OS === 'web') {
+    const WebApp = require('../src/web/App').default;
     return <WebApp />;
   }
 
+  const MobileApp = require('../src/mobile/App').default;
   return <MobileApp />;
 };
 
