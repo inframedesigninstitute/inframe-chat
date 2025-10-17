@@ -1,14 +1,14 @@
 import { useNavigation } from '@react-navigation/native';
 import React, { useState } from 'react';
 import {
-    Alert,
-    FlatList,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  FlatList,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useUser } from '../context/UserContext';
