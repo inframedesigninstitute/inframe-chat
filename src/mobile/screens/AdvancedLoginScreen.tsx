@@ -151,8 +151,6 @@ const AdvancedLoginScreen = () => {
           </TouchableOpacity>
         )}
       </ScrollView>
-
-      {/* ✅ OTP Modal */}
       <Modal
         visible={showOtpModal}
         animationType="fade"

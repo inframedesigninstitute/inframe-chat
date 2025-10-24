@@ -33,6 +33,8 @@ const AdvancedLoginScreen = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [showOtpModal, setShowOtpModal] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const otpInputRef = useRef<TextInput>(null);
 
@@ -41,7 +43,17 @@ const AdvancedLoginScreen = () => {
     return emailRegex.test(value);
   };
 
-  // --- Handle Send OTP ---
+  const handleErrorModalOK = () => {
+    setShowErrorModal(false);
+    setShowOtpModal(false);
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'MainTabs' }],
+    });
+    setOtp('');
+    console.log('✅ Navigation successful after error modal');
+  };
+
   const handleSendOtp = async () => {
     if (!email.trim()) return Alert.alert('Error', 'Please enter your email');
     if (!validateEmail(email)) return Alert.alert('Error', 'Please enter a valid email');
@@ -50,26 +62,40 @@ const AdvancedLoginScreen = () => {
       if (email !== 'admin@inframe.edu' || password !== 'Admin@123') {
         return Alert.alert('Admin Login Failed', 'Invalid credentials');
       }
-      navigation.navigate('AdminDashboard');
+      console.log('Admin login successful, navigating to AdminDashboard...');
+      
+      try {
+        navigation.navigate('AdminDashboard' as never);
+        console.log('Direct admin navigation successful');
+      } catch (navError) {
+        console.log('Direct admin navigation failed, trying reset:', navError);
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'AdminDashboard' as never }],
+        });
+      }
       return;
     }
 
     setIsLoading(true);
     try {
-      const response = await axios.post(`${API_BASE_URL}/student/send-otp`, { studentEmail: email });
+const response = await axios.post(`${API_BASE_URL}/student/send-otp`, { studentEmail: email });
       console.log('OTP Response:', response.data);
 
-      // ✅ Even if backend doesn’t return success:true, still show popup if request succeeds
       if (response.data?.success || response.status === 200) {
-        Alert.alert('Success', `OTP sent to ${email}`);
         setShowOtpModal(true);
-        setTimeout(() => otpInputRef.current?.focus(), 500);
+        setTimeout(() => otpInputRef.current?.focus(), 100);
+Alert.alert('Success', `OTP sent to ${email}`);
       } else {
         Alert.alert('Error', response.data?.message || 'Failed to send OTP');
       }
     } catch (err: any) {
-      console.error('Send OTP Error:', err.message);
-      Alert.alert('Error', 'Network error. Please try again.');
+      console.error('Send OTP Error:', err);
+      if (err.response?.data?.message) {
+        Alert.alert('Error', err.response.data.message);
+      } else {
+        Alert.alert('Error', 'Network error. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -77,24 +103,65 @@ const AdvancedLoginScreen = () => {
 
   // --- Handle Verify OTP ---
   const handleVerifyOtp = async () => {
-    if (otp.trim().length !== 6) return Alert.alert('Error', 'Please enter a valid 6-digit OTP');
+    console.log('=== OTP Verification Started ===');
+    console.log('Email:', email);
+    console.log('OTP:', otp);
+    console.log('OTP Length:', otp.trim().length);
+    
+    if (otp.trim().length !== 6) {
+      console.log('OTP length validation failed');
+      Alert.alert('Error', 'Please enter a valid 6-digit OTP');
+      return;
+    }
 
     setIsVerifying(true);
+console.log(`Starting API call to: ${API_BASE_URL}/student/verify-otp`);
+    
     try {
-      const response = await axios.post(`${API_BASE_URL}/student/verify-otp`, { email, otp });
-      console.log('Verify OTP Response:', response.data);
+      // ✅ FIXED LINE BELOW
+      const requestData = { studentEmail: email, enteredOtp: otp };
+      console.log('Request data:', requestData);
+      
+const response = await axios.post(`${API_BASE_URL}/student/verify-otp`, requestData);
+      console.log('=== API Response ===');
+      console.log('Status:', response.status);
+      console.log('Data:', response.data);
+      console.log('Success check:', response.data?.success);
+      console.log('Status 200 check:', response.status === 200);
 
-      if (response.data?.success) {
+      if (response.data?.success || response.status === 200) {
+        console.log('✅ OTP verification successful, navigating to MainTabs...');
         setShowOtpModal(false);
-        Alert.alert('Success', 'Login Successful');
-        navigation.navigate('MainTabs');
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'MainTabs' }],
+        });
+        setOtp('');
+        console.log('✅ Navigation successful');
       } else {
-        Alert.alert('Error', response.data?.message || 'Invalid OTP');
+        console.log('❌ OTP verification failed - showing mismatch popup');
+        setErrorMessage('The OTP you entered is incorrect. Please try again.');
+        setShowErrorModal(true);
       }
     } catch (err: any) {
-      console.error('Verify OTP Error:', err.message);
-      Alert.alert('Error', 'Network error. Please try again.');
+      console.error('=== OTP Verification Error ===');
+      console.error('Error object:', err);
+      console.error('Error message:', err.message);
+      console.error('Error response:', err.response);
+      console.error('Error status:', err.response?.status);
+      console.error('Error data:', err.response?.data);
+      
+      if (err.response?.status === 400) {
+        console.log('400 Bad Request - OTP verification failed');
+        setErrorMessage('The OTP you entered is incorrect. Please try again.');
+        setShowErrorModal(true);
+      } else {
+        console.log('Other error - showing generic message');
+        setErrorMessage('Network error. Please try again.');
+        setShowErrorModal(true);
+      }
     } finally {
+      console.log('=== OTP Verification Finished ===');
       setIsVerifying(false);
     }
   };
@@ -145,12 +212,13 @@ const AdvancedLoginScreen = () => {
         )}
       </ScrollView>
 
-      {/* ✅ OTP Modal Popup */}
       <Modal
         visible={showOtpModal}
         animationType="fade"
         transparent
-        onRequestClose={() => setShowOtpModal(false)}
+        onRequestClose={() => {
+          setShowOtpModal(false);
+        }}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
@@ -165,6 +233,8 @@ const AdvancedLoginScreen = () => {
               placeholderTextColor="#757575"
               keyboardType="number-pad"
               maxLength={6}
+              autoFocus
+              editable={!isVerifying}
             />
             <TouchableOpacity
               style={[styles.loginButton, isVerifying && styles.loginButtonDisabled]}
@@ -175,8 +245,34 @@ const AdvancedLoginScreen = () => {
                 {isVerifying ? 'Verifying...' : 'Verify OTP'}
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => setShowOtpModal(false)}>
-              <Text style={styles.cancelText}>Cancel</Text>
+            <TouchableOpacity 
+              onPress={() => {
+                setShowOtpModal(false);
+                setOtp('');
+              }}
+              disabled={isVerifying}
+            >
+              <Text style={[styles.cancelText, isVerifying && { opacity: 0.5 }]}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={showErrorModal}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setShowErrorModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <Text style={styles.modalTitle}>OTP Not Match</Text>
+            <Text style={styles.modalSubtitle}>{errorMessage}</Text>
+            <TouchableOpacity
+              style={styles.loginButton}
+              onPress={handleErrorModalOK}
+            >
+              <Text style={styles.loginButtonText}>OK</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -223,8 +319,6 @@ const styles = StyleSheet.create({
   },
   loginButtonDisabled: { backgroundColor: '#b0bec5' },
   loginButtonText: { fontSize: 16, fontWeight: '600', color: '#fff' },
-
-  // Modal Styles
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.3)',

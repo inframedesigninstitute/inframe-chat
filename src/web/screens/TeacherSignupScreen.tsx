@@ -21,10 +21,11 @@ type TeacherSignupScreenNavigationProp = NativeStackNavigationProp<
 const TeacherSignupScreen = () => {
   const navigation = useNavigation<TeacherSignupScreenNavigationProp>();
   const [formData, setFormData] = useState({
-    name: '',
-    fatherName: '',
-    department: '',
-    gender: '', // Added gender field
+    facultyName: '',
+    facultyEmail: '',
+    facultyFatherName: '',
+    facultyDepartment: '',
+    facultyGender: '', // Added gender field
   });
   const [loading, setLoading] = useState(false);
 
@@ -36,19 +37,23 @@ const TeacherSignupScreen = () => {
   };
 
   const validateForm = () => {
-    if (!formData.name.trim()) {
+    if (!formData.facultyName.trim()) {
       Alert.alert('Error', 'Name is required');
       return false;
     }
-    if (!formData.fatherName.trim()) {
+    if (!formData.facultyEmail.trim()) {
+      Alert.alert('Error', 'Email is required');
+      return false;
+    }
+    if (!formData.facultyFatherName.trim()) {
       Alert.alert('Error', 'Father Name is required');
       return false;
     }
-    if (!formData.department.trim()) {
+    if (!formData.facultyDepartment.trim()) {
       Alert.alert('Error', 'Department is required');
       return false;
     }
-    if (!formData.gender.trim()) {
+    if (!formData.facultyGender.trim()) {
       Alert.alert('Error', 'Gender is required');
       return false;
     }
@@ -56,10 +61,22 @@ const TeacherSignupScreen = () => {
   };
 
   const handleSubmit = async () => {
+
     if (!validateForm()) return;
+
+    const facultyData = formData
 
     setLoading(true);
     try {
+      const API_URL = 'http://localhost:5200/web/faculty/register'; // Replace with your API
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(facultyData),
+      });
+
+      const result = await response.json();
+
       // Simulate API call
       await new Promise<void>(resolve => setTimeout(() => resolve(), 2000));
 
@@ -99,8 +116,22 @@ const TeacherSignupScreen = () => {
             <TextInput
               style={styles.input}
               placeholder="Enter your full name"
-              value={formData.name}
-              onChangeText={value => handleInputChange('name', value)}
+              value={formData.facultyName}
+              onChangeText={value => handleInputChange('facultyName', value)}
+              autoCapitalize="words"
+            />
+          </View>
+
+
+
+          {/* Email Field */}
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Email *</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter your Email"
+              value={formData.facultyEmail}
+              onChangeText={value => handleInputChange('facultyEmail', value)}
               autoCapitalize="words"
             />
           </View>
@@ -111,8 +142,8 @@ const TeacherSignupScreen = () => {
             <TextInput
               style={styles.input}
               placeholder="Enter your father's name"
-              value={formData.fatherName}
-              onChangeText={value => handleInputChange('fatherName', value)}
+              value={formData.facultyFatherName}
+              onChangeText={value => handleInputChange('facultyFatherName', value)}
               autoCapitalize="words"
             />
           </View>
@@ -123,8 +154,8 @@ const TeacherSignupScreen = () => {
             <TextInput
               style={styles.input}
               placeholder="e.g., Computer Science, Mathematics, etc."
-              value={formData.department}
-              onChangeText={value => handleInputChange('department', value)}
+              value={formData.facultyDepartment}
+              onChangeText={value => handleInputChange('facultyDepartment', value)}
               autoCapitalize="words"
             />
           </View>
@@ -135,8 +166,8 @@ const TeacherSignupScreen = () => {
             <TextInput
               style={styles.input}
               placeholder="e.g., male, female, etc."
-              value={formData.gender}
-              onChangeText={value => handleInputChange('gender', value)}
+              value={formData.facultyGender}
+              onChangeText={value => handleInputChange('facultyGender', value)}
               autoCapitalize="words"
             />
           </View>
@@ -169,7 +200,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     marginTop: 3,
     marginBottom: 100,
-  height: '100%', // <-- change from '100vh' to '100%'
+    height: '100%', // <-- change from '100vh' to '100%'
   },
   content: {
     flex: 1,
