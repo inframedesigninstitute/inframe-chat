@@ -15,7 +15,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
   children,
   activeTab,
   rightContent,
-  showRightContent = false,
+  showRightContent = false, 
   onRightContentClose
 }) => {
   return (

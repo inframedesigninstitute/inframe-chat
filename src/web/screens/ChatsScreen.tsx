@@ -1,4 +1,3 @@
-"use client"
 
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs"
 import { type CompositeNavigationProp, useNavigation } from "@react-navigation/native"
@@ -165,17 +164,18 @@ const ChatsScreen = () => {
     department: string
   }
 
-  const userProfile: UserProfile | null = selectedChannel
-    ? {
-        name: selectedChannel.name,
-        email: `${selectedChannel.name.toLowerCase().replace(" ", ".")}@example.com`,
-        phone: "+91 98765 43210",
-        bio: "This is a sample bio for the user profile.",
-        fatherName: "Father Name",
-        operator: "John Doe",
-        department: "Sales",
-      }
-    : null
+ const userProfile: UserProfile | null = selectedChannel
+  ? {
+      name: selectedChannel.name,
+      email: `${selectedChannel.name.toLowerCase().replace(" ", ".")}@example.com`,
+      phone: "+91 98765 43210",
+      bio: "This is a sample bio for the user profile.",
+      fatherName: "Father Name",
+      operator: "John Doe",
+      department: "Sales",
+    }
+  : null
+
 
   return (
     <MainLayout
@@ -211,13 +211,6 @@ const ChatsScreen = () => {
                 <Ionicons name="camera" size={20} color="#0a0a0aff" />
               </TouchableOpacity>
             </View>
-
-            {/* <MarqueeText
-              text="Chatting with - Send messages, share files, and stay connected!"
-              speed={80}
-              textStyle={{ color: "#2e7d32", fontSize: 10, fontWeight: "500" }}
-              containerStyle={{ backgroundColor: "#e8f5e8", marginVertical: 4 }}
-            /> */}
 
             <TopTabNavigation onTabChange={handleTabChange} />
 

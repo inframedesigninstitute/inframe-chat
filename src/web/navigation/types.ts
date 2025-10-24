@@ -2,7 +2,10 @@ export type RootStackParamList = {
   Login: undefined;
   AdvancedLogin: { emailPrefill?: string; admin?: boolean } | undefined;
   OtpVerification: { email: string };
-  MainTabs: undefined;
+  Chats: undefined;
+  Groups: undefined;
+  Calls: undefined;
+  Settings: undefined;
   // ChatLayout: undefined;
   Chat: { channelId: string; channelName: string; recipientRole?: 'student' | 'faculty' | 'admin' };
   GroupChat: { groupId: string; groupName: string; isTeacher: boolean };
@@ -12,6 +15,7 @@ export type RootStackParamList = {
   QRScanner: undefined;
   CreateGroup: undefined;
   AddContact: undefined;
+  Calendar: undefined;
   StudentSignup: undefined;
   TeacherSignup: undefined;
   AdminDashboard: undefined;
@@ -25,7 +29,6 @@ export type RootStackParamList = {
   Privacy: undefined;
   AppInfo: undefined;
   StarredMessages: undefined;
-  Settings: undefined;
   Gallery: undefined;
   Status: undefined;
 };

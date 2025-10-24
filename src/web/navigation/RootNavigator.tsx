@@ -9,7 +9,9 @@ import AudioCallScreen from '../screens/AudioCallScreen';
 import CameraScreen from '../screens/CameraScreen';
 // import ChatLayoutScreen from '../screens/ChatLayoutScreen';
 import CalendarScreen from '../screens/CalendarScreen';
+import CallsScreen from '../screens/CallsScreen';
 import ChatScreen from '../screens/ChatScreen';
+import ChatsScreen from '../screens/ChatsScreen';
 import CourseDetailsScreen from '../screens/CourseDetailsScreen';
 import CoursesScreen from '../screens/CoursesScreen';
 import CreateGroupScreen from '../screens/CreateGroupScreen';
@@ -17,6 +19,7 @@ import HelpScreen from '../screens/EnhancedHelpScreen';
 import EnhancedSettingsScreen from '../screens/EnhancedSettingsScreen';
 import GalleryScreen from '../screens/GalleryScreen';
 import GroupChatScreen from '../screens/GroupChatScreen';
+import GroupsScreen from '../screens/GroupsScreen';
 import LoginScreen from '../screens/LoginScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import OtpVerificationScreen from '../screens/OtpVerificationScreen';
@@ -29,7 +32,6 @@ import StudentSignupScreen from '../screens/StudentSignupScreen';
 import TeacherSignupScreen from '../screens/TeacherSignupScreen';
 import TermsScreen from '../screens/TermsScreen';
 import VideoCallScreen from '../screens/VideoCallScreen';
-import MainTabs from './MainTabs';
 import { RootStackParamList } from './types';
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -40,12 +42,18 @@ const RootNavigator = () => {
       <Stack.Screen name="AdvancedLogin" component={AdvancedLoginScreen} />
       <Stack.Screen name="OtpVerification" component={OtpVerificationScreen} />
 
-      {/* Main App with Tabs */}
-      <Stack.Screen name="MainTabs" component={MainTabs} />
+      {/* Main App Screens */}
+      <Stack.Screen name="Chats" component={ChatsScreen} />
+      <Stack.Screen name="Groups" component={GroupsScreen} />
+      <Stack.Screen name="Calls" component={CallsScreen} />
       {/* <Stack.Screen name="ChatLayout" component={ChatLayoutScreen} /> */}
 
       <Stack.Screen name="Chat" component={ChatScreen} options={{ presentation: 'modal' }} />
-      <Stack.Screen name="GroupChat" component={GroupChatScreen} options={{ presentation: 'modal' }} />
+      <Stack.Screen 
+        name="GroupChat" 
+        component={GroupChatScreen} 
+        options={{ presentation: 'modal' }}
+      />
       <Stack.Screen name="AudioCall" component={AudioCallScreen} options={{ presentation: 'fullScreenModal' }} />
       <Stack.Screen name="VideoCall" component={VideoCallScreen} options={{ presentation: 'fullScreenModal' }} />
       <Stack.Screen name="Camera" component={CameraScreen} options={{ presentation: 'fullScreenModal' }} />

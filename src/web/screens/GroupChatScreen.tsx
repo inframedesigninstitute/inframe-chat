@@ -1,3 +1,4 @@
+import { RouteProp, useRoute } from '@react-navigation/native';
 import React, { useState } from 'react';
 import {
   Alert,
@@ -11,6 +12,7 @@ import {
   View,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { RootStackParamList } from '../navigation/types';
 
 type Message = {
   id: string;
@@ -20,13 +22,11 @@ type Message = {
   isTeacherMessage: boolean;
 };
 
-type GroupChatScreenProps = {
-  groupId: string;
-  groupName: string;
-  isTeacher: boolean;
-};
+type GroupChatRouteProp = RouteProp<RootStackParamList, 'GroupChat'>;
 
-const GroupChatScreen = ({ groupId, groupName, isTeacher }: GroupChatScreenProps) => {
+const GroupChatScreen = () => {
+  const route = useRoute<GroupChatRouteProp>();
+  const { groupId, groupName, isTeacher } = route.params;
   const [messages, setMessages] = useState<Message[]>([
     { id: '1', text: 'Hello everyone! Welcome to the group.', sender: 'Teacher', timestamp: '10:00 AM', isTeacherMessage: true },
     { id: '2', text: 'Hi Teacher!', sender: 'Student A', timestamp: '10:01 AM', isTeacherMessage: false },
@@ -64,7 +64,7 @@ const GroupChatScreen = ({ groupId, groupName, isTeacher }: GroupChatScreenProps
 
   const handleConfirmAddMember = () => {
     if (newMemberEmail.trim()) {
-      Alert.alert('Member Added', `${newMemberEmail} has been added to the group.`);
+Alert.alert('Member Added', `${newMemberEmail} has been added to the group.`);
       setNewMemberEmail('');
       setAddMemberModalVisible(false);
     } else {

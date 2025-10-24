@@ -46,10 +46,10 @@ const AdvancedLoginScreen = () => {
   const handleErrorModalOK = () => {
     setShowErrorModal(false);
     setShowOtpModal(false);
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'MainTabs' }],
-    });
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Chats' }],
+        });
     setOtp('');
     console.log('✅ Navigation successful after error modal');
   };
@@ -130,11 +130,11 @@ const response = await axios.post(`${API_BASE_URL}/student/verify-otp`, requestD
       console.log('Status 200 check:', response.status === 200);
 
       if (response.data?.success || response.status === 200) {
-        console.log('✅ OTP verification successful, navigating to MainTabs...');
+        console.log('✅ OTP verification successful, navigating to Chats...');
         setShowOtpModal(false);
         navigation.reset({
           index: 0,
-          routes: [{ name: 'MainTabs' }],
+          routes: [{ name: 'Chats' }],
         });
         setOtp('');
         console.log('✅ Navigation successful');
