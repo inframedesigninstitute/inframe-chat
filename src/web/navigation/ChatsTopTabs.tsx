@@ -4,7 +4,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import ChannelListScreen from '../screens/ChannelListScreen';
+import ChatsScreen from '../screens/ChatsScreen';
 import { ChatsTopTabsParamList, RootStackParamList } from './types';
 
 const TopTab = createMaterialTopTabNavigator<ChatsTopTabsParamList>();
@@ -41,28 +41,28 @@ export default function ChatsTopTabs() {
       >
         <TopTab.Screen 
           name="All" 
-          component={ChannelListScreen}
+          component={ChatsScreen}
           options={{
             tabBarLabel: 'All',
           }}
         />
         <TopTab.Screen 
           name="Unread" 
-          component={ChannelListScreen}
+          component={ChatsScreen}
           options={{
             tabBarLabel: 'Unread 20',
           }}
         />
         <TopTab.Screen 
           name="Favourites" 
-          component={ChannelListScreen}
+          component={ChatsScreen}
           options={{
             tabBarLabel: 'Favourites',
           }}
         />
         <TopTab.Screen 
           name="Groups" 
-          component={ChannelListScreen}
+          component={ChatsScreen}
           options={{
             tabBarLabel: 'Groups 3',
           }}

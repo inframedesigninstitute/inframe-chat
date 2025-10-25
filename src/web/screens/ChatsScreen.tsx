@@ -1,3 +1,4 @@
+"use client"
 
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs"
 import { type CompositeNavigationProp, useNavigation } from "@react-navigation/native"
@@ -164,17 +165,17 @@ const ChatsScreen = () => {
     department: string
   }
 
- const userProfile: UserProfile | null = selectedChannel
+  const userProfile: UserProfile | null = selectedChannel
   ? {
       name: selectedChannel.name,
-      email: `${selectedChannel.name.toLowerCase().replace(" ", ".")}@example.com`,
+      email: `${selectedChannel.name.toLowerCase().replace(" ", ".")}@example.com`, // ✅ template literal
       phone: "+91 98765 43210",
       bio: "This is a sample bio for the user profile.",
       fatherName: "Father Name",
       operator: "John Doe",
       department: "Sales",
     }
-  : null
+  : null;
 
 
   return (

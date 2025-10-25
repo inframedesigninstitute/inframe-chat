@@ -6,10 +6,9 @@ import AdvancedLoginScreen from '../screens/AdvancedLoginScreen';
 import AppInfoScreen from '../screens/AppInfoScreen';
 import AttendanceScreen from '../screens/AttendanceScreen';
 import AudioCallScreen from '../screens/AudioCallScreen';
-import CameraScreen from '../screens/CameraScreen';
-// import ChatLayoutScreen from '../screens/ChatLayoutScreen';
 import CalendarScreen from '../screens/CalendarScreen';
 import CallsScreen from '../screens/CallsScreen';
+import CameraScreen from '../screens/CameraScreen';
 import ChatScreen from '../screens/ChatScreen';
 import ChatsScreen from '../screens/ChatsScreen';
 import CourseDetailsScreen from '../screens/CourseDetailsScreen';
@@ -33,6 +32,7 @@ import TeacherSignupScreen from '../screens/TeacherSignupScreen';
 import TermsScreen from '../screens/TermsScreen';
 import VideoCallScreen from '../screens/VideoCallScreen';
 import { RootStackParamList } from './types';
+import AdminSignupScreen from '../screens/AdminSignInScreen';
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const RootNavigator = () => {
@@ -46,7 +46,6 @@ const RootNavigator = () => {
       <Stack.Screen name="Chats" component={ChatsScreen} />
       <Stack.Screen name="Groups" component={GroupsScreen} />
       <Stack.Screen name="Calls" component={CallsScreen} />
-      {/* <Stack.Screen name="ChatLayout" component={ChatLayoutScreen} /> */}
 
       <Stack.Screen name="Chat" component={ChatScreen} options={{ presentation: 'modal' }} />
       <Stack.Screen 
@@ -77,6 +76,8 @@ const RootNavigator = () => {
       <Stack.Screen name="Privacy" component={PrivacyScreen} />
       <Stack.Screen name="AppInfo" component={AppInfoScreen} />
       <Stack.Screen name="Status" component={StatusScreen} />
+      <Stack.Screen name="AdminSignInScreen" component={AdminSignupScreen} />
+
     </Stack.Navigator>
   );
 };

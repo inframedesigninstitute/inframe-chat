@@ -31,6 +31,8 @@ export type RootStackParamList = {
   StarredMessages: undefined;
   Gallery: undefined;
   Status: undefined;
+  AdminSignInScreen: undefined;
+
 };
 
 export type MainTabsParamList = {

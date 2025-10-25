@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { RootStackParamList } from '../navigation/types';
+import AdminSignupScreen from './AdminSignInScreen';
 import AdvancedLoginScreen from './AdvancedLoginScreen';
 import StudentSignupScreen from './StudentSignupScreen';
 import TeacherSignupScreen from './TeacherSignupScreen';
@@ -111,7 +112,7 @@ const [activeTab, setActiveTab] = useState<'new' | 'old'>('new');
           <StudentSignupScreen />
       )}
       {selectedUser.name === 'Admin' && (
-          <TeacherSignupScreen />  // ✅ Changed from AdvancedLoginScreen
+          <AdminSignupScreen />  // ✅ Changed from AdvancedLoginScreen
       )}
     </View>
 )}
