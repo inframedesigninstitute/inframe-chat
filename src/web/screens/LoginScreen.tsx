@@ -16,6 +16,8 @@ import AdminSignupScreen from './AdminSignInScreen';
 import AdvancedLoginScreen from './AdvancedLoginScreen';
 import StudentSignupScreen from './StudentSignupScreen';
 import TeacherSignupScreen from './TeacherSignupScreen';
+import AdminLoginScreen from './AdvancedLoginScreen';
+import TeacherLoginScreen from './TeacherLoginScreen';
 
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<
@@ -102,7 +104,11 @@ const [activeTab, setActiveTab] = useState<'new' | 'old'>('new');
           <View style={styles.modalBody}>
             <ScrollView contentContainerStyle={styles.modalScrollContent}>
             {activeTab === 'old' ? (
-    <AdvancedLoginScreen />
+     <View>
+                  {selectedUser.name === 'Faculty Login' && <TeacherLoginScreen />}
+                  {selectedUser.name === 'Student Login' && <AdvancedLoginScreen />}
+                  {selectedUser.name === 'Admin' && <AdminLoginScreen />}
+                </View>
 ) : (
     <View>
       {selectedUser.name === 'Faculty Login' && (
@@ -112,7 +118,7 @@ const [activeTab, setActiveTab] = useState<'new' | 'old'>('new');
           <StudentSignupScreen />
       )}
       {selectedUser.name === 'Admin' && (
-          <AdminSignupScreen />  // ✅ Changed from AdvancedLoginScreen
+          <AdminSignupScreen />  
       )}
     </View>
 )}

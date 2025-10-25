@@ -2,7 +2,8 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
 import AddContactScreen from '../screens/AddContactScreen';
 import AdminDashboardScreen from '../screens/AdminDashboardScreen';
-import AdvancedLoginScreen from '../screens/AdvancedLoginScreen';
+import AdminSignupScreen from '../screens/AdminSignInScreen';
+import { default as AdminLoginScreen, default as AdvancedLoginScreen } from '../screens/AdvancedLoginScreen';
 import AppInfoScreen from '../screens/AppInfoScreen';
 import AttendanceScreen from '../screens/AttendanceScreen';
 import AudioCallScreen from '../screens/AudioCallScreen';
@@ -28,11 +29,11 @@ import QRScannerScreen from '../screens/QRScannerScreen';
 import StarredMessagesScreen from '../screens/StarredMessagesScreen';
 import StatusScreen from '../screens/StatusScreen';
 import StudentSignupScreen from '../screens/StudentSignupScreen';
+import TeacherLoginScreen from '../screens/TeacherLoginScreen';
 import TeacherSignupScreen from '../screens/TeacherSignupScreen';
 import TermsScreen from '../screens/TermsScreen';
 import VideoCallScreen from '../screens/VideoCallScreen';
 import { RootStackParamList } from './types';
-import AdminSignupScreen from '../screens/AdminSignInScreen';
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const RootNavigator = () => {
@@ -40,6 +41,9 @@ const RootNavigator = () => {
     <Stack.Navigator initialRouteName="Login" screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="AdvancedLogin" component={AdvancedLoginScreen} />
+      <Stack.Screen name="AdminLogin" component={AdminLoginScreen} />
+      <Stack.Screen name="TeacherLogin" component={TeacherLoginScreen} />
+
       <Stack.Screen name="OtpVerification" component={OtpVerificationScreen} />
 
       {/* Main App Screens */}

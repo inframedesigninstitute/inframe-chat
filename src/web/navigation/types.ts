@@ -1,6 +1,9 @@
 export type RootStackParamList = {
   Login: undefined;
   AdvancedLogin: { emailPrefill?: string; admin?: boolean } | undefined;
+    AdminLogin: { emailPrefill?: string; admin?: boolean } | undefined;
+   TeacherLogin: { emailPrefill?: string; admin?: boolean } | undefined;
+
   OtpVerification: { email: string };
   Chats: undefined;
   Groups: undefined;

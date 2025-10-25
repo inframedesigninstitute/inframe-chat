@@ -16,12 +16,12 @@ import {
 } from 'react-native';
 import { RootStackParamList } from '../navigation/types';
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'AdvancedLogin'>;
-type RouteProps = RouteProp<RootStackParamList, 'AdvancedLogin'>;
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'AdminLogin'>;
+type RouteProps = RouteProp<RootStackParamList, 'AdminLogin'>;
 
 const API_BASE_URL = 'http://localhost:5200/web';
 
-const AdvancedLoginScreen = () => {
+const AdminLoginScreen = () => {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteProps>();
   const isAdmin = route.params?.admin === true;
@@ -46,10 +46,10 @@ const AdvancedLoginScreen = () => {
   const handleErrorModalOK = () => {
     setShowErrorModal(false);
     setShowOtpModal(false);
-        navigation.reset({
-          index: 0,
-          routes: [{ name: 'Chats' }],
-        });
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'Chats' }],
+    });
     setOtp('');
     console.log('✅ Navigation successful after error modal');
   };
@@ -63,7 +63,7 @@ const AdvancedLoginScreen = () => {
         return Alert.alert('Admin Login Failed', 'Invalid credentials');
       }
       console.log('Admin login successful, navigating to AdminDashboard...');
-      
+
       try {
         navigation.navigate('AdminDashboard' as never);
         console.log('Direct admin navigation successful');
@@ -79,13 +79,13 @@ const AdvancedLoginScreen = () => {
 
     setIsLoading(true);
     try {
-const response = await axios.post(`${API_BASE_URL}/student/send-otp`, { studentEmail: email });
+      const response = await axios.post(`${API_BASE_URL}/student/send-otp`, { studentEmail: email });
       console.log('OTP Response:', response.data);
 
       if (response.data?.success || response.status === 200) {
         setShowOtpModal(true);
         setTimeout(() => otpInputRef.current?.focus(), 100);
-Alert.alert('Success', `OTP sent to ${email}`);
+        Alert.alert('Success', `OTP sent to ${email}`);
       } else {
         Alert.alert('Error', response.data?.message || 'Failed to send OTP');
       }
@@ -107,7 +107,7 @@ Alert.alert('Success', `OTP sent to ${email}`);
     console.log('Email:', email);
     console.log('OTP:', otp);
     console.log('OTP Length:', otp.trim().length);
-    
+
     if (otp.trim().length !== 6) {
       console.log('OTP length validation failed');
       Alert.alert('Error', 'Please enter a valid 6-digit OTP');
@@ -115,14 +115,14 @@ Alert.alert('Success', `OTP sent to ${email}`);
     }
 
     setIsVerifying(true);
-console.log(`Starting API call to: ${API_BASE_URL}/student/verify-otp`);
-    
+    console.log(`Starting API call to: ${API_BASE_URL}/student/verify-otp`);
+
     try {
       // ✅ FIXED LINE BELOW
       const requestData = { studentEmail: email, enteredOtp: otp };
       console.log('Request data:', requestData);
-      
-const response = await axios.post(`${API_BASE_URL}/student/verify-otp`, requestData);
+
+      const response = await axios.post(`${API_BASE_URL}/main-admin/verify-otp`, requestData);
       console.log('=== API Response ===');
       console.log('Status:', response.status);
       console.log('Data:', response.data);
@@ -150,7 +150,7 @@ const response = await axios.post(`${API_BASE_URL}/student/verify-otp`, requestD
       console.error('Error response:', err.response);
       console.error('Error status:', err.response?.status);
       console.error('Error data:', err.response?.data);
-      
+
       if (err.response?.status === 400) {
         console.log('400 Bad Request - OTP verification failed');
         setErrorMessage('The OTP you entered is incorrect. Please try again.');
@@ -172,7 +172,7 @@ const response = await axios.post(`${API_BASE_URL}/student/verify-otp`, requestD
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>Student Login</Text>
+        <Text style={styles.title}>Admin Login</Text>
         <Text style={styles.subtitle}>{isAdmin ? 'Admin Login' : 'Login with your Email'}</Text>
 
         <TextInput
@@ -245,7 +245,7 @@ const response = await axios.post(`${API_BASE_URL}/student/verify-otp`, requestD
                 {isVerifying ? 'Verifying...' : 'Verify OTP'}
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => {
                 setShowOtpModal(false);
                 setOtp('');
@@ -281,7 +281,7 @@ const response = await axios.post(`${API_BASE_URL}/student/verify-otp`, requestD
   );
 };
 
-export default AdvancedLoginScreen;
+export default AdminLoginScreen;
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },

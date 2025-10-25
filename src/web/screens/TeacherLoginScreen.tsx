@@ -16,15 +16,19 @@ import {
 } from 'react-native';
 import { RootStackParamList } from '../navigation/types';
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'AdvancedLogin'>;
-type RouteProps = RouteProp<RootStackParamList, 'AdvancedLogin'>;
+// ✅ FIXED TYPE DEFINITIONS
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'TeacherLogin'>;
+type RouteProps = RouteProp<
+  { TeacherLogin: { TeacherLogin?: boolean; emailPrefill?: string; admin?: boolean } },
+  'TeacherLogin'
+>;
 
 const API_BASE_URL = 'http://localhost:5200/web';
 
-const AdvancedLoginScreen = () => {
+const TeacherLoginScreen = () => {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteProps>();
-  const isAdmin = route.params?.admin === true;
+  const isTeacherLogin = route.params?.TeacherLogin === true;
   const prefillEmail = route.params?.emailPrefill || '';
 
   const [email, setEmail] = useState(prefillEmail);
@@ -46,10 +50,10 @@ const AdvancedLoginScreen = () => {
   const handleErrorModalOK = () => {
     setShowErrorModal(false);
     setShowOtpModal(false);
-        navigation.reset({
-          index: 0,
-          routes: [{ name: 'Chats' }],
-        });
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'Chats' }],
+    });
     setOtp('');
     console.log('✅ Navigation successful after error modal');
   };
@@ -58,20 +62,20 @@ const AdvancedLoginScreen = () => {
     if (!email.trim()) return Alert.alert('Error', 'Please enter your email');
     if (!validateEmail(email)) return Alert.alert('Error', 'Please enter a valid email');
 
-    if (isAdmin) {
+    if (isTeacherLogin) {
       if (email !== 'admin@inframe.edu' || password !== 'Admin@123') {
         return Alert.alert('Admin Login Failed', 'Invalid credentials');
       }
       console.log('Admin login successful, navigating to AdminDashboard...');
-      
+
       try {
-        navigation.navigate('AdminDashboard' as never);
-        console.log('Direct admin navigation successful');
+        navigation.navigate('TeacherLoginnDashboard' as never);
+        console.log('Direct TeacherLogin navigation successful');
       } catch (navError) {
-        console.log('Direct admin navigation failed, trying reset:', navError);
+        console.log('Direct TeacherLogin navigation failed, trying reset:', navError);
         navigation.reset({
           index: 0,
-          routes: [{ name: 'AdminDashboard' as never }],
+          routes: [{ name: 'TeacherLoginnDashboard' as never }],
         });
       }
       return;
@@ -79,13 +83,13 @@ const AdvancedLoginScreen = () => {
 
     setIsLoading(true);
     try {
-const response = await axios.post(`${API_BASE_URL}/student/send-otp`, { studentEmail: email });
+      const response = await axios.post(`${API_BASE_URL}/faculty/send-otp`, { studentEmail: email });
       console.log('OTP Response:', response.data);
 
       if (response.data?.success || response.status === 200) {
         setShowOtpModal(true);
         setTimeout(() => otpInputRef.current?.focus(), 100);
-Alert.alert('Success', `OTP sent to ${email}`);
+        Alert.alert('Success', `OTP sent to ${email}`);
       } else {
         Alert.alert('Error', response.data?.message || 'Failed to send OTP');
       }
@@ -101,13 +105,12 @@ Alert.alert('Success', `OTP sent to ${email}`);
     }
   };
 
-  // --- Handle Verify OTP ---
   const handleVerifyOtp = async () => {
     console.log('=== OTP Verification Started ===');
     console.log('Email:', email);
     console.log('OTP:', otp);
     console.log('OTP Length:', otp.trim().length);
-    
+
     if (otp.trim().length !== 6) {
       console.log('OTP length validation failed');
       Alert.alert('Error', 'Please enter a valid 6-digit OTP');
@@ -115,14 +118,13 @@ Alert.alert('Success', `OTP sent to ${email}`);
     }
 
     setIsVerifying(true);
-console.log(`Starting API call to: ${API_BASE_URL}/student/verify-otp`);
-    
+    console.log(`Starting API call to: ${API_BASE_URL}/student/verify-otp`);
+
     try {
-      // ✅ FIXED LINE BELOW
       const requestData = { studentEmail: email, enteredOtp: otp };
       console.log('Request data:', requestData);
-      
-const response = await axios.post(`${API_BASE_URL}/student/verify-otp`, requestData);
+
+      const response = await axios.post(`${API_BASE_URL}/student/verify-otp`, requestData);
       console.log('=== API Response ===');
       console.log('Status:', response.status);
       console.log('Data:', response.data);
@@ -150,7 +152,7 @@ const response = await axios.post(`${API_BASE_URL}/student/verify-otp`, requestD
       console.error('Error response:', err.response);
       console.error('Error status:', err.response?.status);
       console.error('Error data:', err.response?.data);
-      
+
       if (err.response?.status === 400) {
         console.log('400 Bad Request - OTP verification failed');
         setErrorMessage('The OTP you entered is incorrect. Please try again.');
@@ -172,8 +174,8 @@ const response = await axios.post(`${API_BASE_URL}/student/verify-otp`, requestD
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>Student Login</Text>
-        <Text style={styles.subtitle}>{isAdmin ? 'Admin Login' : 'Login with your Email'}</Text>
+        <Text style={styles.title}>Faculty Login</Text>
+        <Text style={styles.subtitle}>{isTeacherLogin ? 'TeacherLogin' : 'Login with your Email'}</Text>
 
         <TextInput
           style={styles.input}
@@ -185,13 +187,13 @@ const response = await axios.post(`${API_BASE_URL}/student/verify-otp`, requestD
           autoCapitalize="none"
         />
 
-        {isAdmin ? (
+        {isTeacherLogin ? (
           <>
             <TextInput
               style={styles.input}
               value={password}
               onChangeText={setPassword}
-              placeholder="Admin password"
+              placeholder="TeacherLogin"
               placeholderTextColor="#757575"
               secureTextEntry
             />
@@ -245,7 +247,7 @@ const response = await axios.post(`${API_BASE_URL}/student/verify-otp`, requestD
                 {isVerifying ? 'Verifying...' : 'Verify OTP'}
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => {
                 setShowOtpModal(false);
                 setOtp('');
@@ -281,7 +283,7 @@ const response = await axios.post(`${API_BASE_URL}/student/verify-otp`, requestD
   );
 };
 
-export default AdvancedLoginScreen;
+export default TeacherLoginScreen;
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
