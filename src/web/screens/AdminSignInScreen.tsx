@@ -2,7 +2,8 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useState } from 'react';
 import {
-    Alert,
+    ActivityIndicator,
+    Modal,
     SafeAreaView,
     ScrollView,
     StyleSheet,
@@ -11,6 +12,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import Ionicons from 'react-native-vector-icons/Ionicons'; // 👈 You'll need to install react-native-vector-icons
 import { RootStackParamList } from '../navigation/types';
 
 type AdminSignupScreenNavigationProp = NativeStackNavigationProp<
@@ -18,16 +20,80 @@ type AdminSignupScreenNavigationProp = NativeStackNavigationProp<
     'AdminSignInScreen'
 >;
 
+// 🆕 Define the structure for the modal content
+interface AlertContent {
+    isVisible: boolean;
+    title: string;
+    message: string;
+    type: 'success' | 'error' | 'warning';
+    onClose: () => void;
+}
+
+// 🆕 Custom Modal Component to display alerts
+const CustomAlertModal: React.FC<AlertContent> = ({ isVisible, title, message, type, onClose }) => {
+    const iconName = type === 'success' ? 'checkmark-circle' : 'close-circle';
+    const iconColor = type === 'success' ? '#4BB543' : '#FF6347'; // Green for success, Red for error/warning
+
+    return (
+        <Modal
+            animationType="fade"
+            transparent={true}
+            visible={isVisible}
+            onRequestClose={onClose}
+        >
+            <View style={modalStyles.centeredView}>
+                <View style={modalStyles.modalView}>
+                    <Ionicons name={iconName} size={60} color={iconColor} style={{ marginBottom: 10 }} />
+                    <Text style={modalStyles.modalTitle}>{title}</Text>
+                    <Text style={modalStyles.modalText}>{message}</Text>
+                    <TouchableOpacity
+                        style={[modalStyles.button, modalStyles.buttonClose]}
+                        onPress={onClose}
+                    >
+                        <Text style={modalStyles.textStyle}>OK</Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
+        </Modal>
+    );
+};
+
 const AdminSignupScreen = () => {
     const navigation = useNavigation<AdminSignupScreenNavigationProp>();
+
     const [formData, setFormData] = useState({
         mainAdminName: '',
         mainAdminEmail: '',
         mainAdminFatherName: '',
         mainAdminDepartment: '',
-        mainAdminGender: '', // Added gender field
+        mainAdminGender: '',
     });
+
     const [loading, setLoading] = useState(false);
+    
+    // 🆕 State for managing the custom modal
+    const [alertContent, setAlertContent] = useState<AlertContent>({
+        isVisible: false,
+        title: '',
+        message: '',
+        type: 'success',
+        onClose: () => {},
+    });
+
+    const showCustomAlert = (title: string, message: string, type: AlertContent['type'], callback?: () => void) => {
+        setAlertContent({
+            isVisible: true,
+            title,
+            message,
+            type,
+            onClose: () => {
+                setAlertContent(prev => ({ ...prev, isVisible: false }));
+                if (callback) {
+                    callback();
+                }
+            },
+        });
+    };
 
     const handleInputChange = (field: string, value: string) => {
         setFormData(prev => ({
@@ -37,63 +103,65 @@ const AdminSignupScreen = () => {
     };
 
     const validateForm = () => {
-        if (!formData.mainAdminName.trim()) {
-            Alert.alert('Error', 'Name is required');
-            return false;
-        }
-        if (!formData.mainAdminEmail.trim()) {
-            Alert.alert('Error', 'Email is required');
-            return false;
-        }
-        if (!formData.mainAdminFatherName.trim()) {
-            Alert.alert('Error', 'Father Name is required');
-            return false;
-        }
-        if (!formData.mainAdminDepartment.trim()) {
-            Alert.alert('Error', 'Department is required');
-            return false;
-        }
-        if (!formData.mainAdminGender.trim()) {
-            Alert.alert('Error', 'Gender is required');
-            return false;
+        const fields = [
+            { key: 'mainAdminName', label: 'Name' },
+            { key: 'mainAdminEmail', label: 'Email' },
+            { key: 'mainAdminFatherName', label: 'Father Name' },
+            { key: 'mainAdminDepartment', label: 'Department' },
+            { key: 'mainAdminGender', label: 'Gender' },
+        ];
+
+        for (const field of fields) {
+            if (!formData[field.key as keyof typeof formData].trim()) {
+                // 🔄 Replaced Alert with custom Modal for validation
+                showCustomAlert('Error', `${field.label} is required`, 'warning');
+                return false;
+            }
         }
         return true;
     };
 
     const handleSubmit = async () => {
-
         if (!validateForm()) return;
-
-        const mainAdminData = formData
 
         setLoading(true);
         try {
-            const API_URL = 'http://localhost:5200/web/main-admin/register'; // Replace with your API
+            const API_URL = 'http://localhost:5200/web/main-admin/register';
+
             const response = await fetch(API_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(mainAdminData),
+                body: JSON.stringify(formData),
             });
-
-            // console.log(mainAdminData)
 
             const result = await response.json();
 
-            // Simulate API call
-            await new Promise<void>(resolve => setTimeout(() => resolve(), 2000));
+            // ✅ Check for backend custom status
+            if (result.status === -1) {
+                // 🔄 Replaced Alert with custom Modal for backend error (e.g., email already registered)
+                showCustomAlert('Submission Error', result.message || 'Submission failed. Email may already be registered.', 'error');
+                return; // Stop execution if status -1
+            }
 
-            Alert.alert(
-                'Application Submitted',
-                'Your application has been submitted for approval. Admin will review and approve your account. Please proceed to login after approval.',
-                [
-                    {
-                        text: 'OK',
-                        onPress: () => navigation.navigate('Login'),
-                    },
-                ]
+            if (!response.ok) {
+                throw new Error(result.message || 'Failed to submit application');
+            }
+
+            // 🔄 Replaced Alert with custom Modal for SUCCESS
+            showCustomAlert(
+                'Success!',
+                'Your application has been submitted for approval. Please proceed to login after approval.',
+                'success',
+                // Callback to navigate after the user presses OK on the modal
+                () => navigation.navigate('AdminSignInScreen')
             );
-        } catch (error) {
-            Alert.alert('Error', 'Failed to submit application. Please try again.');
+        } catch (error: any) {
+            // 🔄 Replaced Alert with custom Modal for general fetch/network error
+            showCustomAlert(
+                'Error',
+                error.message || 'Something went wrong. Please try again later.',
+                'error'
+            );
         } finally {
             setLoading(false);
         }
@@ -101,6 +169,13 @@ const AdminSignupScreen = () => {
 
     return (
         <SafeAreaView style={styles.container}>
+            <CustomAlertModal // 👈 Render the custom modal
+                isVisible={alertContent.isVisible}
+                title={alertContent.title}
+                message={alertContent.message}
+                type={alertContent.type}
+                onClose={alertContent.onClose}
+            />
             <ScrollView
                 style={styles.content}
                 contentContainerStyle={{ flexGrow: 1 }}
@@ -109,10 +184,10 @@ const AdminSignupScreen = () => {
                 <View style={styles.formContainer}>
                     <Text style={styles.formTitle}>Admin Registration</Text>
                     <Text style={styles.formSubtitle}>
-                        Fill in your details to register as a Admin
+                        Fill in your details to register as an Admin
                     </Text>
 
-                    {/* Name Field */}
+                    {/* Form Fields... (Unchanged) */}
                     <View style={styles.inputContainer}>
                         <Text style={styles.label}>Name *</Text>
                         <TextInput
@@ -124,8 +199,8 @@ const AdminSignupScreen = () => {
                         />
                     </View>
 
-
-
+                    {/* ... other fields ... */}
+                    
                     {/* Email Field */}
                     <View style={styles.inputContainer}>
                         <Text style={styles.label}>Email *</Text>
@@ -134,7 +209,8 @@ const AdminSignupScreen = () => {
                             placeholder="Enter your Email"
                             value={formData.mainAdminEmail}
                             onChangeText={value => handleInputChange('mainAdminEmail', value)}
-                            autoCapitalize="words"
+                            keyboardType="email-address"
+                            autoCapitalize="none"
                         />
                     </View>
 
@@ -145,7 +221,9 @@ const AdminSignupScreen = () => {
                             style={styles.input}
                             placeholder="Enter your father's name"
                             value={formData.mainAdminFatherName}
-                            onChangeText={value => handleInputChange('mainAdminFatherName', value)}
+                            onChangeText={value =>
+                                handleInputChange('mainAdminFatherName', value)
+                            }
                             autoCapitalize="words"
                         />
                     </View>
@@ -157,7 +235,9 @@ const AdminSignupScreen = () => {
                             style={styles.input}
                             placeholder="e.g., Computer Science, Mathematics, etc."
                             value={formData.mainAdminDepartment}
-                            onChangeText={value => handleInputChange('mainAdminDepartment', value)}
+                            onChangeText={value =>
+                                handleInputChange('mainAdminDepartment', value)
+                            }
                             autoCapitalize="words"
                         />
                     </View>
@@ -180,9 +260,11 @@ const AdminSignupScreen = () => {
                         onPress={handleSubmit}
                         disabled={loading}
                     >
-                        <Text style={styles.submitButtonText}>
-                            {loading ? 'Submitting...' : 'Submit Application'}
-                        </Text>
+                        {loading ? (
+                            <ActivityIndicator color="#fff" />
+                        ) : (
+                            <Text style={styles.submitButtonText}>Submit Application</Text>
+                        )}
                     </TouchableOpacity>
 
                     {/* Info Text */}
@@ -196,13 +278,66 @@ const AdminSignupScreen = () => {
     );
 };
 
+// 🆕 Styles for the Custom Alert Modal
+const modalStyles = StyleSheet.create({
+    centeredView: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)', // Dark overlay
+    },
+    modalView: {
+        margin: 20,
+        backgroundColor: 'white',
+        borderRadius: 10,
+        padding: 35,
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
+        elevation: 5,
+        width: '80%',
+    },
+    modalTitle: {
+        marginBottom: 10,
+        textAlign: 'center',
+        fontSize: 22,
+        fontWeight: 'bold',
+        color: '#333',
+    },
+    modalText: {
+        marginBottom: 15,
+        textAlign: 'center',
+        fontSize: 16,
+        color: '#555',
+    },
+    button: {
+        borderRadius: 8,
+        padding: 10,
+        elevation: 2,
+        width: '50%',
+        marginTop: 15,
+    },
+    buttonClose: {
+        backgroundColor: '#6A5ACD', // Purple color for OK button
+    },
+    textStyle: {
+        color: 'white',
+        fontWeight: 'bold',
+        textAlign: 'center',
+        fontSize: 16,
+    },
+});
+
 const styles = StyleSheet.create({
+    // ... (Your existing styles remain here)
     container: {
         flex: 1,
         backgroundColor: '#fff',
         marginTop: 3,
         marginBottom: 100,
-        height: '100%', // <-- change from '100vh' to '100%'
+        height: '100%',
     },
     content: {
         flex: 1,
@@ -239,7 +374,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginTop: 20,
     },
-    submitButtonDisabled: { backgroundColor: '#ccc' },
+    submitButtonDisabled: { backgroundColor: '#999' },
     submitButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
     infoText: {
         fontSize: 14,
@@ -250,4 +385,4 @@ const styles = StyleSheet.create({
     },
 });
 
-export default AdminSignupScreen;
+export default AdminSignupScreen;  

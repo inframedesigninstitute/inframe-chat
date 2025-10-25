@@ -3049,6 +3049,11 @@ csstype@^3.0.2:
   resolved "https://registry.npmjs.org/csstype/-/csstype-3.1.3.tgz"
   integrity sha512-M1uQkMl8rQK/szD0LNhtqxIPLpimGm8sOBwU7lLnCpSbTyY3yeU1Vc7l4KT5zT4s/yOxHH5O7tIuuLOCnLADRw==
 
+cute-alert@^0.0.3:
+  version "0.0.3"
+  resolved "https://registry.npmjs.org/cute-alert/-/cute-alert-0.0.3.tgz"
+  integrity sha512-62y7sQuf0KMSd5Mqf7XEYHq/1nySQVnv5xx7lnUkp/v8GB/CRmNJY2hC0QlfDmZsG8+jESyas9Ah3XWXr0xFkw==
+
 data-view-buffer@^1.0.2:
   version "1.0.2"
   resolved "https://registry.npmjs.org/data-view-buffer/-/data-view-buffer-1.0.2.tgz"

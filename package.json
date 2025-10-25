@@ -27,6 +27,7 @@
     "@react-navigation/material-top-tabs": "^7.3.7",
     "@react-navigation/native": "^7.1.8",
     "axios": "^1.12.2",
+    "cute-alert": "^0.0.3",
     "expo": "54.0.12",
     "expo-camera": "~17.0.8",
     "expo-clipboard": "~8.0.7",

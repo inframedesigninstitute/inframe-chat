@@ -12,12 +12,12 @@ import {
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { RootStackParamList } from '../navigation/types';
+import AdminLoginScreen from './AdminLoginScreen';
 import AdminSignupScreen from './AdminSignInScreen';
 import AdvancedLoginScreen from './AdvancedLoginScreen';
 import StudentSignupScreen from './StudentSignupScreen';
-import TeacherSignupScreen from './TeacherSignupScreen';
-import AdminLoginScreen from './AdvancedLoginScreen';
 import TeacherLoginScreen from './TeacherLoginScreen';
+import TeacherSignupScreen from './TeacherSignupScreen';
 
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<
