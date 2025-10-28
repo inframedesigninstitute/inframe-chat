@@ -33,6 +33,7 @@ const RootNavigator = () => {
   return (
     <Stack.Navigator initialRouteName="AdminLogin" screenOptions={{ headerShown: false }}>
       <Stack.Screen name="AdminLogin" component={AdminLoginScreen} />
+      <Stack.Screen name="AdminSignInScreen" component={AdminSignupScreen} />
 
 
       <Stack.Screen name="Chats" component={ChatsScreen} />
@@ -67,7 +68,6 @@ const RootNavigator = () => {
       <Stack.Screen name="Privacy" component={PrivacyScreen} />
       <Stack.Screen name="AppInfo" component={AppInfoScreen} />
       <Stack.Screen name="Status" component={StatusScreen} />
-      <Stack.Screen name="AdminSignInScreen" component={AdminSignupScreen} />
 
     </Stack.Navigator>
   );

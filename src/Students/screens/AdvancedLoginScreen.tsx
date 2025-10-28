@@ -16,6 +16,7 @@ import {
 import { RootStackParamList } from '../navigation/types';
 // Assuming you have vector icons installed for better visual alerts
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import StudentSignupScreen from './StudentSignupScreen';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'AdvancedLogin'>;
 type RouteProps = RouteProp<RootStackParamList, 'AdvancedLogin'>;
@@ -87,6 +88,7 @@ const AdvancedLoginScreen = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [isVerifying, setIsVerifying] = useState(false);
     const [showOtpModal, setShowOtpModal] = useState(false);
+    const [activeTab, setActiveTab] = useState<'old' | 'new'>('old');
     
     // 🔄 Error/Admin Error States
     const [showErrorModal, setShowErrorModal] = useState(false);
@@ -158,14 +160,14 @@ const AdvancedLoginScreen = () => {
 
         setIsLoading(true);
         try {
-            const response = await axios.post(`${API_BASE_URL}/student/send-otp`, { studentEmail: email });
+const response = await axios.post(`${API_BASE_URL}/student/send-otp`, { studentEmail: email });
             console.log('OTP Response:', response.data);
 
             if (response.data?.success || response.status === 200) {
                 setShowOtpModal(true);
                 setTimeout(() => otpInputRef.current?.focus(), 100);
                 // 🔄 Replaced Alert.alert with Modal for OTP Send Success
-                showCustomSuccess(`OTP sent to ${email}`);
+showCustomSuccess(`OTP sent to ${email}`);
             } else {
                 // 🔄 Replaced Alert.alert with Modal for OTP Send Failure
                 showCustomError('OTP Send Failed', response.data?.message || 'Failed to send OTP.');
@@ -198,13 +200,13 @@ const AdvancedLoginScreen = () => {
         }
 
         setIsVerifying(true);
-        console.log(`Starting API call to: ${API_BASE_URL}/student/verify-otp`);
+console.log(`Starting API call to: ${API_BASE_URL}/student/verify-otp`);
         
         try {
             const requestData = { studentEmail: email, enteredOtp: otp };
             console.log('Request data:', requestData);
             
-            const response = await axios.post(`${API_BASE_URL}/student/verify-otp`, requestData);
+const response = await axios.post(`${API_BASE_URL}/student/verify-otp`, requestData);
             console.log('=== API Response ===');
 
             if (response.data?.success || response.status === 200) {
@@ -244,44 +246,80 @@ const AdvancedLoginScreen = () => {
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
             <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-                <Text style={styles.title}>Student Login</Text>
-                <Text style={styles.subtitle}>{isAdmin ? 'Admin Login' : 'Login with your Email'}</Text>
-
-                <TextInput
-                    style={styles.input}
-                    value={email}
-                    onChangeText={setEmail}
-                    placeholder="Enter your email"
-                    placeholderTextColor="#757575"
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                />
-
-                {isAdmin ? (
-                    <>
-                        <TextInput
-                            style={styles.input}
-                            value={password}
-                            onChangeText={setPassword}
-                            placeholder="Admin password"
-                            placeholderTextColor="#757575"
-                            secureTextEntry
-                        />
-                        <TouchableOpacity style={styles.loginButton} onPress={handleSendOtp}>
-                            <Text style={styles.loginButtonText}>Login as Admin</Text>
+                <View style={styles.card}>
+                    <View style={styles.headerRow}>
+                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButtonHitSlop}>
+                            <Ionicons name="chevron-back" size={22} color="#212121" />
                         </TouchableOpacity>
-                    </>
-                ) : (
-                    <TouchableOpacity
-                        style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
-                        onPress={handleSendOtp}
-                        disabled={isLoading}
-                    >
-                        <Text style={styles.loginButtonText}>
-                            {isLoading ? 'Sending OTP...' : 'Send OTP'}
-                        </Text>
-                    </TouchableOpacity>
-                )}
+                        <Text style={styles.headerTitle}>Student Login</Text>
+                        <View style={{ width: 22 }} />
+                    </View>
+
+                    <View style={styles.tabsContainer}>
+                        <TouchableOpacity
+                            style={[styles.tab, activeTab === 'new' && styles.tabActive]}
+                            activeOpacity={0.8}
+                            onPress={() => setActiveTab('new')}
+                        >
+                            <Text style={[styles.tabText, activeTab === 'new' && styles.tabTextActive]}>New Member</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[styles.tab, activeTab === 'old' && styles.tabActive]}
+                            activeOpacity={0.8}
+                            onPress={() => setActiveTab('old')}
+                        >
+                            <Text style={[styles.tabText, activeTab === 'old' && styles.tabTextActive]}>Old Member</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    {activeTab === 'old' && (
+                        <>
+                            <Text style={styles.subtitle}>{isAdmin ? 'Admin Login' : 'Login with your Email'}</Text>
+
+                            <TextInput
+                                style={styles.input}
+                                value={email}
+                                onChangeText={setEmail}
+                                placeholder="Enter your email"
+                                placeholderTextColor="#757575"
+                                keyboardType="email-address"
+                                autoCapitalize="none"
+                            />
+
+                            {isAdmin ? (
+                                <>
+                                    <TextInput
+                                        style={styles.input}
+                                        value={password}
+                                        onChangeText={setPassword}
+                                        placeholder="Admin password"
+                                        placeholderTextColor="#757575"
+                                        secureTextEntry
+                                    />
+                                    <TouchableOpacity style={styles.loginButton} onPress={handleSendOtp}>
+                                        <Text style={styles.loginButtonText}>Login as Admin</Text>
+                                    </TouchableOpacity>
+                                </>
+                            ) : (
+                                <TouchableOpacity
+                                    style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
+                                    onPress={handleSendOtp}
+                                    disabled={isLoading}
+                                >
+                                    <Text style={styles.loginButtonText}>
+                                        {isLoading ? 'Sending OTP...' : 'Send OTP'}
+                                    </Text>
+                                </TouchableOpacity>
+                            )}
+                        </>
+                    )}
+
+                    {activeTab === 'new' && (
+                        <View style={{ maxHeight: 520, overflow: 'hidden' }}>
+                            <StudentSignupScreen />
+                        </View>
+                    )}
+                </View>
             </ScrollView>
 
             {/* OTP Entry Modal (Existing, Unchanged) */}
@@ -355,6 +393,28 @@ export default AdvancedLoginScreen;
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#fff' },
     content: { flexGrow: 1, paddingHorizontal: 24, justifyContent: 'center' },
+    card: {
+        backgroundColor: '#ffffff',
+        borderRadius: 16,
+        shadowColor: '#000',
+        shadowOpacity: 0.08,
+        shadowRadius: 12,
+        shadowOffset: { width: 0, height: 4 },
+        elevation: 4,
+        paddingVertical: 22,
+        paddingHorizontal: 20,
+        width: '90%',
+        alignSelf: 'center',
+        maxWidth: 520,
+    },
+    headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
+    backButtonHitSlop: { padding: 4 },
+    headerTitle: { fontSize: 18, fontWeight: '700', color: '#212121', textAlign: 'center' },
+    tabsContainer: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#eeeeee', paddingBottom: 8, marginBottom: 18 },
+    tab: { width: '50%', alignItems: 'center', paddingBottom: 8 },
+    tabActive: { borderBottomWidth: 2, borderBottomColor: '#4a90e2' },
+    tabText: { fontSize: 14, color: '#9e9e9e', fontWeight: '600' },
+    tabTextActive: { color: '#4a90e2' },
     title: {
         fontSize: 26,
         fontWeight: 'bold',

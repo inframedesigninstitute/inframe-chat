@@ -33,6 +33,7 @@ const RootNavigator = () => {
   return (
     <Stack.Navigator initialRouteName="TeacherLogin" screenOptions={{ headerShown: false }}>
       <Stack.Screen name="TeacherLogin" component={TeacherLoginScreen} />
+      <Stack.Screen name="TeacherSignup" component={TeacherSignupScreen} />
 
 
       <Stack.Screen name="Chats" component={ChatsScreen} />
@@ -53,7 +54,6 @@ const RootNavigator = () => {
       <Stack.Screen name="CreateGroup" component={CreateGroupScreen} options={{ presentation: 'modal' }} />
       <Stack.Screen name="AddContact" component={AddContactScreen} options={{ presentation: 'modal' }} />
       <Stack.Screen name="Calendar" component={CalendarScreen} />
-      <Stack.Screen name="TeacherSignup" component={TeacherSignupScreen} />
       <Stack.Screen name="Profile" component={ProfileScreen} />
       <Stack.Screen name="Courses" component={CoursesScreen} />
       <Stack.Screen name="CourseDetails" component={CourseDetailsScreen} />
