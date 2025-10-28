@@ -47,9 +47,11 @@ interface Message {
 export default function ChatThread({
   channel,
   onOpenProfile,
+  onGroupCreated,
 }: {
   channel: { id: string; name: string }
   onOpenProfile: () => void
+  onGroupCreated?: (group: any) => void
 }) {
   const route = useRoute<ChatScreenRouteProp>()
   const navigation = useNavigation<ChatScreenNavigationProp>()
@@ -411,7 +413,16 @@ export default function ChatThread({
         </TouchableOpacity>
       </Modal>
 
-      <AddMemberModal visible={showAddMemberModal} onClose={() => setShowAddMemberModal(false)} />
+      <AddMemberModal
+        visible={showAddMemberModal}
+        onClose={() => setShowAddMemberModal(false)}
+        onGroupCreated={(group) => {
+          if (onGroupCreated) {
+            onGroupCreated(group)
+          }
+          setShowAddMemberModal(false)
+        }}
+      />
     </SafeAreaView>
   )
 }

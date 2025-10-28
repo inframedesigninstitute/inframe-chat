@@ -155,6 +155,11 @@ const ChatsScreen = () => {
     // navigation.navigate("ChatThread", { channel }) // removed
   }
 
+  const handleGroupCreated = (newGroup: Channel) => {
+    setChannels([newGroup, ...channels])
+    setSelectedChannel(newGroup)
+  }
+
   type UserProfile = {
     name: string
     email: string
@@ -166,17 +171,16 @@ const ChatsScreen = () => {
   }
 
   const userProfile: UserProfile | null = selectedChannel
-  ? {
-      name: selectedChannel.name,
-      email: `${selectedChannel.name.toLowerCase().replace(" ", ".")}@example.com`, // ✅ template literal
-      phone: "+91 98765 43210",
-      bio: "This is a sample bio for the user profile.",
-      fatherName: "Father Name",
-      operator: "John Doe",
-      department: "Sales",
-    }
-  : null;
-
+    ? {
+        name: selectedChannel.name,
+        email: `${selectedChannel.name.toLowerCase().replace(" ", ".")}@example.com`, // ✅ template literal
+        phone: "+91 98765 43210",
+        bio: "This is a sample bio for the user profile.",
+        fatherName: "Father Name",
+        operator: "John Doe",
+        department: "Sales",
+      }
+    : null
 
   return (
     <MainLayout
@@ -241,8 +245,8 @@ const ChatsScreen = () => {
             {selectedChannel ? (
               <ChatThread
                 channel={selectedChannel}
-                // clicking header user opens the profile panel on the right
                 onOpenProfile={() => setShowUserProfile(true)}
+                onGroupCreated={handleGroupCreated}
               />
             ) : (
               <View style={styles.emptyChat}>
@@ -262,7 +266,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fbfdfdff",
-    
   },
   header: {
     flexDirection: "row",
@@ -277,7 +280,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "600",
     color: "#075E54",
-    
   },
   searchContainer: {
     flexDirection: "row",
