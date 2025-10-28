@@ -123,7 +123,7 @@ const AdvancedLoginScreen = () => {
         setShowOtpModal(false);
         navigation.reset({
             index: 0,
-            routes: [{ name: 'Login' }],
+            routes: [{ name: 'AdvancedLogin' }],
         });
         setOtp('');
         console.log('✅ Navigation successful after error modal');

@@ -1,7 +1,5 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import AddContactScreen from '../screens/AddContactScreen';
-import AdminLoginScreen from '../screens/AdminLoginScreen';
-import AdminSignupScreen from '../screens/AdminSignInScreen';
 import AdvancedLoginScreen from '../screens/AdvancedLoginScreen';
 import AppInfoScreen from '../screens/AppInfoScreen';
 import AttendanceScreen from '../screens/AttendanceScreen';
@@ -19,7 +17,6 @@ import EnhancedSettingsScreen from '../screens/EnhancedSettingsScreen';
 import GalleryScreen from '../screens/GalleryScreen';
 import GroupChatScreen from '../screens/GroupChatScreen';
 import GroupsScreen from '../screens/GroupsScreen';
-import LoginScreen from '../screens/LoginScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import PrivacyScreen from '../screens/PrivacyScreen';
 import ProfileScreen from '../screens/ProfileScreen';
@@ -27,8 +24,6 @@ import QRScannerScreen from '../screens/QRScannerScreen';
 import StarredMessagesScreen from '../screens/StarredMessagesScreen';
 import StatusScreen from '../screens/StatusScreen';
 import StudentSignupScreen from '../screens/StudentSignupScreen';
-import TeacherLoginScreen from '../screens/TeacherLoginScreen';
-import TeacherSignupScreen from '../screens/TeacherSignupScreen';
 import TermsScreen from '../screens/TermsScreen';
 import VideoCallScreen from '../screens/VideoCallScreen';
 import { RootStackParamList } from './types';
@@ -36,11 +31,8 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const RootNavigator = () => {
   return (
-    <Stack.Navigator initialRouteName="Login" screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="Login" component={LoginScreen} />
+    <Stack.Navigator initialRouteName="AdvancedLogin" screenOptions={{ headerShown: false }}>
       <Stack.Screen name="AdvancedLogin" component={AdvancedLoginScreen} />
-      <Stack.Screen name="AdminLogin" component={AdminLoginScreen} />
-      <Stack.Screen name="TeacherLogin" component={TeacherLoginScreen} />
 
 
       <Stack.Screen name="Chats" component={ChatsScreen} />
@@ -62,7 +54,6 @@ const RootNavigator = () => {
       <Stack.Screen name="AddContact" component={AddContactScreen} options={{ presentation: 'modal' }} />
       <Stack.Screen name="Calendar" component={CalendarScreen} />
       <Stack.Screen name="StudentSignup" component={StudentSignupScreen} />
-      <Stack.Screen name="TeacherSignup" component={TeacherSignupScreen} />
       <Stack.Screen name="Profile" component={ProfileScreen} />
       <Stack.Screen name="Courses" component={CoursesScreen} />
       <Stack.Screen name="CourseDetails" component={CourseDetailsScreen} />
@@ -76,7 +67,6 @@ const RootNavigator = () => {
       <Stack.Screen name="Privacy" component={PrivacyScreen} />
       <Stack.Screen name="AppInfo" component={AppInfoScreen} />
       <Stack.Screen name="Status" component={StatusScreen} />
-      <Stack.Screen name="AdminSignInScreen" component={AdminSignupScreen} />
 
     </Stack.Navigator>
   );

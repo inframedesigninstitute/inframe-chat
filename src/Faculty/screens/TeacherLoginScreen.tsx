@@ -117,7 +117,7 @@ const TeacherLoginScreen = () => {
             setOtp('');
             // Only reset navigation on major errors or successful full flow completion
             if (alertTitle.includes('Error') && !showOtpModal) {
-                 navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+                 navigation.reset({ index: 0, routes: [{ name: 'TeacherLogin' }] });
             }
         }
     };

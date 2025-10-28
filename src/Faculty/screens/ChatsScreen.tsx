@@ -35,7 +35,7 @@ type Channel = {
 const initialChannels: Channel[] = [
   {
     id: "1",
-    name: "Vikram Choudhary",
+    name: "Vikram  faculty ",
     lastMessage: "✓✓ signon name father name batch course...",
     time: "12:07 am",
     unread: 1,
