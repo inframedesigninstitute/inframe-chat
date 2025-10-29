@@ -35,7 +35,7 @@ type Channel = {
 const initialChannels: Channel[] = [
   {
     id: "1",
-    name: "Vikram Choudhary",
+    name: "Vikram  Admin",
     lastMessage: "✓✓ signon name father name batch course...",
     time: "12:07 am",
     unread: 1,
@@ -155,6 +155,11 @@ const ChatsScreen = () => {
     // navigation.navigate("ChatThread", { channel }) // removed
   }
 
+  const handleGroupCreated = (newGroup: Channel) => {
+    setChannels([newGroup, ...channels])
+    setSelectedChannel(newGroup)
+  }
+
   type UserProfile = {
     name: string
     email: string
@@ -166,17 +171,16 @@ const ChatsScreen = () => {
   }
 
   const userProfile: UserProfile | null = selectedChannel
-  ? {
-      name: selectedChannel.name,
-      email: `${selectedChannel.name.toLowerCase().replace(" ", ".")}@example.com`, // ✅ template literal
-      phone: "+91 98765 43210",
-      bio: "This is a sample bio for the user profile.",
-      fatherName: "Father Name",
-      operator: "John Doe",
-      department: "Sales",
-    }
-  : null;
-
+    ? {
+        name: selectedChannel.name,
+        email: `${selectedChannel.name.toLowerCase().replace(" ", ".")}@example.com`, // ✅ template literal
+        phone: "+91 98765 43210",
+        bio: "This is a sample bio for the user profile.",
+        fatherName: "Father Name",
+        operator: "John Doe",
+        department: "Sales",
+      }
+    : null
 
   return (
     <MainLayout
@@ -241,8 +245,8 @@ const ChatsScreen = () => {
             {selectedChannel ? (
               <ChatThread
                 channel={selectedChannel}
-                // clicking header user opens the profile panel on the right
                 onOpenProfile={() => setShowUserProfile(true)}
+                onGroupCreated={handleGroupCreated}
               />
             ) : (
               <View style={styles.emptyChat}>
@@ -259,78 +263,304 @@ const ChatsScreen = () => {
 export default ChatsScreen
 
 const styles = StyleSheet.create({
+  // 🔹 Root Container
   container: {
     flex: 1,
-    backgroundColor: "#fbfdfdff",
-    
+    backgroundColor: "#e6ecf3", // soft neutral background
   },
+
+  // 🔹 Header
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
-    backgroundColor: "#fff",
+    padding: 14,
+    backgroundColor: "#ffffff",
+    borderBottomLeftRadius: 22,
+    borderBottomRightRadius: 22,
+    elevation: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+  },
+  backButton: { marginRight: 14 },
+  contactInfo: { flex: 1 },
+  contactName: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#111",
+    textShadowColor: "rgba(0,0,0,0.1)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 1,
+  },
+  contactNumber: { fontSize: 12, color: "#4caf50", marginTop: 2 },
+  headerActions: { flexDirection: "row" },
+  actionButton: {
+    marginLeft: 10,
+    backgroundColor: "#f2f4f8",
+    padding: 10,
+    borderRadius: 12,
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: "600",
     color: "#075E54",
-    
   },
-  searchContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#ece5e5ff",
-    marginHorizontal: 20,
-    marginVertical: 8,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  searchIcon: {
-    marginRight: 12,
-    color: "#000",
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    color: "#000",
-  },
-  qrButton: {
-    marginLeft: 12,
-    padding: 4,
-  },
-  cameraButton: {
-    marginLeft: 8,
-    padding: 4,
-  },
+
+  // 🔹 Chat Layout
   rootRow: {
     flex: 1,
     flexDirection: "row",
   },
   listColumn: {
-    width: 600,
+    width: 400,
     maxWidth: 450,
     minWidth: 260,
     borderRightWidth: 1,
-    borderRightColor: "#e5e7eb",
-    backgroundColor: "#ffffff",
+    borderRightColor: "#e2e6ea",
+    backgroundColor: "#fefefe",
+    elevation: 6,
+    shadowColor: "#000",
+    shadowOffset: { width: 2, height: 0 },
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
   },
   chatColumn: {
     flex: 1,
-    backgroundColor: "#ffffff",
-    borderRightWidth: 1,
-    borderRightColor: "#e5e7eb",
+    backgroundColor: "#f9fbfd",
+    borderLeftWidth: 1,
+    borderLeftColor: "#dde2e8",
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: -2, height: 0 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
   },
+
+  // 🔹 Search Bar (Glassmorphism)
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.8)",
+    marginHorizontal: 20,
+    marginVertical: 10,
+    borderRadius: 25,
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 6,
+  },
+  searchIcon: { marginRight: 12, color: "#333" },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: "#000",
+  },
+  qrButton: { marginLeft: 10, padding: 6 },
+
+  // 🔹 Chat Empty Screen
   emptyChat: {
     flex: 1,
-    alignItems: "center",
     justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f2f6fa",
   },
   emptyChatText: {
-    color: "#6b7280",
-    fontSize: 14,
+    color: "#64748b",
+    fontSize: 15,
+    fontWeight: "500",
   },
-})
+
+  // 🔹 Messages
+  messagesContainer: { flex: 1 },
+  messagesList: { flex: 1 },
+  messagesContent: { padding: 14 },
+
+  messageContainer: {
+    marginVertical: 6,
+    transform: [{ scale: 1 }],
+  },
+  sentMessage: { alignSelf: "flex-end" },
+  receivedMessage: { alignSelf: "flex-start" },
+
+  messageBubble: {
+    padding: 12,
+    borderRadius: 18,
+    maxWidth: "80%",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 5,
+  },
+  sentBubble: {
+    backgroundColor: "#007aff",
+    borderTopRightRadius: 0,
+    shadowColor: "#007aff",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 3,
+  },
+  receivedBubble: {
+    backgroundColor: "#ffffff",
+    borderTopLeftRadius: 0,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+  },
+  messageText: { fontSize: 15, lineHeight: 20 },
+  sentText: { color: "#fff" },
+  receivedText: { color: "#111" },
+
+  messageFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 4,
+  },
+  timestamp: { fontSize: 10, color: "#777", marginRight: 4 },
+
+  // 🔹 Input Bar
+  inputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 12,
+    backgroundColor: "#ffffff",
+    borderTopWidth: 0,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    elevation: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+  },
+  attachButton: {
+    marginRight: 8,
+    backgroundColor: "#f3f4f6",
+    borderRadius: 20,
+    padding: 8,
+    elevation: 5,
+  },
+  cameraButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: "#e8eaf0",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 8,
+    elevation: 4,
+  },
+  textInput: {
+    flex: 1,
+    fontSize: 15,
+    padding: 10,
+    backgroundColor: "#f9f9f9",
+    borderRadius: 25,
+    color: "#000",
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+  },
+  sendButton: {
+    marginLeft: 8,
+    backgroundColor: "#007aff",
+    padding: 12,
+    borderRadius: 28,
+    elevation: 8,
+    shadowColor: "#007aff",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.35,
+    shadowRadius: 5,
+  },
+
+  // 🔹 Attachment Overlay
+  attachmentOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
+  },
+  attachmentContainer: {
+    backgroundColor: "#ffffffee",
+    padding: 25,
+    width: "90%",
+    flex: 0.5,
+    borderRadius: 30,
+    alignSelf: "center",
+    elevation: 14,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+  },
+  attachmentHeader: {
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+  },
+  attachmentTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    textAlign: "center",
+    color: "#1a1a1a",
+  },
+  attachmentGrid: {
+    paddingTop: 20,
+    gap: 30,
+    alignSelf: "center",
+  },
+  attachmentRow: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    alignItems: "center",
+  },
+  attachmentItem: {
+    alignItems: "center",
+  },
+  attachmentIcon: {
+    width: 70,
+    height: 70,
+    borderRadius: 28,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 8,
+    backgroundColor: "#eaf2ff",
+    elevation: 8,
+    shadowColor: "#007aff",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  attachmentLabel: {
+    fontSize: 12,
+    color: "#000",
+    textAlign: "center",
+    fontWeight: "500",
+  },
+
+  // 🔹 Floating Attach Button
+  attachButtons: {
+    alignSelf: "flex-end",
+    margin: 24,
+    backgroundColor: "#00bcd4",
+    borderRadius: 30,
+    padding: 12,
+    elevation: 10,
+    shadowColor: "#00bcd4",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+  },
+});
+

@@ -27,7 +27,6 @@ const App = () => {
         style={styles.logo}
         resizeMode="contain"
       />
-      {/* <Text style={styles.logoSubtitle}>ART • DESIGN • BUSINESS</Text> */}
 
       <Text style={styles.heading}>Welcome to Inframe</Text>
 
@@ -52,7 +51,7 @@ export default App;
 
 const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: 'flex-start', alignItems: 'center', backgroundColor: '#ffffff' },
-  logo: { width: 290, height: 140, marginTop: 60 },
+  logo: { width: 350, height: 190, marginTop: 90 },
   logoSubtitle: { marginTop: -6, color: '#7b7b7b', letterSpacing: 1, fontSize: 12 },
   heading: { marginTop: 48, fontSize: 20, fontWeight: '700', color: '#1c1c1c' },
   buttonsWrap: { marginTop: 24, width: 360, alignItems: 'center' },
