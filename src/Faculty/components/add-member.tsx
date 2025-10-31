@@ -111,7 +111,13 @@ export default function AddMemberModal({ visible, onClose, onGroupCreated }: Add
   const [activeModal, setActiveModal] = useState<"main" | "newContact" | "newGroup">("main")
   const [contacts, setContacts] = useState<Contact[]>(INITIAL_CONTACTS)
 
-  const [firstName, setFirstName] = useState("")
+
+
+  const [studentName, setStudentName] = useState("")
+  const [studentEmail, setStudentEmail] = useState('')
+
+
+
   const [lastName, setLastName] = useState("")
   const [selectedCountry, setSelectedCountry] = useState("IN")
   const [phoneNumber, setPhoneNumber] = useState("")
@@ -140,31 +146,8 @@ export default function AddMemberModal({ visible, onClose, onGroupCreated }: Add
     }
   }
 
-  const handleAddContact = () => {
-    if (!firstName.trim() || !phoneNumber.trim()) {
-      alert("Please fill in all required fields")
-      return
-    }
+  const [loading, setLoading] = useState(false)
 
-    const country = COUNTRIES.find((c) => c.code === selectedCountry)
-    const fullPhone = `${country?.dial} ${phoneNumber}`
-    const fullName = `${firstName}${lastName ? " " + lastName : ""}`
-
-    const newContact: Contact = {
-      id: String(contacts.length + 1),
-      name: fullName,
-      phone: "",
-      avatar: firstName.charAt(0).toUpperCase(),
-      bgColor: "#25D366",
-    }
-
-    setContacts([...contacts, newContact])
-    setFirstName("")
-    setLastName("")
-    setPhoneNumber("")
-    setSelectedCountry("IN")
-    setActiveModal("main")
-  }
 
   const toggleMemberSelection = (contactId: string) => {
     const newSelected = new Set(selectedMembers)
@@ -207,6 +190,40 @@ export default function AddMemberModal({ visible, onClose, onGroupCreated }: Add
     setActiveModal("main")
     onClose()
   }
+
+  const handleSubmit = async () => {
+    if (!studentEmail) return;
+
+
+    setLoading(true);
+    try {
+      const API_URL = 'http://localhost:5200/web/faculty/add-contacts';
+
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          "Content-Type": "application/json",
+          // Authorization: `Bearer ${token}`, // ✅ send token properly here
+        },
+
+        body: JSON.stringify({ studentName, studentEmail }),
+      });
+
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result?.message || 'student added.');
+      }
+
+      // Success - 🔄 Replaced Alert.alert with CustomAlertModal
+
+    } catch (error: any) {
+      console.error('Registration Error:', error);
+
+
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const renderActionButton = (button: (typeof ACTION_BUTTONS)[0]) => (
     <TouchableOpacity key={button.id} style={styles.actionButton} onPress={() => handleActionButtonPress(button.id)}>
@@ -315,10 +332,10 @@ export default function AddMemberModal({ visible, onClose, onGroupCreated }: Add
                 <Ionicons name="person" size={20} color="#000000ff" style={styles.formIcon} />
                 <TextInput
                   style={styles.formInput}
-                  placeholder="First name"
+                  placeholder="Email"
                   placeholderTextColor="#000000ff"
-                  value={firstName}
-                  onChangeText={setFirstName}
+                  value={studentEmail}
+                  onChangeText={setStudentEmail}
                 />
               </View>
             </View>
@@ -334,21 +351,21 @@ export default function AddMemberModal({ visible, onClose, onGroupCreated }: Add
                 onChangeText={setLastName}
               />
             </View> */}
-             <View style={styles.formGroup}>
+            <View style={styles.formGroup}>
               <View style={styles.inputWithIcon}>
                 <Ionicons name="person" size={25} color="#000000ff" style={styles.formIcon} />
                 <TextInput
                   style={styles.formInput}
-                  placeholder="Last name"
+                  placeholder="Full Name"
                   placeholderTextColor="#000000ff"
-                  value={lastName}
-                  onChangeText={setLastName}
+                  value={studentName}
+                  onChangeText={setStudentName}
                 />
               </View>
             </View>
 
             {/* Country and Phone */}
-            <View style={styles.countryPhoneRow}>
+            {/* <View style={styles.countryPhoneRow}>
               <View style={styles.countrySection}>
                 <View style={styles.inputWithIcon}>
                   <Ionicons name="call" size={20} color="#000000ff" style={styles.formIcon} />
@@ -362,10 +379,10 @@ export default function AddMemberModal({ visible, onClose, onGroupCreated }: Add
                     </Text>
                     <Ionicons name="chevron-down" size={16} color="#1b1717ff" />
                   </TouchableOpacity>
-                </View>
+                </View> */}
 
-                {/* Country Dropdown */}
-                {showCountryDropdown && (
+            {/* Country Dropdown */}
+            {/* {showCountryDropdown && (
                   <View style={styles.dropdownMenu}>
                     {COUNTRIES.map((country) => (
                       <TouchableOpacity
@@ -383,10 +400,10 @@ export default function AddMemberModal({ visible, onClose, onGroupCreated }: Add
                     ))}
                   </View>
                 )}
-              </View>
+              </View> */}
 
-              {/* Phone Number */}
-              <View style={styles.phoneSection}>
+            {/* Phone Number */}
+            {/* <View style={styles.phoneSection}>
                 <TextInput
                   style={styles.formInput}
                   placeholder="Phone"
@@ -395,11 +412,11 @@ export default function AddMemberModal({ visible, onClose, onGroupCreated }: Add
                   onChangeText={setPhoneNumber}
                   keyboardType="phone-pad"
                 />
-              </View>
-            </View>
+              </View> */}
+            {/* </View> */}
 
             {/* Add Button */}
-            <TouchableOpacity style={styles.addButton} onPress={handleAddContact}>
+            <TouchableOpacity style={styles.addButton} onPress={handleSubmit}>
               <Text style={styles.addButtonText}>Add Contact</Text>
             </TouchableOpacity>
           </View>
