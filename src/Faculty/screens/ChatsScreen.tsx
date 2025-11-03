@@ -1,19 +1,21 @@
 "use client"
 
-import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs"
-import { type CompositeNavigationProp, useNavigation } from "@react-navigation/native"
-import type { NativeStackNavigationProp } from "@react-navigation/native-stack"
-import { useMemo, useState } from "react"
-import { FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native"
-import Ionicons from "react-native-vector-icons/Ionicons"
-import MaterialIcons from "react-native-vector-icons/MaterialIcons"
-import ChannelItemWithLongPress from "../components/ChannelItemWithLongPress"
-import ChatThread from "../components/ChatThread"
-import MainLayout from "../components/MainLayout"
-import TopTabNavigation from "../components/TopTabNavigation"
-import WebBackButton from "../components/WebBackButton"
-import type { MainTabsParamList, RootStackParamList } from "../navigation/types"
-import UserProfileScreen from "./UserProfileScreen"
+import { RootState } from '@/src/Redux/Store/store';
+import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
+import { type CompositeNavigationProp, useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useEffect, useMemo, useState } from "react";
+import { FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import Ionicons from "react-native-vector-icons/Ionicons";
+import MaterialIcons from "react-native-vector-icons/MaterialIcons";
+import { useSelector } from 'react-redux';
+import ChannelItemWithLongPress from "../components/ChannelItemWithLongPress";
+import ChatThread from "../components/ChatThread";
+import MainLayout from "../components/MainLayout";
+import TopTabNavigation from "../components/TopTabNavigation";
+import WebBackButton from "../components/WebBackButton";
+import type { MainTabsParamList, RootStackParamList } from "../navigation/types";
+import UserProfileScreen from "./UserProfileScreen";
 
 type ChatsNavigationProp = CompositeNavigationProp<
   BottomTabNavigationProp<MainTabsParamList, "Chats">,
@@ -101,7 +103,11 @@ const initialChannels: Channel[] = [
   },
 ]
 
+
+
 const ChatsScreen = () => {
+  const token = useSelector((state: RootState) => state.facultyStore.token)
+
   const navigation = useNavigation<ChatsNavigationProp>()
   const [channels, setChannels] = useState(initialChannels)
   const [searchText, setSearchText] = useState("")
@@ -172,15 +178,54 @@ const ChatsScreen = () => {
 
   const userProfile: UserProfile | null = selectedChannel
     ? {
-        name: selectedChannel.name,
-        email: `${selectedChannel.name.toLowerCase().replace(" ", ".")}@example.com`, // ✅ template literal
-        phone: "+91 98765 43210",
-        bio: "This is a sample bio for the user profile.",
-        fatherName: "Father Name",
-        operator: "John Doe",
-        department: "Sales",
-      }
+      name: selectedChannel.name,
+      email: `${selectedChannel.name.toLowerCase().replace(" ", ".")}@example.com`, // ✅ template literal
+      phone: "+91 98765 43210",
+      bio: "This is a sample bio for the user profile.",
+      fatherName: "Father Name",
+      operator: "John Doe",
+      department: "Sales",
+    }
     : null
+
+
+
+  const API_BASE = 'localhost:5200/web/faculty/add-contacts'
+
+  // console.log(token)
+
+
+  const fetchAllFaculies = async () => {
+    try {
+      const API_URL = "http://localhost:5200/web/faculty/view-contacts";
+
+      const response = await fetch(API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({}),
+      });
+
+      // ✅ Parse JSON response
+      const data = await response.json();
+
+      if (data?.success || response.status === 200) {
+        console.log("✅ Faculty data:", data);
+      } else {
+        console.log("❌ Failed to fetch faculties");
+      }
+    } catch (err: any) {
+      console.error("🔥 Error fetching faculties:", err.message);
+    }
+  };
+
+
+
+  useEffect(() => {
+    fetchAllFaculies()
+  }, [])
 
   return (
     <MainLayout

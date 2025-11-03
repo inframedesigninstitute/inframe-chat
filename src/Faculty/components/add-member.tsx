@@ -3,6 +3,7 @@
 import { RootState } from "@/src/Redux/Store/store"
 import { useState } from "react"
 import {
+  Alert,
   FlatList,
   Modal,
   SafeAreaView,
@@ -169,7 +170,7 @@ export default function AddMemberModal({ visible, onClose, onGroupCreated }: Add
 
   const handleCreateGroup = () => {
     if (selectedMembers.size === 0) {
-      alert("Please select at least one member")
+      Alert.alert("Please select at least one member")
       return
     }
 

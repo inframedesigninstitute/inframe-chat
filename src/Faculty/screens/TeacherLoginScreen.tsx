@@ -178,7 +178,7 @@ const TeacherLoginScreen = () => {
         setIsVerifying(true);
 
         try {
-            const requestData = { facultyEmail: email, enteredOtp: otp };
+            const requestData = { facultyEmail: email, otp };
             const response = await axios.post(`${API_BASE_URL}/faculty/verify-otp`, requestData);
 
             console.log("OTP Verify Response:", response.data);
@@ -356,9 +356,9 @@ const styles = StyleSheet.create({
         elevation: 4,
         paddingVertical: 22,
         paddingHorizontal: 20,
-        width: '90%',
+        width: '60%',
         alignSelf: 'center',
-        maxWidth: 520,
+        maxWidth: 420,
     },
     headerRow: {
         flexDirection: 'row',
@@ -412,7 +412,7 @@ const styles = StyleSheet.create({
     },
     modalBox: {
         backgroundColor: '#fff',
-        width: '85%',
+        width: '65%',
         borderRadius: 12,
         padding: 24,
         elevation: 5,
