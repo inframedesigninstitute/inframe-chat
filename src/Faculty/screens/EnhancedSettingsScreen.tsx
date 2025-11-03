@@ -1,6 +1,5 @@
 "use client"
 
-import AsyncStorage from "@react-native-async-storage/async-storage"
 import { useNavigation } from "@react-navigation/native"
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack"
 import type React from "react"
@@ -121,7 +120,7 @@ const EnhancedSettingsScreen = () => {
       case "Calendar":
         return <CalendarScreen />
       case "Starred":
-        return <StarredMessagesScreen/>
+        return <StarredMessagesScreen />
       case "Alumnus App":
         return (
           <View style={styles.emptyDetail}>
@@ -151,6 +150,36 @@ const EnhancedSettingsScreen = () => {
           </View>
         )
     }
+  }
+
+  const logout = () => {
+    // async () => {
+    //   Alert.alert("Logout", "Are you sure you want to logout?", [
+    //     { text: "Cancel", style: "cancel" },
+    //     {
+    //       text: "Logout",
+    //       style: "destructive",
+    //       onPress: async () => {
+    //         try {
+    //           // 🧹 Clear token and user data
+    //           await AsyncStorage.removeItem("TOKEN");
+    //           setUser(null);
+
+    //           // 🔁 Navigate to TeacherLogin
+    //           navigation.reset({
+    //             index: 0,
+    //             routes: [{ name: "TeacherLogin" as never }],
+    //           });
+
+    //           console.log("✅ Successfully logged out and navigated to TeacherLogin");
+    //         } catch (error) {
+    //           console.error("Logout error:", error);
+    //           Alert.alert("Error", "Failed to logout, please try again.");
+    //         }
+    //       },
+    //     },
+    //   ]);
+    // }
   }
 
   return (
@@ -221,42 +250,16 @@ const EnhancedSettingsScreen = () => {
               <SettingItem icon="settings" title="Admin Dashboard" subtitle="Manage approvals & settings" />
             )}
 
-          <View style={{ marginTop: 12 }}>
-  <TouchableOpacity
-    style={styles.logoutButton}
-    activeOpacity={0.85}
-    onPress={async () => {
-      Alert.alert("Logout", "Are you sure you want to logout?", [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Logout",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              // 🧹 Clear token and user data
-              await AsyncStorage.removeItem("TOKEN");
-              setUser(null);
-
-              // 🔁 Navigate to TeacherLogin
-              navigation.reset({
-                index: 0,
-                routes: [{ name: "TeacherLogin" as never }],
-              });
-
-              console.log("✅ Successfully logged out and navigated to TeacherLogin");
-            } catch (error) {
-              console.error("Logout error:", error);
-              Alert.alert("Error", "Failed to logout, please try again.");
-            }
-          },
-        },
-      ]);
-    }}
-  >
-    <Ionicons name="log-out" size={22} color="#E53935" />
-    <Text style={styles.logoutText}>Log out</Text>
-  </TouchableOpacity>
-</View>
+            <View style={{ marginTop: 12 }}>
+              <TouchableOpacity
+                style={styles.logoutButton}
+                activeOpacity={0.85}
+                onPress={logout}
+              >
+                <Ionicons name="log-out" size={22} color="#E53935" />
+                <Text style={styles.logoutText}>Log out</Text>
+              </TouchableOpacity>
+            </View>
 
           </ScrollView>
         </View>

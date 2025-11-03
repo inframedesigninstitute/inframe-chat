@@ -112,16 +112,16 @@ const TeacherLoginScreen = () => {
 
         checkToken();
     }, []);
-    
+
     // ✅ FIXED Logout Function
     const handleLogout = async () => {
         try {
             await AsyncStorage.removeItem('TOKEN');
-            
+
             // ⭐️ FIX: Changed 'null' to '' (empty string) to satisfy the 'string' type expectation 
             // of the Redux slice action, resolving the TypeScript error 2322.
-            dispatch(setToken({ token: "" })); 
-            
+            dispatch(setToken({ token: "" }));
+
             console.log("User logged out. Token cleared.");
             // Reset navigation stack to the login screen
             navigation.reset({ index: 0, routes: [{ name: "TeacherLogin" }] });
@@ -129,7 +129,7 @@ const TeacherLoginScreen = () => {
             console.error("Failed to clear token during logout:", e);
         }
     };
-    
+
     console.log(facultyStore);
 
     const handleSendOtp = async () => {
@@ -203,7 +203,7 @@ const TeacherLoginScreen = () => {
             }
         } catch (err: any) {
             console.error("=== OTP Verification Error ===", err.response || err.message);
-            
+
             let message = "Network error. Please try again.";
             if (err.response?.data?.message) {
                 // Use specific error from the backend if available

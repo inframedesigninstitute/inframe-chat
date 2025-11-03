@@ -1,5 +1,6 @@
 "use client"
 
+import { RootState } from "@/src/Redux/Store/store"
 import { useState } from "react"
 import {
   FlatList,
@@ -13,6 +14,7 @@ import {
   View,
 } from "react-native"
 import Ionicons from "react-native-vector-icons/Ionicons"
+import { useSelector } from "react-redux"
 
 interface Contact {
   id: string
@@ -146,6 +148,12 @@ export default function AddMemberModal({ visible, onClose, onGroupCreated }: Add
     }
   }
 
+  const token = useSelector((state: RootState) => state.facultyStore.token)
+
+  console.log(token)
+
+
+
   const [loading, setLoading] = useState(false)
 
 
@@ -203,7 +211,7 @@ export default function AddMemberModal({ visible, onClose, onGroupCreated }: Add
         method: 'POST',
         headers: {
           "Content-Type": "application/json",
-          // Authorization: `Bearer ${token}`, // ✅ send token properly here
+          Authorization: `Bearer ${token}`, 
         },
 
         body: JSON.stringify({ studentName, studentEmail }),
@@ -214,7 +222,6 @@ export default function AddMemberModal({ visible, onClose, onGroupCreated }: Add
         throw new Error(result?.message || 'student added.');
       }
 
-      // Success - 🔄 Replaced Alert.alert with CustomAlertModal
 
     } catch (error: any) {
       console.error('Registration Error:', error);
@@ -340,17 +347,7 @@ export default function AddMemberModal({ visible, onClose, onGroupCreated }: Add
               </View>
             </View>
 
-            {/* Last Name */}
-            {/* <View style={styles.formGroup}>
-              
-              <TextInput
-                style={styles.formInput}
-                placeholder="Last name"
-                placeholderTextColor="#020202ff"
-                value={lastName}
-                onChangeText={setLastName}
-              />
-            </View> */}
+         
             <View style={styles.formGroup}>
               <View style={styles.inputWithIcon}>
                 <Ionicons name="person" size={25} color="#000000ff" style={styles.formIcon} />
@@ -364,57 +361,7 @@ export default function AddMemberModal({ visible, onClose, onGroupCreated }: Add
               </View>
             </View>
 
-            {/* Country and Phone */}
-            {/* <View style={styles.countryPhoneRow}>
-              <View style={styles.countrySection}>
-                <View style={styles.inputWithIcon}>
-                  <Ionicons name="call" size={20} color="#000000ff" style={styles.formIcon} />
-                  <TouchableOpacity
-                    style={styles.countryDropdown}
-                    onPress={() => setShowCountryDropdown(!showCountryDropdown)}
-                  >
-                    <Text style={styles.countryText}>
-                      {COUNTRIES.find((c) => c.code === selectedCountry)?.code}{" "}
-                      {COUNTRIES.find((c) => c.code === selectedCountry)?.dial}
-                    </Text>
-                    <Ionicons name="chevron-down" size={16} color="#1b1717ff" />
-                  </TouchableOpacity>
-                </View> */}
-
-            {/* Country Dropdown */}
-            {/* {showCountryDropdown && (
-                  <View style={styles.dropdownMenu}>
-                    {COUNTRIES.map((country) => (
-                      <TouchableOpacity
-                        key={country.code}
-                        style={styles.dropdownItem}
-                        onPress={() => {
-                          setSelectedCountry(country.code)
-                          setShowCountryDropdown(false)
-                        }}
-                      >
-                        <Text style={styles.dropdownItemText}>
-                          {country.code} {country.dial}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
-              </View> */}
-
-            {/* Phone Number */}
-            {/* <View style={styles.phoneSection}>
-                <TextInput
-                  style={styles.formInput}
-                  placeholder="Phone"
-                  placeholderTextColor="#070606ff"
-                  value={phoneNumber}
-                  onChangeText={setPhoneNumber}
-                  keyboardType="phone-pad"
-                />
-              </View> */}
-            {/* </View> */}
-
+            
             {/* Add Button */}
             <TouchableOpacity style={styles.addButton} onPress={handleSubmit}>
               <Text style={styles.addButtonText}>Add Contact</Text>
@@ -449,7 +396,6 @@ export default function AddMemberModal({ visible, onClose, onGroupCreated }: Add
             />
           </View>
 
-          {/* Members List */}
           <View style={styles.contactsSection}>
             <FlatList
               data={filteredGroupContacts}
@@ -461,7 +407,6 @@ export default function AddMemberModal({ visible, onClose, onGroupCreated }: Add
           </View>
         </ScrollView>
 
-        {/* Create Group Button */}
         {selectedMembers.size > 0 && (
           <View style={styles.bottomButtonContainer}>
             <TouchableOpacity style={styles.createGroupButton} onPress={handleCreateGroup}>

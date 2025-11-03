@@ -136,19 +136,19 @@ const TeacherSignupScreen = () => {
                 'Your application has been submitted for approval. Admin will review and approve your account. Please proceed to login after approval.',
                 () => navigation.navigate('Login') // Navigate on OK press
             );
-            
+
             // Clear form data on successful submission
             setFormData({ facultyName: '', facultyEmail: '', facultyFatherName: '', facultyDepartment: '', facultyGender: '' });
-            
+
         } catch (error: any) {
             console.error('Registration Error:', error);
-            
+
             // Failure - 🔄 Replaced Alert.alert with CustomAlertModal
             showCustomAlert(
                 'Submission Failed ❌',
                 error.message || 'Faculty Already registered wait for the approval'
             );
-            
+
         } finally {
             setLoading(false);
         }
@@ -244,7 +244,7 @@ const TeacherSignupScreen = () => {
                     >
                         {loading ? (
                             <ActivityIndicator color="#fff" />
-                    ) : (
+                        ) : (
                             <Text style={styles.submitButtonText}>
                                 Submit Application
                             </Text>
@@ -298,7 +298,7 @@ const modalStyles = StyleSheet.create({
         borderRadius: 8,
         paddingVertical: 12,
         width: '50%',
-        alignItems: 'center',  backgroundColor:"#e0dedeff"
+        alignItems: 'center', backgroundColor: "#e0dedeff"
 
     },
     modalButtonText: {
