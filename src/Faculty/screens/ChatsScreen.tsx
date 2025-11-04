@@ -170,7 +170,7 @@ const ChatsScreen = () => {
       } else setRawGroups([]);
     } catch (err: any) {
       console.error("Error fetching groups:", err.response?.data || err.message);
-      setRawGroups([]);
+      
     }
   };
 
