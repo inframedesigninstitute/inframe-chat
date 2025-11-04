@@ -1,200 +1,248 @@
-"use client"
+import { RootState } from "@/src/Redux/Store/store";
+import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
+import { CompositeNavigationProp, useFocusEffect, useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import axios from "axios";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import Ionicons from "react-native-vector-icons/Ionicons";
+import MaterialIcons from "react-native-vector-icons/MaterialIcons";
+import { useSelector } from "react-redux";
+import ChannelItemWithLongPress from "../components/ChannelItemWithLongPress";
+import ChatThread from "../components/ChatThread";
+import MainLayout from "../components/MainLayout";
+import TopTabNavigation from "../components/TopTabNavigation";
+import WebBackButton from "../components/WebBackButton";
+import type { MainTabsParamList, RootStackParamList } from "../navigation/types";
+import UserProfileScreen from "./UserProfileScreen";
 
-import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs"
-import { type CompositeNavigationProp, useNavigation } from "@react-navigation/native"
-import type { NativeStackNavigationProp } from "@react-navigation/native-stack"
-import { useMemo, useState } from "react"
-import { FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native"
-import Ionicons from "react-native-vector-icons/Ionicons"
-import MaterialIcons from "react-native-vector-icons/MaterialIcons"
-import ChannelItemWithLongPress from "../components/ChannelItemWithLongPress"
-import ChatThread from "../components/ChatThread"
-import MainLayout from "../components/MainLayout"
-import TopTabNavigation from "../components/TopTabNavigation"
-import WebBackButton from "../components/WebBackButton"
-import type { MainTabsParamList, RootStackParamList } from "../navigation/types"
-import UserProfileScreen from "./UserProfileScreen"
+const API_BASE_URL = "http://localhost:5200/web";
+
+type StudentContact = {
+  studentId: string;
+  studentName: string;
+  studentEmail?: string;
+};
+
+type GroupContact = {
+  groupId: string;
+  groupName: string;
+  membersCount?: number;
+};
+
+type Channel = {
+  id: string;
+  name: string;
+  lastMessage: string;
+  time: string;
+  unread?: number;
+  isArchived?: boolean;
+  isStarred?: boolean;
+  type?: "personal" | "group";
+  isPinned?: boolean;
+};
 
 type ChatsNavigationProp = CompositeNavigationProp<
   BottomTabNavigationProp<MainTabsParamList, "Chats">,
   NativeStackNavigationProp<RootStackParamList>
->
-
-type Channel = {
-  id: string
-  name: string
-  lastMessage: string
-  time: string
-  unread?: number
-  isArchived?: boolean
-  isStarred?: boolean
-  type?: "personal" | "group"
-  isPinned?: boolean
-}
-
-const initialChannels: Channel[] = [
-  {
-    id: "1",
-    name: "Vikram  Admin",
-    lastMessage: "✓✓ signon name father name batch course...",
-    time: "12:07 am",
-    unread: 1,
-    isStarred: false,
-    type: "personal",
-  },
-  { id: "2", name: "fdhd", lastMessage: "✓✓ Vvvv", time: "Yesterday", unread: 0, isStarred: true, type: "personal" },
-  { id: "3", name: "Bhavesh", lastMessage: "82000", time: "Yesterday", unread: 0, isStarred: false, type: "personal" },
-  {
-    id: "4",
-    name: "+91 8765987643",
-    lastMessage: "Internet services have been resumed...",
-    time: "Yesterday",
-    unread: 0,
-    isStarred: false,
-    type: "personal",
-  },
-  {
-    id: "5",
-    name: "Code Step by Step 🧠",
-    lastMessage: "+91 63826 37219 joined using a group...",
-    time: "Yesterday",
-    unread: 1,
-    isStarred: false,
-    type: "group",
-  },
-  {
-    id: "6",
-    name: "Sunil 🍪😊",
-    lastMessage: "✓✓ 📷 Photo",
-    time: "Yesterday",
-    unread: 0,
-    isStarred: true,
-    type: "personal",
-  },
-  {
-    id: "7",
-    name: "Business Group",
-    lastMessage: "Announcements ▸ HCL...",
-    time: "9:36 am",
-    unread: 3,
-    isStarred: false,
-    type: "group",
-  },
-  {
-    id: "8",
-    name: "Educational Group",
-    lastMessage: "✓✓ cha.zip",
-    time: "9:36 am",
-    unread: 0,
-    isStarred: true,
-    type: "group",
-  },
-  { id: "9", name: "Rahul", lastMessage: "gfdgf", time: "8:06 am", unread: 2, isStarred: false, type: "personal" },
-  {
-    id: "10",
-    name: "Family Group",
-    lastMessage: "Good morning everyone!",
-    time: "7:50 am",
-    unread: 5,
-    isStarred: false,
-    type: "group",
-  },
-]
+>;
 
 const ChatsScreen = () => {
-  const navigation = useNavigation<ChatsNavigationProp>()
-  const [channels, setChannels] = useState(initialChannels)
-  const [searchText, setSearchText] = useState("")
-  const [activeTab, setActiveTab] = useState("All")
-  const [showUserProfile, setShowUserProfile] = useState(false)
-  const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null)
+  const token = useSelector((state: RootState) => state.facultyStore.token);
+  const navigation = useNavigation<ChatsNavigationProp>();
+  const [rawContacts, setRawContacts] = useState<StudentContact[]>([]);
+  const [rawGroups, setRawGroups] = useState<GroupContact[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [searchText, setSearchText] = useState("");
+  const [activeTab, setActiveTab] = useState("All");
+  const [showUserProfile, setShowUserProfile] = useState(false);
+  const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
 
+  // Combine both contacts & groups
+  const channels = useMemo<Channel[]>(() => {
+    const studentChannels = rawContacts.map((contact) => ({
+      id: contact.studentId,
+      name: contact.studentName,
+      lastMessage: `Email: ${contact.studentEmail || "N/A"}`,
+      time: "Now",
+      unread: 0,
+      isStarred: false,
+      type: "personal" as const,
+      isArchived: false,
+      isPinned: false,
+    }));
+
+    const groupChannels = rawGroups.map((group) => ({
+      id: group.groupId,
+      name: group.groupName,
+      lastMessage: `Members: ${group.membersCount ?? 0}`,
+      time: "Now",
+      unread: 0,
+      isStarred: false,
+      type: "group" as const,
+      isArchived: false,
+      isPinned: false,
+    }));
+
+    return [...studentChannels, ...groupChannels];
+  }, [rawContacts, rawGroups]);
+
+  // Filter logic
   const filteredChannels = useMemo(() => {
-    let filtered = channels
-
-    switch (activeTab) {
-      case "Unread":
-        filtered = channels.filter((c) => (c.unread || 0) > 0)
-        break
-      case "Favourites":
-        filtered = channels.filter((c) => c.isStarred)
-        break
-      case "Groups":
-        filtered = channels.filter((c) => c.type === "group")
-        break
-      default:
-        filtered = channels
-    }
+    let filtered = channels;
+    if (activeTab === "Unread") filtered = channels.filter((c) => (c.unread || 0) > 0);
+    else if (activeTab === "Favourites") filtered = channels.filter((c) => c.isStarred);
+    else if (activeTab === "Groups") filtered = channels.filter((c) => c.type === "group");
 
     if (searchText.trim()) {
       filtered = filtered.filter(
         (c) =>
           c.name.toLowerCase().includes(searchText.toLowerCase()) ||
-          c.lastMessage.toLowerCase().includes(searchText.toLowerCase()),
-      )
+          c.lastMessage.toLowerCase().includes(searchText.toLowerCase())
+      );
     }
+    return filtered;
+  }, [channels, activeTab, searchText]);
 
-    return filtered
-  }, [channels, activeTab, searchText])
-
-  const handleTabChange = (tab: string) => {
-    setActiveTab(tab)
-  }
-
-  const handleAddGroup = () => {
-    console.log("Navigate to Create Group Screen")
-  }
-
-  const handleOpenCamera = () => {
-    console.log("Open Camera")
-  }
-
+  const handleTabChange = (tab: string) => setActiveTab(tab);
   const handleChannelPress = (channel: Channel) => {
-    setSelectedChannel(channel)
-    setShowUserProfile(false)
-    // navigation.navigate("ChatThread", { channel }) // removed
-  }
+    setSelectedChannel(channel);
+    setShowUserProfile(false);
+  };
 
   const handleGroupCreated = (newGroup: Channel) => {
-    setChannels([newGroup, ...channels])
-    setSelectedChannel(newGroup)
-  }
+    setRawGroups((prev) => {
+      const exists = prev.some((g) => g.groupId === newGroup.id);
+      if (exists) return prev;
+      return [...prev, { groupId: newGroup.id, groupName: newGroup.name, membersCount: 1 }];
+    });
+  };
 
-  type UserProfile = {
-    name: string
-    email: string
-    phone: string
-    bio: string
-    fatherName: string
-    operator: string
-    department: string
-  }
+  // Fetch student contacts
+  const fetchAllContacts = async () => {
+    if (!token) return setError("Authentication token not found. Please log in.");
 
-  const userProfile: UserProfile | null = selectedChannel
-    ? {
-        name: selectedChannel.name,
-        email: `${selectedChannel.name.toLowerCase().replace(" ", ".")}@example.com`, // ✅ template literal
-        phone: "+91 98765 43210",
-        bio: "This is a sample bio for the user profile.",
-        fatherName: "Father Name",
-        operator: "John Doe",
-        department: "Sales",
+    try {
+      const response = await axios.post(
+        `${API_BASE_URL}/faculty/view-contacts`,
+        {},
+        { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+      );
+
+      const data = response.data;
+      if (data?.status === 1 && data.facultyContactsList?.[0]?.facultyContacts) {
+        const contacts: StudentContact[] = data.facultyContactsList[0].facultyContacts;
+        setRawContacts(contacts);
+      } else setError(data?.msg || "Failed to load contacts data.");
+    } catch (err: any) {
+      console.error("Error fetching contacts:", err.response?.data || err.message);
+      setError("Failed to fetch contacts.");
+    }
+  };
+
+  // Fetch faculty groups
+  const fetchAllGroups = async () => {
+    if (!token) return setError("Authentication token not found. Please log in.");
+    try {
+      const response = await axios.post(
+        `${API_BASE_URL}/faculty/view-group`,
+        {},
+        { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+      );
+
+      const data = response.data;
+      if (data?.status === 1 && Array.isArray(data.data)) {
+        const groups: GroupContact[] = data.data.map((g: any) => ({
+          groupId: g._id || g.groupId || g.facultyGroupId,
+          groupName: g.facultyGroupName || g.groupName || "Unnamed Group",
+          membersCount: g.groupMembers?.length || 0,
+        }));
+        setRawGroups(groups);
+      } else setRawGroups([]);
+    } catch (err: any) {
+      console.error("Error fetching groups:", err.response?.data || err.message);
+      
+    }
+  };
+
+  // 🔁 Auto-refresh whenever screen refocuses (e.g., after adding contact/group)
+  useFocusEffect(
+    useCallback(() => {
+      if (token) {
+        fetchAllContacts();
+        fetchAllGroups();
       }
-    : null
+    }, [token])
+  );
+
+  useEffect(() => {
+    if (token) {
+      setIsLoading(true);
+      Promise.all([fetchAllContacts(), fetchAllGroups()])
+        .catch((e) => console.error(e))
+        .finally(() => setIsLoading(false));
+    }
+  }, [token]);
+
+  const ListLoadingOrError = () => {
+    if (isLoading)
+      return (
+        <View style={styles.centeredMessage}>
+          <ActivityIndicator size="large" color="#075E54" />
+          <Text style={styles.messageTextContent}>Loading student contacts & groups...</Text>
+        </View>
+      );
+    if (error)
+      return (
+        <View style={styles.centeredMessage}>
+          <Ionicons name="alert-circle-outline" size={30} color="#FF6347" style={{ marginBottom: 10 }} />
+          <Text style={styles.messageTextContent}>Error: {error}</Text>
+          <TouchableOpacity
+            onPress={() => {
+              fetchAllContacts();
+              fetchAllGroups();
+            }}
+            style={styles.retryButton}
+          >
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    return null;
+  };
 
   return (
     <MainLayout
       activeTab="Chats"
       showRightContent={showUserProfile}
       rightContent={
-        userProfile ? <UserProfileScreen userProfile={userProfile} onClose={() => setShowUserProfile(false)} /> : null
+        selectedChannel ? (
+          <UserProfileScreen
+            userProfile={{
+              name: selectedChannel.name,
+              email: selectedChannel.lastMessage.replace("Email: ", ""),
+              phone: "+91 98765 43210",
+              bio: "Sample bio.",
+              fatherName: "Father Name",
+              operator: "John Doe",
+              department: "Sales",
+            }}
+            onClose={() => setShowUserProfile(false)}
+          />
+        ) : null
       }
-      onRightContentClose={() => setShowUserProfile(false)}
     >
       <View style={styles.container}>
-        {/* Two-column content to match the reference image */}
         <View style={styles.rootRow}>
-          {/* LEFT: Channel list (narrow) */}
           <View style={styles.listColumn}>
             <View style={styles.header}>
               <WebBackButton />
@@ -209,15 +257,22 @@ const ChatsScreen = () => {
                 onChangeText={setSearchText}
                 style={styles.searchInput}
               />
-              <TouchableOpacity style={styles.qrButton} onPress={() => navigation.navigate("QRScanner")}>
+              <TouchableOpacity
+                style={styles.qrButton}
+                onPress={() => navigation.navigate("QRScanner")}
+              >
                 <Ionicons name="qr-code" size={20} color="#1a1b1bff" />
               </TouchableOpacity>
-              <TouchableOpacity style={styles.cameraButton} onPress={() => navigation.navigate("Camera")}>
+              <TouchableOpacity
+                style={styles.cameraButton}
+                onPress={() => navigation.navigate("Camera")}
+              >
                 <Ionicons name="camera" size={20} color="#0a0a0aff" />
               </TouchableOpacity>
             </View>
 
             <TopTabNavigation onTabChange={handleTabChange} />
+            <ListLoadingOrError />
 
             <FlatList
               data={filteredChannels}
@@ -234,13 +289,21 @@ const ChatsScreen = () => {
                     isPinned: item.isPinned,
                   }}
                   onPress={() => handleChannelPress(item)}
-                  onUpdate={() => setChannels([...channels])}
+                  onUpdate={() => fetchAllContacts()}
                 />
               )}
+              ListEmptyComponent={
+                !isLoading && !error && filteredChannels.length === 0 ? (
+                  <View style={styles.centeredMessage}>
+                    <Text style={styles.messageTextContent}>
+                      No student contacts or groups found.
+                    </Text>
+                  </View>
+                ) : null
+              }
             />
           </View>
 
-          {/* CENTER: Chat thread */}
           <View style={styles.chatColumn}>
             {selectedChannel ? (
               <ChatThread
@@ -257,19 +320,13 @@ const ChatsScreen = () => {
         </View>
       </View>
     </MainLayout>
-  )
-}
+  );
+};
 
-export default ChatsScreen
+export default ChatsScreen;
 
 const styles = StyleSheet.create({
-  // 🔹 Root Container
-  container: {
-    flex: 1,
-    backgroundColor: "#e6ecf3", // soft neutral background
-  },
-
-  // 🔹 Header
+  container: { flex: 1, backgroundColor: "#e6ecf3" },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -278,45 +335,9 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 22,
     borderBottomRightRadius: 22,
     elevation: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
   },
-  backButton: { marginRight: 14 },
-  contactInfo: { flex: 1 },
-  contactName: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#111",
-    textShadowColor: "rgba(0,0,0,0.1)",
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 1,
-  },
-  contactNumber: { fontSize: 12, color: "#4caf50", marginTop: 2 },
-  headerActions: { flexDirection: "row" },
-  actionButton: {
-    marginLeft: 10,
-    backgroundColor: "#f2f4f8",
-    padding: 10,
-    borderRadius: 12,
-    elevation: 5,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#075E54",
-  },
-
-  // 🔹 Chat Layout
-  rootRow: {
-    flex: 1,
-    flexDirection: "row",
-  },
+  headerTitle: { fontSize: 18, fontWeight: "600", color: "#075E54" },
+  rootRow: { flex: 1, flexDirection: "row" },
   listColumn: {
     width: 400,
     maxWidth: 450,
@@ -324,25 +345,13 @@ const styles = StyleSheet.create({
     borderRightWidth: 1,
     borderRightColor: "#e2e6ea",
     backgroundColor: "#fefefe",
-    elevation: 6,
-    shadowColor: "#000",
-    shadowOffset: { width: 2, height: 0 },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
   },
   chatColumn: {
     flex: 1,
     backgroundColor: "#f9fbfd",
     borderLeftWidth: 1,
     borderLeftColor: "#dde2e8",
-    elevation: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: -2, height: 0 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
   },
-
-  // 🔹 Search Bar (Glassmorphism)
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -352,104 +361,10 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     paddingHorizontal: 18,
     paddingVertical: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 6,
   },
   searchIcon: { marginRight: 12, color: "#333" },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    color: "#000",
-  },
+  searchInput: { flex: 1, fontSize: 16, color: "#000" },
   qrButton: { marginLeft: 10, padding: 6 },
-
-  // 🔹 Chat Empty Screen
-  emptyChat: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#f2f6fa",
-  },
-  emptyChatText: {
-    color: "#64748b",
-    fontSize: 15,
-    fontWeight: "500",
-  },
-
-  // 🔹 Messages
-  messagesContainer: { flex: 1 },
-  messagesList: { flex: 1 },
-  messagesContent: { padding: 14 },
-
-  messageContainer: {
-    marginVertical: 6,
-    transform: [{ scale: 1 }],
-  },
-  sentMessage: { alignSelf: "flex-end" },
-  receivedMessage: { alignSelf: "flex-start" },
-
-  messageBubble: {
-    padding: 12,
-    borderRadius: 18,
-    maxWidth: "80%",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.15,
-    shadowRadius: 3,
-    elevation: 5,
-  },
-  sentBubble: {
-    backgroundColor: "#007aff",
-    borderTopRightRadius: 0,
-    shadowColor: "#007aff",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.4,
-    shadowRadius: 3,
-  },
-  receivedBubble: {
-    backgroundColor: "#ffffff",
-    borderTopLeftRadius: 0,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-  },
-  messageText: { fontSize: 15, lineHeight: 20 },
-  sentText: { color: "#fff" },
-  receivedText: { color: "#111" },
-
-  messageFooter: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 4,
-  },
-  timestamp: { fontSize: 10, color: "#777", marginRight: 4 },
-
-  // 🔹 Input Bar
-  inputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 12,
-    backgroundColor: "#ffffff",
-    borderTopWidth: 0,
-    borderTopLeftRadius: 22,
-    borderTopRightRadius: 22,
-    elevation: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-  },
-  attachButton: {
-    marginRight: 8,
-    backgroundColor: "#f3f4f6",
-    borderRadius: 20,
-    padding: 8,
-    elevation: 5,
-  },
   cameraButton: {
     width: 42,
     height: 42,
@@ -458,109 +373,17 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginRight: 8,
-    elevation: 4,
   },
-  textInput: {
-    flex: 1,
-    fontSize: 15,
-    padding: 10,
-    backgroundColor: "#f9f9f9",
-    borderRadius: 25,
-    color: "#000",
-    elevation: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 3,
+  emptyChat: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#f2f6fa" },
+  emptyChatText: { color: "#64748b", fontSize: 15, fontWeight: "500" },
+  centeredMessage: { justifyContent: "center", alignItems: "center", padding: 20, marginTop: 50 },
+  messageTextContent: { marginTop: 10, fontSize: 15, color: "#555", textAlign: "center" },
+  retryButton: {
+    backgroundColor: "#075E54",
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+    borderRadius: 8,
+    marginTop: 15,
   },
-  sendButton: {
-    marginLeft: 8,
-    backgroundColor: "#007aff",
-    padding: 12,
-    borderRadius: 28,
-    elevation: 8,
-    shadowColor: "#007aff",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.35,
-    shadowRadius: 5,
-  },
-
-  // 🔹 Attachment Overlay
-  attachmentOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "flex-end",
-  },
-  attachmentContainer: {
-    backgroundColor: "#ffffffee",
-    padding: 25,
-    width: "90%",
-    flex: 0.5,
-    borderRadius: 30,
-    alignSelf: "center",
-    elevation: 14,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-  },
-  attachmentHeader: {
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
-  },
-  attachmentTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    textAlign: "center",
-    color: "#1a1a1a",
-  },
-  attachmentGrid: {
-    paddingTop: 20,
-    gap: 30,
-    alignSelf: "center",
-  },
-  attachmentRow: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    alignItems: "center",
-  },
-  attachmentItem: {
-    alignItems: "center",
-  },
-  attachmentIcon: {
-    width: 70,
-    height: 70,
-    borderRadius: 28,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 8,
-    backgroundColor: "#eaf2ff",
-    elevation: 8,
-    shadowColor: "#007aff",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-  },
-  attachmentLabel: {
-    fontSize: 12,
-    color: "#000",
-    textAlign: "center",
-    fontWeight: "500",
-  },
-
-  // 🔹 Floating Attach Button
-  attachButtons: {
-    alignSelf: "flex-end",
-    margin: 24,
-    backgroundColor: "#00bcd4",
-    borderRadius: 30,
-    padding: 12,
-    elevation: 10,
-    shadowColor: "#00bcd4",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 6,
-  },
+  retryButtonText: { color: "#fff", fontWeight: "600" },
 });
-
