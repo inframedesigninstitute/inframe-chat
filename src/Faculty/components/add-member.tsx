@@ -1,11 +1,10 @@
-// src/components/AddMemberModal.tsx
 "use client"
 
 import { RootState } from "@/src/Redux/Store/store";
-import axios from "axios"; // Axios आयात किया गया
-import { useEffect, useState } from "react"; // useEffect आयात किया गया
+import axios from "axios";
+import { useEffect, useState } from "react";
 import {
-  ActivityIndicator, // ActivityIndicator आयात किया गया
+  ActivityIndicator,
   Alert,
   FlatList,
   Modal,
@@ -24,6 +23,7 @@ import CustomDialog from "./CustomDialog";
 
 const API_BASE_URL = "http://localhost:5200/web"
 
+// ChatsScreen से StudentContact टाइप
 type StudentContact = {
   studentId: string
   studentName: string
@@ -31,28 +31,37 @@ type StudentContact = {
 }
 
 interface Contact {
-  id: string 
-  name: string 
-  phone: string 
+  id: string
+  name: string
+  phone: string
   avatar?: string
   status?: string
   initials?: string
   bgColor?: string
 }
 
+interface FacultyGroup {
+  _id: string; // Group ID
+  facultyGroupName: string;
+  facultyGroupDescription: string;
+  facultyGroupCreatedAt: string;
+}
+
+interface ChatItem {
+  id: string
+  name: string
+  type: "group"
+  lastMessage: string
+  time: string
+  unread: number
+  isStarred: boolean
+  isPinned: boolean
+}
+
 interface AddMemberModalProps {
   visible: boolean
   onClose: () => void
-  onGroupCreated?: (group: {
-    id: string
-    name: string
-    type: "group"
-    lastMessage: string
-    time: string
-    unread: number
-    isStarred: boolean
-    isPinned: boolean
-  }) => void
+  onGroupCreated?: (group: ChatItem) => void
 }
 
 const ACTION_BUTTONS = [
@@ -74,9 +83,17 @@ const ACTION_BUTTONS = [
 export default function AddMemberModal({ visible, onClose, onGroupCreated }: AddMemberModalProps) {
   const [searchQuery, setSearchQuery] = useState("")
   const [activeModal, setActiveModal] = useState<"main" | "newContact" | "newGroup">("main")
-  const [contacts, setContacts] = useState<Contact[]>([]) 
+  const facultyData = useSelector((state: RootState) => state.facultyStore?.facultyData);
+
+  // Contacts States
+  const [contacts, setContacts] = useState<Contact[]>([])
   const [isContactsLoading, setIsContactsLoading] = useState(false)
   const [contactsError, setContactsError] = useState<string | null>(null)
+
+  // Groups States
+  const [groups, setGroups] = useState<FacultyGroup[]>([])
+  const [isGroupsLoading, setIsGroupsLoading] = useState(false)
+  const [groupsError, setGroupsError] = useState<string | null>(null)
 
   const [dialogVisible, setDialogVisible] = useState(false);
   const [dialogData, setDialogData] = useState({
@@ -88,13 +105,17 @@ export default function AddMemberModal({ visible, onClose, onGroupCreated }: Add
   const [studentName, setStudentName] = useState("")
   const [studentEmail, setStudentEmail] = useState('')
 
-  const [lastName, setLastName] = useState("")
-  const [selectedCountry, setSelectedCountry] = useState("IN")
-  const [phoneNumber, setPhoneNumber] = useState("")
-  const [showCountryDropdown, setShowCountryDropdown] = useState(false)
+  const [loading, setLoading] = useState(false) // Add Contact button loading state
+  const [groupCreationLoading, setGroupCreationLoading] = useState(false); // Group creation loading state
 
   const [selectedMembers, setSelectedMembers] = useState<Set<string>>(new Set())
   const [groupSearchQuery, setGroupSearchQuery] = useState("")
+
+  // States for Group Details Modal
+  const [groupDetailsModalVisible, setGroupDetailsModalVisible] = useState(false)
+  const [groupName, setGroupName] = useState("")
+  const [groupDescription, setGroupDescription] = useState("")
+
 
   const filteredContacts = contacts.filter(
     (contact) =>
@@ -118,7 +139,10 @@ export default function AddMemberModal({ visible, onClose, onGroupCreated }: Add
 
   const token = useSelector((state: RootState) => state.facultyStore.token)
 
-  const [loading, setLoading] = useState(false) // Add Contact button loading state
+
+  const facultyId = useSelector((state: RootState) => (state.facultyStore as any).facultyData?.facultyId)
+
+
 
   const fetchAllContacts = async () => {
     if (!token) {
@@ -154,13 +178,13 @@ export default function AddMemberModal({ visible, onClose, onGroupCreated }: Add
           const namePart = (c.studentName || c.studentEmail || '').toUpperCase().split(' ');
           const initials = namePart.length > 1 ? `${namePart[0][0]}${namePart[1][0]}` : namePart[0].substring(0, 2);
           const randomColor = `#${Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')}`
-          
+
           return {
-            id: c.studentId, 
-            name: c.studentName || c.studentEmail || "No Name", 
-            phone: c.studentEmail || "Email not available", 
+            id: c.studentId,
+            name: c.studentName || c.studentEmail || "No Name",
+            phone: c.studentEmail || "Email not available",
             initials: initials,
-            bgColor: randomColor, 
+            bgColor: randomColor,
           }
         })
         setContacts(formattedContacts)
@@ -177,13 +201,84 @@ export default function AddMemberModal({ visible, onClose, onGroupCreated }: Add
     }
   }
 
+  const fetchGroups = async () => {
+    if (!token) {
+      setGroupsError("Authentication token missing.");
+      return;
+    }
+
+    try {
+      const facultyId = facultyData?.facultyId || facultyData?._id || facultyData?.id;
+      if (!facultyId) {
+        console.warn("⚠️ Faculty ID missing — cannot fetch groups");
+        setGroupsError("Faculty ID not found.");
+        return;
+      }
+
+      const API_URL = `${API_BASE_URL}/faculty/view-groups`;
+      console.log("📤 Fetching groups:", API_URL);
+
+      const response = await axios.post(
+        API_URL,
+        { facultyId }, // ✅ Use the exact key your backend expects
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+
+      );
+
+      console.log("✅ Group Response:", response.data);
+
+      const data = response.data;
+
+      if (data.status === 1 && Array.isArray(data.facultyGroupsList)) {
+        const list = data.facultyGroupsList.flatMap((g: any) => g.facultyGroups || []);
+        setGroups(list);
+        console.log("🎯 Groups fetched successfully:", list);
+      } else if (Array.isArray(data.data)) {
+        setGroups(data.data);
+      } else {
+        console.warn("⚠️ No valid group data found");
+        setGroups([]);
+        setGroupsError(data.msg || "No groups found.");
+      }
+    } catch (error: any) {
+      console.error("❌ Error fetching groups:", error.response?.data || error.message);
+      setGroups([]);
+      setGroupsError(error.response?.data?.msg || "Failed to fetch groups. Try again.");
+    } finally {
+      setIsGroupsLoading(false);
+    }
+    
+  };
+
+
+
+  // ✅ Wait until both token & facultyId exist before fetching
+  useEffect(() => {
+    console.log("👀 useEffect triggered - visible:", visible, "token:", token, "facultyId:", facultyId);
+
+    if (visible && token && facultyId) {
+      fetchAllContacts();
+      fetchGroups();
+    } else if (visible && (!token || !facultyId)) {
+      setGroupsError("Authentication token or Faculty ID not found.");
+    }
+  }, [visible, token, facultyId]);
+
+  // --- Effects and Handlers ---
+
   useEffect(() => {
     if (visible && token) {
       fetchAllContacts()
+      fetchGroups()
     }
-  }, [visible, token])
+  }, [visible, token, facultyId])
 
-  
+
   const toggleMemberSelection = (contactId: string) => {
     const newSelected = new Set(selectedMembers)
     if (newSelected.has(contactId)) {
@@ -194,122 +289,191 @@ export default function AddMemberModal({ visible, onClose, onGroupCreated }: Add
     setSelectedMembers(newSelected)
   }
 
-  const handleCreateGroup = () => {
+  // Function to open the Group Details Modal
+  const handleOpenGroupDetails = () => {
     if (selectedMembers.size === 0) {
       Alert.alert("Please select at least one member")
       return
     }
-
-    const selectedMembersList = Array.from(selectedMembers)
-      .map((id) => contacts.find((c) => c.id === id)?.name)
-      .filter(Boolean)
-
-    const groupName = `Group (${selectedMembers.size})`
-    const newGroup = {
-      id: `group-${Date.now()}`,
-      name: groupName,
-      type: "group" as const,
-      lastMessage: `${selectedMembersList.length} members added`,
-      time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      unread: 0,
-      isStarred: false,
-      isPinned: false,
-    }
-
-    if (onGroupCreated) {
-      onGroupCreated(newGroup)
-    }
-
-    setSelectedMembers(new Set())
-    setGroupSearchQuery("")
-    setActiveModal("main")
-    onClose()
+    setGroupDetailsModalVisible(true)
   }
+
+  // Function to handle the actual API call for group creation
+  const handleCreateGroupAPI = async () => {
+    if (!groupName.trim()) {
+      Alert.alert("Group Name Required", "Please enter a name for the new group.")
+      return
+    }
+    if (selectedMembers.size === 0) {
+      Alert.alert("No Members Selected", "Please select members for the group.")
+      return
+    }
+
+    setGroupCreationLoading(true)
+    const memberIds = Array.from(selectedMembers)
+
+    try {
+      const API_URL = `${API_BASE_URL}/faculty/create-group`
+
+      const response = await axios.post(
+        API_URL,
+        {
+          facultyGroupName: groupName.trim(),
+          facultyGroupDescription: groupDescription.trim(),
+          facultyGroupMembers: memberIds,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      )
+
+      const result = response.data;
+
+      if (result.status === 1) {
+        const newGroup: ChatItem = {
+          id: result.groupId || result.data?.groupId || `group-${Date.now()}`,
+          name: groupName.trim(),
+          type: "group" as const,
+          lastMessage: `Group created with ${selectedMembers.size} members.`,
+          time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          unread: 0,
+          isStarred: false,
+          isPinned: false,
+        }
+
+        if (onGroupCreated) {
+          onGroupCreated(newGroup)
+        }
+
+        fetchGroups();
+
+        setDialogData({
+          type: "success",
+          title: "Success",
+          message: result.msg || "Group created successfully! Chat list is updated.",
+        });
+        setDialogVisible(true);
+
+        setSelectedMembers(new Set())
+        setGroupSearchQuery("")
+        setGroupName("")
+        setGroupDescription("")
+        setGroupDetailsModalVisible(false)
+        setActiveModal("main")
+        onClose()
+
+      } else {
+        setDialogData({
+          type: "error",
+          title: "Group Creation Failed",
+          message: result.msg || "Failed to create group. Please try again.",
+        });
+        setDialogVisible(true);
+      }
+
+    } catch (error: any) {
+      console.error("Create Group Error:", error.response?.data || error.message);
+      setDialogData({
+        type: "error",
+        title: "Server Error",
+        message: error.response?.data?.msg || "An unexpected error occurred during group creation. Please try again later.",
+      });
+      setDialogVisible(true);
+    } finally {
+      setGroupCreationLoading(false)
+    }
+  }
+
 
   const handleCloseDialog = () => {
     setDialogVisible(false);
-    if (dialogData.type === 'success') {
+    if (dialogData.type === 'success' && activeModal === 'newContact') {
       setStudentName("");
       setStudentEmail("");
       setActiveModal("main");
-      onClose();
     }
   };
 
 
-const handleSubmit = async () => {
-  if (!studentEmail) {
-    setDialogData({
-      type: "warning",
-      title: "Missing Field",
-      message: "Please enter student email",
-    });
-    setDialogVisible(true);
-    return;
-  }
-
-  setLoading(true);
-  try {
-    const API_URL = "http://localhost:5200/web/faculty/add-contacts";
-
-    const response = await fetch(API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ studentName, studentEmail }),
-    });
-
-    const result = await response.json();
-
-    if (result.status === 1) {
-      setDialogData({
-        type: "success",
-        title: "Success",
-        message: "Student added successfully! Please re-open the modal to see updated list.",
-      });
-      await fetchAllContacts();
-    } else if (result.status === -1) {
-      setDialogData({
-        type: "error",
-        title: "Error",
-        message: "Faculty not found.",
-      });
-    } else if (result.status === -2) {
-      setDialogData({
-        type: "error",
-        title: "Error",
-        message: "Student not found or not approved.",
-      });
-    } else if (result.status === -3) {
+  const handleSubmit = async () => {
+    if (!studentEmail) {
       setDialogData({
         type: "warning",
-        title: "Warning",
-        message: "Student already in your contacts.",
+        title: "Missing Field",
+        message: "Please enter student email",
       });
-    } else {
-      setDialogData({
-        type: "error",
-        title: "Error",
-        message: "Something went wrong. Please try again.",
-      });
+      setDialogVisible(true);
+      return;
     }
 
-    setDialogVisible(true);
-  } catch (error) {
-    console.error("Add Contact Error:", error);
-    setDialogData({
-      type: "error",
-      title: "Server Error",
-      message: "An unexpected error occurred. Please try again later.",
-    });
-    setDialogVisible(true);
-  } finally {
-    setLoading(false);
-  }
-};
+    setLoading(true);
+    try {
+      const API_URL = `${API_BASE_URL}/faculty/add-contacts`;
 
+      const response = await axios.post(
+        API_URL,
+        { studentName, studentEmail },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const result = response.data;
+
+      if (result.status === 1) {
+        setDialogData({
+          type: "success",
+          title: "Success",
+          message: "Student added successfully! Please re-open the modal to see updated list.",
+        });
+        await fetchAllContacts();
+      } else if (result.status === -1) {
+        setDialogData({
+          type: "error",
+          title: "Error",
+          message: "Faculty not found.",
+        });
+      } else if (result.status === -2) {
+        setDialogData({
+          type: "error",
+          title: "Error",
+          message: "Student not found or not approved.",
+        });
+      } else if (result.status === -3) {
+        setDialogData({
+          type: "warning",
+          title: "Warning",
+          message: "Student already in your contacts.",
+        });
+      } else {
+        setDialogData({
+          type: "error",
+          title: "Error",
+          message: result.msg || "Something went wrong. Please try again.",
+        });
+      }
+
+      setDialogVisible(true);
+    } catch (error) {
+      console.error("Add Contact Error:", error);
+      setDialogData({
+        type: "error",
+        title: "Server Error",
+        message: "An unexpected error occurred. Please try again later.",
+      });
+      setDialogVisible(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // --- Render Functions (Same as before) ---
 
   const renderActionButton = (button: (typeof ACTION_BUTTONS)[0]) => (
     <TouchableOpacity key={button.id} style={styles.actionButton} onPress={() => handleActionButtonPress(button.id)}>
@@ -319,6 +483,19 @@ const handleSubmit = async () => {
       <Text style={styles.actionLabel}>{button.label}</Text>
     </TouchableOpacity>
   )
+
+  const renderGroupItem = ({ item }: { item: FacultyGroup }) => (
+    <TouchableOpacity style={styles.contactItem} onPress={() => Alert.alert(`Open Group: ${item.facultyGroupName}`)}>
+      <View style={[styles.contactAvatar, { backgroundColor: '#66bb6a' }]}>
+        <Ionicons name="people" size={24} color="#fff" />
+      </View>
+      <View style={styles.contactDetails}>
+        <Text style={styles.contactName}>{item.facultyGroupName}</Text>
+        <Text style={styles.contactStatus}>{item.facultyGroupDescription || "No description"}</Text>
+      </View>
+    </TouchableOpacity>
+  )
+
 
   const renderContactItem = ({ item }: { item: Contact }) => (
     <TouchableOpacity style={styles.contactItem}>
@@ -358,6 +535,67 @@ const handleSubmit = async () => {
     )
   }
 
+  // Group Details Modal
+  const renderGroupDetailsModal = () => (
+    <Modal visible={groupDetailsModalVisible} animationType="fade" transparent={true} onRequestClose={() => setGroupDetailsModalVisible(false)}>
+      <View style={styles.groupDetailsOverlay}>
+        <View style={styles.groupDetailsContainer}>
+          <Text style={styles.groupDetailsTitle}>Group Details</Text>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.formLabel}>Group Name*</Text>
+            <TextInput
+              style={styles.detailsInput}
+              placeholder="Enter Group Name"
+              placeholderTextColor="#999"
+              value={groupName}
+              onChangeText={setGroupName}
+            />
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.formLabel}>Description (Optional)</Text>
+            <TextInput
+              style={[styles.detailsInput, styles.descriptionInput]}
+              placeholder="Enter a description for the group"
+              placeholderTextColor="#999"
+              value={groupDescription}
+              onChangeText={setGroupDescription}
+              multiline={true}
+              numberOfLines={4}
+            />
+          </View>
+
+          <View style={styles.modalActions}>
+            <TouchableOpacity
+              style={styles.modalButtonCancel}
+              onPress={() => {
+                setGroupDetailsModalVisible(false);
+                setGroupName("");
+                setGroupDescription("");
+              }}
+              disabled={groupCreationLoading}
+            >
+              <Text style={styles.modalButtonTextCancel}>Cancel</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.modalButtonConfirm, groupCreationLoading && { opacity: 0.5 }]}
+              onPress={handleCreateGroupAPI}
+              disabled={groupCreationLoading || !groupName.trim()}
+            >
+              {groupCreationLoading ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={styles.modalButtonTextConfirm}>Create Group</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  )
+
   const renderMainScreen = () => (
     <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
       <SafeAreaView style={styles.container}>
@@ -383,36 +621,70 @@ const handleSubmit = async () => {
 
           <View style={styles.actionButtonsContainer}>{ACTION_BUTTONS.map(renderActionButton)}</View>
 
+          {/* Groups Section */}
           <View style={styles.contactsSection}>
-            <Text style={styles.sectionTitle}>Contacts on WhatsApp</Text>
+            <Text style={styles.sectionTitle}>My Groups</Text>
             <View style={styles.divider} />
-            
-            {isContactsLoading ? (
-                <View style={styles.centeredMessage}>
-                    <ActivityIndicator size="large" color="#25D366" />
-                    <Text style={styles.messageTextContent}>Loading contacts...</Text>
-                </View>
-            ) : contactsError ? (
-                <View style={styles.centeredMessage}>
-                    <Ionicons name="alert-circle-outline" size={30} color="#FF6347" />
-                    <Text style={styles.messageTextContent}>Error: {contactsError}</Text>
-                    <TouchableOpacity onPress={fetchAllContacts} style={styles.retryButton}>
-                        <Text style={styles.retryButtonText}>Retry</Text>
-                    </TouchableOpacity>
-                </View>
+
+            {isGroupsLoading ? (
+              <View style={styles.centeredMessage}>
+                <ActivityIndicator size="small" color="#25D366" />
+                <Text style={styles.messageTextContent}>Loading groups...</Text>
+              </View>
+            ) : groupsError ? (
+              <View style={styles.centeredMessage}>
+                <Ionicons name="alert-circle-outline" size={30} color="#FF6347" />
+                <Text style={styles.messageTextContent}>{groupsError}</Text>
+                <TouchableOpacity onPress={fetchGroups} style={styles.retryButton}>
+                  <Text style={styles.retryButtonText}>Retry</Text>
+                </TouchableOpacity>
+              </View>
             ) : (
-                <FlatList
-                    data={filteredContacts}
-                    keyExtractor={(item) => item.id}
-                    renderItem={renderContactItem}
-                    scrollEnabled={false}
-                    ItemSeparatorComponent={() => <View style={styles.separator} />}
-                    ListEmptyComponent={
-                        <View style={styles.centeredMessage}>
-                            <Text style={styles.messageTextContent}>No contacts found.</Text>
-                        </View>
-                    }
-                />
+              <FlatList
+                data={groups}
+                keyExtractor={(item) => item._id}
+                renderItem={renderGroupItem}
+                scrollEnabled={false}
+                ItemSeparatorComponent={() => <View style={styles.separator} />}
+                ListEmptyComponent={
+                  <View style={styles.centeredMessage}>
+                    <Text style={styles.messageTextContent}>No groups created yet.</Text>
+                  </View>
+                }
+              />
+            )}
+          </View>
+
+          <View style={styles.contactsSection}>
+            <Text style={styles.sectionTitle}>Contacts</Text>
+            <View style={styles.divider} />
+
+            {isContactsLoading ? (
+              <View style={styles.centeredMessage}>
+                <ActivityIndicator size="large" color="#25D366" />
+                <Text style={styles.messageTextContent}>Loading contacts...</Text>
+              </View>
+            ) : contactsError ? (
+              <View style={styles.centeredMessage}>
+                <Ionicons name="alert-circle-outline" size={30} color="#FF6347" />
+                <Text style={styles.messageTextContent}>Error: {contactsError}</Text>
+                <TouchableOpacity onPress={fetchAllContacts} style={styles.retryButton}>
+                  <Text style={styles.retryButtonText}>Retry</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <FlatList
+                data={filteredContacts}
+                keyExtractor={(item) => item.id}
+                renderItem={renderContactItem}
+                scrollEnabled={false}
+                ItemSeparatorComponent={() => <View style={styles.separator} />}
+                ListEmptyComponent={
+                  <View style={styles.centeredMessage}>
+                    <Text style={styles.messageTextContent}>No contacts found.</Text>
+                  </View>
+                }
+              />
             )}
           </View>
         </ScrollView>
@@ -422,7 +694,7 @@ const handleSubmit = async () => {
 
   const renderNewContactScreen = () => (
     <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={() => setActiveModal("main")}>
-       <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => setActiveModal("main")}>
             <Ionicons name="arrow-back" size={24} color="#000" />
@@ -449,7 +721,7 @@ const handleSubmit = async () => {
               </View>
             </View>
 
-          
+
             <View style={styles.formGroup}>
               <View style={styles.inputWithIcon}>
                 <Ionicons name="person-outline" size={20} color="#000000ff" style={styles.formIcon} />
@@ -463,10 +735,10 @@ const handleSubmit = async () => {
               </View>
             </View>
 
-            
-            <TouchableOpacity 
-              style={[styles.addButton, loading && { opacity: 0.3 }]} 
-              onPress={handleSubmit} 
+
+            <TouchableOpacity
+              style={[styles.addButton, loading && { opacity: 0.3 }]}
+              onPress={handleSubmit}
               disabled={loading}
             >
               <Text style={styles.addButtonText}>
@@ -476,7 +748,7 @@ const handleSubmit = async () => {
           </View>
         </ScrollView>
 
-      
+
         <CustomDialog
           visible={dialogVisible}
           type={dialogData.type}
@@ -489,7 +761,7 @@ const handleSubmit = async () => {
   )
 
   const renderAddGroupScreen = () => (
-    <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
+    <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={() => setActiveModal("main")}>
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => setActiveModal("main")}>
@@ -513,44 +785,81 @@ const handleSubmit = async () => {
           </View>
 
           <View style={styles.contactsSection}>
-            {isContactsLoading ? (
-                <View style={styles.centeredMessage}>
-                    <ActivityIndicator size="large" color="#25D366" />
-                    <Text style={styles.messageTextContent}>Loading group members...</Text>
-                </View>
-            ) : contactsError ? (
-                <View style={styles.centeredMessage}>
-                    <Ionicons name="alert-circle-outline" size={30} color="#FF6347" />
-                    <Text style={styles.messageTextContent}>Error loading members: {contactsError}</Text>
-                    <TouchableOpacity onPress={fetchAllContacts} style={styles.retryButton}>
-                        <Text style={styles.retryButtonText}>Retry</Text>
-                    </TouchableOpacity>
-                </View>
-            ) : (
-                <FlatList
-                    data={filteredGroupContacts}
-                    keyExtractor={(item) => item.id}
-                    renderItem={renderGroupMemberItem}
-                    scrollEnabled={false}
-                    ItemSeparatorComponent={() => <View style={styles.separator} />}
-                    ListEmptyComponent={
-                        <View style={styles.centeredMessage}>
-                            <Text style={styles.messageTextContent}>No members found.</Text>
+            {/* Displaying selected members at the top */}
+            {selectedMembers.size > 0 && (
+              <View style={styles.selectedMembersContainer}>
+                <Text style={styles.selectedMembersTitle}>{selectedMembers.size} Members Selected:</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.selectedMembersScroll}>
+                  {Array.from(selectedMembers).map((memberId) => {
+                    const member = contacts.find(c => c.id === memberId);
+                    if (!member) return null;
+                    return (
+                      <TouchableOpacity
+                        key={member.id}
+                        style={styles.selectedMemberChip}
+                        onPress={() => toggleMemberSelection(member.id)}
+                      >
+                        <View style={[styles.contactAvatarSmall, { backgroundColor: member.bgColor || "#E8E8E8" }]}>
+                          <Text style={styles.initialsTextSmall}>{member.initials}</Text>
                         </View>
-                    }
-                />
+                        <Ionicons name="close-circle" size={18} color="#fff" style={styles.removeIcon} />
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            )}
+
+            <Text style={[styles.sectionTitle, { marginTop: 15 }]}>All Contacts</Text>
+            <View style={styles.divider} />
+
+            {isContactsLoading ? (
+              <View style={styles.centeredMessage}>
+                <ActivityIndicator size="large" color="#25D366" />
+                <Text style={styles.messageTextContent}>Loading group members...</Text>
+              </View>
+            ) : contactsError ? (
+              <View style={styles.centeredMessage}>
+                <Ionicons name="alert-circle-outline" size={30} color="#FF6347" />
+                <Text style={styles.messageTextContent}>Error loading members: {contactsError}</Text>
+                <TouchableOpacity onPress={fetchAllContacts} style={styles.retryButton}>
+                  <Text style={styles.retryButtonText}>Retry</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <FlatList
+                data={filteredGroupContacts}
+                keyExtractor={(item) => item.id}
+                renderItem={renderGroupMemberItem}
+                scrollEnabled={false}
+                ItemSeparatorComponent={() => <View style={styles.separator} />}
+                ListEmptyComponent={
+                  <View style={styles.centeredMessage}>
+                    <Text style={styles.messageTextContent}>No members found.</Text>
+                  </View>
+                }
+              />
             )}
           </View>
         </ScrollView>
 
         {selectedMembers.size > 0 && (
           <View style={styles.bottomButtonContainer}>
-            <TouchableOpacity style={styles.createGroupButton} onPress={handleCreateGroup}>
-              <Text style={styles.createGroupButtonText}>Create Group ({selectedMembers.size})</Text>
+            <TouchableOpacity style={styles.createGroupButton} onPress={handleOpenGroupDetails}>
+              <Text style={styles.createGroupButtonText}>Next (Group Details)</Text>
+              <Ionicons name="arrow-forward" size={20} color="#fff" style={{ marginLeft: 8 }} />
             </TouchableOpacity>
           </View>
         )}
       </SafeAreaView>
+      {renderGroupDetailsModal()}
+      <CustomDialog
+        visible={dialogVisible}
+        type={dialogData.type}
+        title={dialogData.title}
+        message={dialogData.message}
+        onClose={handleCloseDialog}
+      />
     </Modal>
   )
 
@@ -564,6 +873,12 @@ const handleSubmit = async () => {
 
   return renderMainScreen()
 }
+
+
+
+
+
+
 
 
 const styles = StyleSheet.create({
@@ -763,6 +1078,12 @@ const styles = StyleSheet.create({
   formGroup: {
     marginBottom: 20,
   },
+  formLabel: { // 🆕 Added for Group Details Modal
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#333",
+    marginBottom: 8,
+  },
   inputWithIcon: {
     flexDirection: "row",
     alignItems: "center",
@@ -780,7 +1101,7 @@ const styles = StyleSheet.create({
   },
   formIcon: {
     marginRight: 12,
-    color: "#0c0808ff", 
+    color: "#0c0808ff",
   },
   formInput: {
     flex: 1,
@@ -788,67 +1109,21 @@ const styles = StyleSheet.create({
     color: "#000",
     padding: 0,
   },
-  countryPhoneRow: {
-    flexDirection: "row",
-    gap: 1,
-    marginBottom: 10,
-  },
-  countrySection: {
-    flex: 0.4,
-  },
-  
-  countryDropdown: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 8,
-  },
-  countryText: {
-    fontSize: 14,
-    color: "#000",
-  },
-  dropdownMenu: {
-    position: "absolute",
-    top: 50,
-    left: 0,
-    right: 0,
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "#302c2cff",
-    borderRadius: 8,
-    zIndex: 1000,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  dropdownItem: {
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
-  },
-  dropdownItemText: {
-    fontSize: 14,
-    color: "#000",
-  },
   addButton: {
-    backgroundColor: "#effff5ff", 
-    paddingVertical: 14, 
+    backgroundColor: "#effff5ff",
+    paddingVertical: 14,
     borderRadius: 10,
     alignItems: "center",
     marginTop: 20,
-    shadowColor: "#0c0e0cff", 
+    shadowColor: "#0c0e0cff",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2, 
+    shadowOpacity: 0.2,
     shadowRadius: 6,
     elevation: 1,
   },
   addButtonText: {
-    color: "#070505ff", 
-    fontSize: 19, 
+    color: "#070505ff",
+    fontSize: 19,
     fontWeight: "700",
   },
   bottomButtonContainer: {
@@ -868,6 +1143,8 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: "center",
+    justifyContent: 'center',
+    flexDirection: 'row', // 🆕 To align text and icon
     shadowColor: "#25D366",
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.3,
@@ -895,22 +1172,145 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   messageTextContent: {
-      marginTop: 10,
-      fontSize: 15,
-      color: "#555",
-      textAlign: "center",
-      paddingHorizontal: 20,
+    marginTop: 10,
+    fontSize: 15,
+    color: "#555",
+    textAlign: "center",
+    paddingHorizontal: 20,
   },
   retryButton: {
-      marginTop: 15,
-      backgroundColor: "#25D366",
-      paddingHorizontal: 15,
-      paddingVertical: 8,
-      borderRadius: 8,
+    marginTop: 15,
+    backgroundColor: "#25D366",
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 8,
   },
   retryButtonText: {
-      color: "#fff",
-      fontWeight: "600",
-      fontSize: 14,
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 14,
   },
+
+  // 🆕 Styles for Group Details Modal
+  groupDetailsOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  groupDetailsContainer: {
+    width: '90%',
+    maxWidth: 400,
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    padding: 25,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 8,
+  },
+  groupDetailsTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#111',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  detailsInput: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 10,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    fontSize: 16,
+    color: '#000',
+    backgroundColor: '#f9f9f9',
+  },
+  descriptionInput: {
+    height: 100,
+    textAlignVertical: 'top',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 30,
+    gap: 15,
+  },
+  modalButtonCancel: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#999',
+    backgroundColor: '#f0f0f0',
+    minWidth: 90,
+    alignItems: 'center',
+  },
+  modalButtonConfirm: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    backgroundColor: '#25D366',
+    minWidth: 120,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalButtonTextCancel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#555',
+  },
+  modalButtonTextConfirm: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#0f0909ff',
+  },
+  // 🆕 Styles for Selected Members Chip
+  selectedMembersContainer: {
+    marginBottom: 15,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
+  },
+  selectedMembersTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#555',
+    marginBottom: 8,
+  },
+  selectedMembersScroll: {
+    flexDirection: 'row',
+  },
+  selectedMemberChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 10,
+    position: 'relative',
+  },
+  contactAvatarSmall: {
+    width: 35,
+    height: 35,
+    borderRadius: 17.5,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: '#fff',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+  },
+  initialsTextSmall: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#fff",
+  },
+  removeIcon: {
+    position: 'absolute',
+    right: -5,
+    top: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 9,
+  }
 });
