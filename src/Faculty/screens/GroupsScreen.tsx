@@ -1,149 +1,226 @@
-"use client"
-
-import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs"
-import { type CompositeNavigationProp, useNavigation } from "@react-navigation/native"
-import type { NativeStackNavigationProp } from "@react-navigation/native-stack"
-import { useMemo, useState } from "react"
-import { FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native"
-import Ionicons from "react-native-vector-icons/Ionicons"
-import MaterialIcons from "react-native-vector-icons/MaterialIcons"
-import ChannelItemWithLongPress from "../components/ChannelItemWithLongPress"
-import ChatThread from "../components/ChatThread"
-import MainLayout from "../components/MainLayout"
-import TopTabNavigation from "../components/TopTabNavigation"
-import WebBackButton from "../components/WebBackButton"
-import type { MainTabsParamList, RootStackParamList } from "../navigation/types"
-import UserProfileScreen from "./UserProfileScreen"
+import { RootState } from "@/src/Redux/Store/store";
+import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
+import { CompositeNavigationProp, useFocusEffect, useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import axios from "axios";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from "react-native";
+import Ionicons from "react-native-vector-icons/Ionicons";
+import MaterialIcons from "react-native-vector-icons/MaterialIcons";
+import { useSelector } from "react-redux";
+import ChannelItemWithLongPress from "../components/ChannelItemWithLongPress";
+import ChatThread from "../components/FacultyChatThread";
+import MainLayout from "../components/MainLayout";
+import TopTabNavigation from "../components/TopTabNavigation";
+import WebBackButton from "../components/WebBackButton";
+import type { MainTabsParamList, RootStackParamList } from "../navigation/types";
+import UserProfileScreen from "./FacultyGroupUserProfileScreen";
 
 type GroupsNavigationProp = CompositeNavigationProp<
-  BottomTabNavigationProp<MainTabsParamList, "Groups">,
-  NativeStackNavigationProp<RootStackParamList>
->
+  BottomTabNavigationProp<MainTabsParamList, "Groups">,
+  NativeStackNavigationProp<RootStackParamList>
+>;
+type GroupContact = {
+  groupId: string;
+  groupName: string;
+  membersCount?: number;
+};
 
 type Channel = {
-  id: string
-  name: string
-  lastMessage: string
-  time: string
-  unread?: number
-  isArchived?: boolean
-  isStarred?: boolean
-  type?: "personal" | "group"
-  isPinned?: boolean
-  members?: number // Added
-  isAdmin?: boolean // Added
-}
+  id: string;
+  name: string;
+  lastMessage: string;
+  time: string;
+  unread?: number;
+  isArchived?: boolean;
+  isStarred?: boolean;
+  type?: "personal" | "group";
+  isPinned?: boolean;
+  members?: number;
+  isAdmin?: boolean;
+};
 
-const initialChannels: Channel[] = [
-    { id: '1', name: 'bahd 2025-27', lastMessage: '+91 83879 60061: Dear Students, This i...', time: '3:50 pm', unread: 5, members: 45, isAdmin: true },
-  { id: '2', name: 'Freshers India - 10', lastMessage: 'Announcements ▸ HCL (Work From H...', time: '9:36 am', unread: 1, members: 12, isAdmin: false },
-  { id: '3', name: 'MaterialIcons', lastMessage: 'settings-voice', time: '1:15 pm', members: 2, isAdmin: true },
-  { id: '4', name: 'Study Group CS', lastMessage: 'video-settings', time: '1:15 pm', members: 6, isAdmin: false },
-  { id: '5', name: 'infream rf', lastMessage: 'Lab decorations in said 🧪🔬', time: '6:41 pm', members: 28, isAdmin: false },
-  { id: '6', name: 'College Friends', lastMessage: 'Hey everyone! How are you all?', time: '2:30 pm', members: 8, isAdmin: true },
-
-]
+const API_BASE_URL = "http://localhost:5200/web";
 
 const GroupsScreen = () => {
-const navigation = useNavigation<GroupsNavigationProp>()
-  const [channels, setChannels] = useState(initialChannels)
-  const [searchText, setSearchText] = useState("")
-  const [activeTab, setActiveTab] = useState("All")
-  const [showUserProfile, setShowUserProfile] = useState(false)
-  const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null)
+  const navigation = useNavigation<GroupsNavigationProp>();
+  const [channels, setChannels] = useState<Channel[]>([]); 
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [searchText, setSearchText] = useState("");
+  const [activeTab, setActiveTab] = useState("All");
+  const [showUserProfile, setShowUserProfile] = useState(false);
+  const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
+  const token = useSelector((state: RootState) => state.facultyStore.token);
+  const [rawGroups, setRawGroups] = useState<GroupContact[]>([]); 
+
+  // ✅ Fetch groups
+  const fetchAllGroups = async () => {
+    if (!token) return setError("Authentication token not found. Please log in.");
+    setLoading(true); // 👈 Loading शुरू करें
+    setError(null);
+    try {
+      const response = await axios.post(
+        `${API_BASE_URL}/faculty/view-group`,
+        {},
+        { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+      );
+
+      const data = response.data;
+      if (data?.status === 1 && Array.isArray(data.data)) {
+        const groups: GroupContact[] = data.data.map((g: any) => ({
+          groupId: g._id || g.groupId || g.facultyGroupId,
+          groupName: g.facultyGroupName || g.groupName || "Unnamed Group",
+          membersCount: g.groupMembers?.length || 0,
+        }));
+        setRawGroups(groups); 
+      } else {
+        setRawGroups([]);
+   
+      }
+    } catch (err: any) {
+      console.error("Error fetching groups:", err.response?.data || err.message);
+      setError("Failed to load groups. Please try again.");
+    } finally {
+      setLoading(false); 
+    }
+  };
+
+  useEffect(() => {
+    const mappedChannels: Channel[] = rawGroups.map((group) => ({
+      id: group.groupId,
+      name: group.groupName,
+      lastMessage: `Members: ${group.membersCount || 0}`, 
+      time: "", 
+      unread: 0,
+      type: "group", 
+      isPinned: false,
+      members: group.membersCount,
+    }));
+    setChannels(mappedChannels);
+  }, [rawGroups]);
+
+  // ✅ Refresh on focus
+  useFocusEffect(
+    useCallback(() => {
+      fetchAllGroups();
+    }, [])
+  );
+
+  useEffect(() => {
+    // Initial fetch for the first load
+    fetchAllGroups();
+  }, []);
+
 
   const filteredChannels = useMemo(() => {
-    let filtered = channels
-
-    switch (activeTab) {
-      case "Unread":
-        filtered = channels.filter((c) => (c.unread || 0) > 0)
-        break
-      case "Favourites":
-        filtered = channels.filter((c) => c.isStarred)
-        break
-      case "Groups":
-        filtered = channels.filter((c) => c.type === "group")
-        break
-      default:
-        filtered = channels
-    }
-
+    let filtered = channels;
+       if (activeTab === "Unread") filtered = channels.filter((c) => (c.unread || 0) > 0);
+    else if (activeTab === "Favourites") filtered = channels.filter((c) => c.isStarred);
+   
+  
     if (searchText.trim()) {
       filtered = filtered.filter(
         (c) =>
           c.name.toLowerCase().includes(searchText.toLowerCase()) ||
-          c.lastMessage.toLowerCase().includes(searchText.toLowerCase()),
-      )
+          c.lastMessage.toLowerCase().includes(searchText.toLowerCase())
+      );
     }
+    return filtered;
+  }, [channels, activeTab, searchText]);
+  
 
-    return filtered
-  }, [channels, activeTab, searchText])
-
-  const handleTabChange = (tab: string) => {
-    setActiveTab(tab)
-  }
-
-  const handleAddGroup = () => {
-    console.log("Navigate to Create Group Screen")
-  }
-
-  const handleOpenCamera = () => {
-    console.log("Open Camera")
-  }
+  const handleTabChange = (tab: string) => setActiveTab(tab);
 
   const handleChannelPress = (channel: Channel) => {
-    setSelectedChannel(channel)
-    setShowUserProfile(false)
-    // navigation.navigate("ChatThread", { channel }) // removed
-  }
+    setSelectedChannel(channel);
+    setShowUserProfile(false);
+  };
 
   const handleGroupCreated = (newGroup: Channel) => {
-    setChannels([newGroup, ...channels])
-    setSelectedChannel(newGroup)
-  }
+    setChannels((prev) => {
+      const exists = prev.some((g) => g.id === newGroup.id);
+      if (exists) return prev;
+      return [newGroup, ...prev];
+    });
+    setSelectedChannel(newGroup);
+  };
+const userProfile = selectedChannel
+  ? {
+      // FIX: Add the required 'id' property
+      id: selectedChannel.id,
+      name: selectedChannel.name,
+      email: `${selectedChannel.name
+        .toLowerCase()
+        .replace(/\s+/g, ".")}@example.com`,
+      phone: "+91 98765 43210",
+      bio: "This is a sample bio.",
+      fatherName: "Father Name",
+      operator: "John Doe",
+      department: "Sales",
+      // 'groupMembers' is already present, which is correct
+      groupMembers: [], 
+    }
+  : null;
 
-  type UserProfile = {
-    name: string
-    email: string
-    phone: string
-    bio: string
-    fatherName: string
-    operator: string
-    department: string
-  }
-
-  const userProfile: UserProfile | null = selectedChannel
-    ? {
-        name: selectedChannel.name,
-        email: `${selectedChannel.name.toLowerCase().replace(" ", ".")}@example.com`, // ✅ template literal
-        phone: "+91 98765 43210",
-        bio: "This is a sample bio for the user profile.",
-        fatherName: "Father Name",
-        operator: "John Doe",
-        department: "Sales",
-      }
-    : null
+  const ListLoadingOrError = () => {
+    if (loading)
+      return (
+        <View style={styles.centeredMessage}>
+          <ActivityIndicator size="large" color="#075E54" />
+          <Text style={styles.messageTextContent}>Loading groups...</Text>
+        </View>
+      );
+    if (error)
+      return (
+        <View style={styles.centeredMessage}>
+          <Ionicons
+            name="alert-circle-outline"
+            size={30}
+            color="#FF6347"
+            style={{ marginBottom: 10 }}
+          />
+          <Text style={styles.messageTextContent}>{error}</Text>
+          <TouchableOpacity onPress={fetchAllGroups} style={styles.retryButton}>
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    return null;
+  };
 
   return (
     <MainLayout
       activeTab="Groups"
       showRightContent={showUserProfile}
       rightContent={
-        userProfile ? <UserProfileScreen userProfile={userProfile} onClose={() => setShowUserProfile(false)} /> : null
+        userProfile ? (
+          <UserProfileScreen userProfile={userProfile} onClose={() => setShowUserProfile(false)} />
+        ) : null
       }
-      onRightContentClose={() => setShowUserProfile(false)}
     >
       <View style={styles.container}>
-        {/* Two-column content to match the reference image */}
         <View style={styles.rootRow}>
-          {/* LEFT: Channel list (narrow) */}
+          {/* LEFT COLUMN */}
           <View style={styles.listColumn}>
             <View style={styles.header}>
               <WebBackButton />
               <Text style={styles.headerTitle}>Groups</Text>
+              <TouchableOpacity>
+              <Text style={styles.headerTitles}>Edit</Text>
+
+              </TouchableOpacity>
             </View>
 
+            {/* SEARCH BAR */}
             <View style={styles.searchContainer}>
               <MaterialIcons name="search" size={20} color="#666" style={styles.searchIcon} />
               <TextInput
@@ -152,38 +229,53 @@ const navigation = useNavigation<GroupsNavigationProp>()
                 onChangeText={setSearchText}
                 style={styles.searchInput}
               />
-              <TouchableOpacity style={styles.qrButton} onPress={() => navigation.navigate("QRScanner")}>
+              <TouchableOpacity
+                style={styles.qrButton}
+                onPress={() => navigation.navigate("QRScanner")}
+              >
                 <Ionicons name="qr-code" size={20} color="#1a1b1bff" />
               </TouchableOpacity>
-              <TouchableOpacity style={styles.cameraButton} onPress={() => navigation.navigate("Camera")}>
+              <TouchableOpacity
+                style={styles.cameraButton}
+                onPress={() => navigation.navigate("Camera")}
+              >
                 <Ionicons name="camera" size={20} color="#0a0a0aff" />
               </TouchableOpacity>
             </View>
 
             <TopTabNavigation onTabChange={handleTabChange} />
 
-            <FlatList
-              data={filteredChannels}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item }) => (
-                <ChannelItemWithLongPress
-                  channel={{
-                    id: item.id,
-                    name: item.name,
-                    lastMessage: item.lastMessage,
-                    timestamp: item.time,
-                    unread: item.unread,
-                    isGroup: item.type === "group",
-                    isPinned: item.isPinned,
-                  }}
-                  onPress={() => handleChannelPress(item)}
-                  onUpdate={() => setChannels([...channels])}
-                />
-              )}
-            />
+            <ListLoadingOrError />
+
+            {!loading && !error && (
+              <FlatList
+                data={filteredChannels} 
+                keyExtractor={(item) => item.id}
+                renderItem={({ item }) => (
+                  <ChannelItemWithLongPress
+                    channel={{
+                      id: item.id,
+                      name: item.name,
+                      lastMessage: item.lastMessage,
+                      timestamp: item.time,
+                      unread: item.unread,
+                      isGroup: item.type === "group",
+                      isPinned: item.isPinned,
+                    }}
+                    onPress={() => handleChannelPress(item)}
+                    onUpdate={() => fetchAllGroups()}
+                  />
+                )}
+                ListEmptyComponent={
+                  <View style={styles.centeredMessage}>
+                    <Text style={styles.messageTextContent}>No groups found.</Text>
+                  </View>
+                }
+              />
+            )}
           </View>
 
-          {/* CENTER: Chat thread */}
+          {/* RIGHT COLUMN */}
           <View style={styles.chatColumn}>
             {selectedChannel ? (
               <ChatThread
@@ -193,23 +285,24 @@ const navigation = useNavigation<GroupsNavigationProp>()
               />
             ) : (
               <View style={styles.emptyChat}>
-                <Text style={styles.emptyChatText}>Select a chat to start messaging</Text>
+                <Text style={styles.emptyChatText}>Select a group to start messaging</Text>
               </View>
             )}
           </View>
         </View>
       </View>
     </MainLayout>
-  )
-}
+  );
+};
 
 export default GroupsScreen
 
+// Styles remain the same
 const styles = StyleSheet.create({
-  // 🔹 Root Container
+
   container: {
     flex: 1,
-    backgroundColor: "#e6ecf3", // soft neutral background
+    backgroundColor: "#e6ecf3", 
   },
 
   // 🔹 Header
@@ -253,6 +346,34 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "600",
     color: "#075E54",
+  },
+  headerTitles: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#000000ff", alignContent:"flex-end" , marginStart: 190
+  },
+
+  centeredMessage: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  messageTextContent: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+  },
+  retryButton: {
+    backgroundColor: '#007bff',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    marginTop: 10,
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
   },
 
   rootRow: {
@@ -505,4 +626,3 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
   },
 });
-

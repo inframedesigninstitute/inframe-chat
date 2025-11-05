@@ -194,10 +194,9 @@ const TeacherLoginScreen = () => {
                 setOtp("");
 
                 showModal("Success!", "Verification successful. Welcome!", () =>
-                    navigation.reset({ index: 0, routes: [{ name: "Chats" }] })
+                    navigation.reset({ index: 0, routes: [{ name: "FacultyChats" }] })
                 );
             } else {
-                // If it wasn't a success/token combo, show the mismatch/failure message
                 console.log("❌ OTP verification failed or token missing.");
                 showModal("OTP Mismatch", response.data?.message || "Incorrect OTP or missing token. Please try again.");
             }

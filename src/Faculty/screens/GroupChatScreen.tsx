@@ -451,7 +451,6 @@ const GroupChatScreen = () => {
 // --- Consolidated Stylesheet ---
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
-  // Header styles
   header: { flexDirection: "row", alignItems: "center", padding: 12, borderBottomWidth: 1, borderColor: "#eee", backgroundColor: "#fff" },
   backButton: { marginRight: 12 },
   contactInfo: { flex: 1 },

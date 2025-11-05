@@ -5,18 +5,18 @@ import { type RouteProp, useNavigation, useRoute } from "@react-navigation/nativ
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack"
 import { useState } from "react"
 import {
-  Alert,
-  Dimensions,
-  FlatList,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    Dimensions,
+    FlatList,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    SafeAreaView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native"
 import Ionicons from "react-native-vector-icons/Ionicons"
 import MaterialIcons from "react-native-vector-icons/MaterialIcons"

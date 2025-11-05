@@ -7,12 +7,12 @@ import CalendarScreen from '../screens/CalendarScreen';
 import CallsScreen from '../screens/CallsScreen';
 import CameraScreen from '../screens/CameraScreen';
 import ChatScreen from '../screens/ChatScreen';
-import ChatsScreen from '../screens/ChatsScreen';
 import CourseDetailsScreen from '../screens/CourseDetailsScreen';
 import CoursesScreen from '../screens/CoursesScreen';
 import CreateGroupScreen from '../screens/CreateGroupScreen';
 import HelpScreen from '../screens/EnhancedHelpScreen';
 import EnhancedSettingsScreen from '../screens/EnhancedSettingsScreen';
+import FacultyChatsScreen from '../screens/FacultyChatsScreen';
 import GalleryScreen from '../screens/GalleryScreen';
 import GroupChatScreen from '../screens/GroupChatScreen';
 import GroupsScreen from '../screens/GroupsScreen';
@@ -36,7 +36,7 @@ const RootNavigator = () => {
       <Stack.Screen name="TeacherSignup" component={TeacherSignupScreen} />
 
 
-      <Stack.Screen name="Chats" component={ChatsScreen} />
+      <Stack.Screen name="FacultyChats" component={FacultyChatsScreen} />
 
 
       <Stack.Screen name="Groups" component={GroupsScreen} />
