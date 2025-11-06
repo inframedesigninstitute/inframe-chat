@@ -1,7 +1,7 @@
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import axios from 'axios';
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
     KeyboardAvoidingView,
     Modal,
@@ -15,7 +15,10 @@ import {
 } from 'react-native';
 import { RootStackParamList } from '../navigation/types';
 // Assuming you have vector icons installed for better visual alerts
+import { setToken } from '@/src/Redux/Slices/studentTokenSlice';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { useDispatch } from 'react-redux';
 import StudentSignupScreen from './StudentSignupScreen';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'AdvancedLogin'>;
@@ -89,7 +92,7 @@ const AdvancedLoginScreen = () => {
     const [isVerifying, setIsVerifying] = useState(false);
     const [showOtpModal, setShowOtpModal] = useState(false);
     const [activeTab, setActiveTab] = useState<'old' | 'new'>('old');
-    
+
     // 🔄 Error/Admin Error States
     const [showErrorModal, setShowErrorModal] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
@@ -143,7 +146,7 @@ const AdvancedLoginScreen = () => {
                 return showCustomError('Admin Login Failed', 'Invalid credentials.');
             }
             console.log('Admin login successful, navigating to AdminDashboard...');
-            
+
             try {
                 // Admin login is direct, no OTP for them in this logic
                 navigation.navigate('AdminDashboard' as never);
@@ -160,14 +163,14 @@ const AdvancedLoginScreen = () => {
 
         setIsLoading(true);
         try {
-const response = await axios.post(`${API_BASE_URL}/student/send-otp`, { studentEmail: email });
+            const response = await axios.post(`${API_BASE_URL}/student/send-otp`, { studentEmail: email });
             console.log('OTP Response:', response.data);
 
             if (response.data?.success || response.status === 200) {
                 setShowOtpModal(true);
                 setTimeout(() => otpInputRef.current?.focus(), 100);
                 // 🔄 Replaced Alert.alert with Modal for OTP Send Success
-showCustomSuccess(`OTP sent to ${email}`);
+                showCustomSuccess(`OTP sent to ${email}`);
             } else {
                 // 🔄 Replaced Alert.alert with Modal for OTP Send Failure
                 showCustomError('OTP Send Failed', response.data?.message || 'Failed to send OTP.');
@@ -176,7 +179,7 @@ showCustomSuccess(`OTP sent to ${email}`);
             console.error('Send OTP Error:', err);
             let message = 'Network error. Please try again.';
             if (err.response?.data?.message) {
-                 message = err.response.data.message;
+                message = err.response.data.message;
             }
             // 🔄 Replaced Alert.alert with Modal for Network Error
             showCustomError('Error', message);
@@ -191,7 +194,7 @@ showCustomSuccess(`OTP sent to ${email}`);
         console.log('Email:', email);
         console.log('OTP:', otp);
         console.log('OTP Length:', otp.trim().length);
-        
+
         if (otp.trim().length !== 6) {
             console.log('OTP length validation failed');
             // 🔄 Replaced Alert.alert with Modal
@@ -200,13 +203,13 @@ showCustomSuccess(`OTP sent to ${email}`);
         }
 
         setIsVerifying(true);
-console.log(`Starting API call to: ${API_BASE_URL}/student/verify-otp`);
-        
+        console.log(`Starting API call to: ${API_BASE_URL}/student/verify-otp`);
+
         try {
             const requestData = { studentEmail: email, enteredOtp: otp };
             console.log('Request data:', requestData);
-            
-const response = await axios.post(`${API_BASE_URL}/student/verify-otp`, requestData);
+
+            const response = await axios.post(`${API_BASE_URL}/student/verify-otp`, requestData);
             console.log('=== API Response ===');
 
             if (response.data?.success || response.status === 200) {
@@ -225,10 +228,10 @@ const response = await axios.post(`${API_BASE_URL}/student/verify-otp`, requestD
             }
         } catch (err: any) {
             console.error('=== OTP Verification Error ===');
-            
+
             let message = 'Network error. Please try again.';
             if (err.response?.status === 400 || err.response?.data?.message) {
-                 message = err.response?.data?.message || 'The OTP you entered is incorrect or expired. Please try again.';
+                message = err.response?.data?.message || 'The OTP you entered is incorrect or expired. Please try again.';
             }
 
             // 🔄 Replaced direct error modal call with custom function
@@ -239,6 +242,28 @@ const response = await axios.post(`${API_BASE_URL}/student/verify-otp`, requestD
             setIsVerifying(false);
         }
     };
+
+    const dispatch = useDispatch()
+
+
+    useEffect(() => {
+        const checkToken = async () => {
+            try {
+                const storedToken = await AsyncStorage.getItem('TOKEN');
+                if (storedToken) {
+                    console.log("Found stored token. Auto-logging in...");
+                    dispatch(setToken({ token: storedToken }));
+                    // Navigate directly to the authenticated screen
+                    navigation.reset({ index: 0, routes: [{ name: "Chats" }] });
+                }
+            } catch (e) {
+                console.error("Failed to retrieve token from storage:", e);
+                // Continue to login screen if storage check fails
+            }
+        };
+
+        checkToken();
+    }, []);
 
     return (
         <KeyboardAvoidingView
@@ -356,7 +381,7 @@ const response = await axios.post(`${API_BASE_URL}/student/verify-otp`, requestD
                                 {isVerifying ? 'Verifying...' : 'Verify OTP'}
                             </Text>
                         </TouchableOpacity>
-                        <TouchableOpacity 
+                        <TouchableOpacity
                             onPress={() => {
                                 setShowOtpModal(false);
                                 setOtp('');
@@ -447,7 +472,7 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     loginButtonDisabled: { backgroundColor: '#b0bec5' },
-    loginButtonText: { fontSize: 16, fontWeight: '600', color: '#000000ff', paddingLeft:30, paddingRight:30 },
+    loginButtonText: { fontSize: 16, fontWeight: '600', color: '#000000ff', paddingLeft: 30, paddingRight: 30 },
     modalOverlay: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.3)',

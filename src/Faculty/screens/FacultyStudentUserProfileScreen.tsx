@@ -1,4 +1,4 @@
-import type { RootState } from "@/src/Redux/Store/store"; // 2. Import RootState (adjust path if needed)
+import type { RootState } from "../../Redux/Store/store"; // 2. Import RootState (adjust path if needed)
 import axios from "axios";
 import React, { useState } from 'react';
 import {
@@ -12,7 +12,7 @@ import {
     View,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { useSelector } from 'react-redux'; // 1. Import useSelector
+import { useSelector } from 'react-redux'; 
 import GroupMembersModal from '../components/GroupMembersModal';
 
 const API_BASE_URL = "http://localhost:5200/web";

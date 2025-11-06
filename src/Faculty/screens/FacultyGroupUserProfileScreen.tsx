@@ -1,4 +1,4 @@
-import type { RootState } from "@/src/Redux/Store/store"; // 2. Import RootState (adjust path if needed)
+import type { RootState } from "../../Redux/Store/store"; // 2. Import RootState (adjust path if needed)
 import React, { useState } from 'react';
 import {
     Image,

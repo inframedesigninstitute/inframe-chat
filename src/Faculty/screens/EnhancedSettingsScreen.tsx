@@ -46,10 +46,10 @@ const EnhancedSettingsScreen = () => {
 
   const handleChatTheme = () => {
     Alert.alert("Chat Theme", "Choose your chat theme", [
-      { text: "Default", onPress: () => setSelectedSetting("Chats") },
-      { text: "Dark", onPress: () => setSelectedSetting("Chats") },
-      { text: "Blue", onPress: () => setSelectedSetting("Chats") },
-      { text: "Green", onPress: () => setSelectedSetting("Chats") },
+      { text: "Default", onPress: () => setSelectedSetting("FacultyChats") },
+      { text: "Dark", onPress: () => setSelectedSetting("FacultyChats") },
+      { text: "Blue", onPress: () => setSelectedSetting("FacultyChats") },
+      { text: "Green", onPress: () => setSelectedSetting("FacultyChats") },
     ])
   }
 
@@ -103,7 +103,7 @@ const EnhancedSettingsScreen = () => {
         return <ProfileScreen />
       case "Privacy":
         return <PrivacyScreen />
-      case "Chats":
+      case "FacultyChats":
         return <StatusScreen />
       case "Notifications":
         return <NotificationsScreen />
@@ -235,7 +235,7 @@ const EnhancedSettingsScreen = () => {
             <SettingItem icon="lock-closed" title="Privacy" subtitle="Blocked contacts, disappearing messages" />
             <SettingItem
               icon="chatbox-ellipses"
-              title="Chats"
+              title="FacultyChats"
               subtitle="Theme, wallpaper, chat settings"
               onPress={handleChatTheme}
             />

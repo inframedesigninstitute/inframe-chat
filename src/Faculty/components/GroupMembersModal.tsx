@@ -55,8 +55,8 @@ const GroupMembersModal: React.FC<GroupMembersModalProps> = ({
             setError(null);
 
             const { data } = await axios.post(
-                `${API_BASE_URL}/faculty/view-contacts`,
-                {},
+                `${API_BASE_URL}/faculty/view-group-members`,
+                { groupId },
                 {
                     headers: {
                         "Content-Type": "application/json",
@@ -66,37 +66,39 @@ const GroupMembersModal: React.FC<GroupMembersModalProps> = ({
             );
 
             if (data?.status === 1) {
-                const contactsList =
-                    data?.facultyContactsList?.[0]?.facultyContacts || [];
+                const groupData = data?.facultyGroup?.[0];
+                const membersList = groupData?.facultyGroupMembers || [];
 
-                if (Array.isArray(contactsList) && contactsList.length > 0) {
-                    const formatted: GroupMember[] = contactsList.map(
-                        (c: StudentContact, i: number) => ({
-                            _id: c.studentId,
-                            phone: c.studentId,
-                            name: c.studentName,
+                if (Array.isArray(membersList) && membersList.length > 0) {
+                    const formatted: GroupMember[] = membersList.map(
+                        (m: any, i: number) => ({
+                            _id: m._id,
+                            phone: m.memberId,
+                            name: `${m.memberName} ${i + 1}`,
                             status: "Active",
                             isAdmin: i === 0,
-                            profilePicture: undefined,
+                            profilePicture: "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png",
                         })
                     );
                     setMembers(formatted);
                 } else {
-                    setError("No contacts found.");
+                    setError("No members found.");
                 }
             } else {
-                setError(data?.msg || "Failed to load contacts.");
+                setError(data?.msg || "Failed to load members.");
             }
         } catch (err: any) {
             console.error("Error fetching contacts:", err.response?.data || err.message);
-            setError("Network error occurred while fetching contacts.");
+            setError("Network error occurred while fetching members.");
         } finally {
             setLoading(false);
         }
     };
 
+
     const handleRemoveMember = async (mId: string) => {
-        console.log(mId)
+        console.log(groupId)
+        console.log('member id which is deleted', mId)
         if (!token) {
             setError("Authentication token not found.");
             return;
@@ -119,12 +121,11 @@ const GroupMembersModal: React.FC<GroupMembersModalProps> = ({
 
             if (!data || typeof data !== "object") {
                 setError("Unexpected server response.");
-                await fetchContacts(); // 🔄 Refresh member list to revert UI
+                await fetchContacts();
                 return;
             }
 
             if (data.status === 1) {
-                // ✅ Only remove from list if confirmed success
                 setMembers((prevMembers) =>
                     Array.isArray(prevMembers)
                         ? prevMembers.filter((m) => m._id !== mId)
@@ -150,6 +151,8 @@ const GroupMembersModal: React.FC<GroupMembersModalProps> = ({
     useEffect(() => {
         fetchContacts();
     }, [groupId, token]);
+
+
 
     const sortedMembers = [...members].sort((a, b) =>
         a.isAdmin === b.isAdmin ? 0 : a.isAdmin ? -1 : 1

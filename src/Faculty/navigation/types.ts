@@ -5,7 +5,6 @@ export type RootStackParamList = {
    TeacherLogin: { emailPrefill?: string; admin?: boolean } | undefined;
 
   OtpVerification: { email: string };
-  Chats: undefined;
   FacultyChats:undefined;
 AdminChats:undefined;
   Groups: undefined;
@@ -41,13 +40,13 @@ AdminChats:undefined;
 };
 
 export type MainTabsParamList = {
-  Chats: undefined;
+  FacultyChats: undefined;
   Groups: undefined;
   Calls: undefined;
   Settings: undefined;
 };
 
-export type ChatsTopTabsParamList = {
+export type FacultyChatsTopTabsParamList = {
   All: undefined;
   Unread: undefined;
   Favourites: undefined;

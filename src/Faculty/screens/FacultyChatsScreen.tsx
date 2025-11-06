@@ -1,4 +1,3 @@
-import { RootState } from "@/src/Redux/Store/store";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import { CompositeNavigationProp, useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -16,6 +15,8 @@ import {
 import Ionicons from "react-native-vector-icons/Ionicons";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import { useSelector } from "react-redux";
+import { RootState } from "../../Redux/Store/store";
+import AddMemberModal from "../components/add-member";
 import ChannelItemWithLongPress from "../components/ChannelItemWithLongPress";
 import ChatThread from "../components/FacultyChatThread";
 import MainLayout from "../components/MainLayout";
@@ -27,7 +28,7 @@ import UserProfileScreen from "./FacultyStudentUserProfileScreen";
 const API_BASE_URL = "http://localhost:5200/web";
 
 type StudentContact = {
-    studentId: string;
+    studentId: string;  
     studentName: string;
     studentEmail?: string;
 };
@@ -50,14 +51,14 @@ type Channel = {
     isPinned?: boolean;
 };
 
-type ChatsNavigationProp = CompositeNavigationProp<
-    BottomTabNavigationProp<MainTabsParamList, "Chats">,
+type FacultyChatsNavigationProp = CompositeNavigationProp<
+    BottomTabNavigationProp<MainTabsParamList, "FacultyChats">,
     NativeStackNavigationProp<RootStackParamList>
->;
+>
 
-const ChatsScreen = () => {
+const FacultyChatsScreen = () => {
     const token = useSelector((state: RootState) => state.facultyStore.token);
-    const navigation = useNavigation<ChatsNavigationProp>();
+    const navigation = useNavigation<FacultyChatsNavigationProp>();
     const [rawContacts, setRawContacts] = useState<StudentContact[]>([]);
     const [rawGroups, setRawGroups] = useState<GroupContact[]>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -66,6 +67,7 @@ const ChatsScreen = () => {
     const [activeTab, setActiveTab] = useState("All");
     const [showUserProfile, setShowUserProfile] = useState(false);
     const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
+    const [showAddMemberModal, setShowAddMemberModal] = useState(false)
 
     // Combine both contacts & groups
     const channels = useMemo<Channel[]>(() => {
@@ -174,7 +176,6 @@ const ChatsScreen = () => {
         }
     };
 
-    // 🔁 Auto-refresh whenever screen refocuses (e.g., after adding contact/group)
     useFocusEffect(
         useCallback(() => {
             if (token) {
@@ -222,7 +223,7 @@ const ChatsScreen = () => {
 
     return (
         <MainLayout
-            activeTab="Chats"
+            activeTab="FacultyChats"
             showRightContent={showUserProfile}
             rightContent={
                 selectedChannel ? (
@@ -260,12 +261,16 @@ const ChatsScreen = () => {
                                 onChangeText={setSearchText}
                                 style={styles.searchInput}
                             />
-                            <TouchableOpacity
+                            {/* <TouchableOpacity
                                 style={styles.qrButton}
                                 onPress={() => navigation.navigate("QRScanner")}
                             >
                                 <Ionicons name="qr-code" size={20} color="#1a1b1bff" />
+                            </TouchableOpacity> */}
+                            <TouchableOpacity style={styles.attachButton} onPress={() => setShowAddMemberModal(true)}>
+                                <Ionicons name="add" size={30} color="#000" />
                             </TouchableOpacity>
+
                             <TouchableOpacity
                                 style={styles.cameraButton}
                                 onPress={() => navigation.navigate("Camera")}
@@ -322,11 +327,21 @@ const ChatsScreen = () => {
                     </View>
                 </View>
             </View>
+            <AddMemberModal
+                visible={showAddMemberModal}
+                onClose={() => setShowAddMemberModal(false)}
+                onGroupCreated={(group) => {
+                    handleGroupCreated(group);  // use the defined function
+                    setShowAddMemberModal(false);
+                }}
+            />
+
         </MainLayout>
+
     );
 };
 
-export default ChatsScreen;
+export default FacultyChatsScreen;
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: "#e6ecf3" },
@@ -338,7 +353,8 @@ const styles = StyleSheet.create({
         borderBottomLeftRadius: 22,
         borderBottomRightRadius: 22,
         elevation: 10,
-    },
+    }, attachButton: { marginRight: 8 },
+
     headerTitle: { fontSize: 18, fontWeight: "600", color: "#075E54" },
     rootRow: { flex: 1, flexDirection: "row" },
     listColumn: {

@@ -4,12 +4,12 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import ChatsScreen from '../screens/ChatsScreen';
-import { ChatsTopTabsParamList, RootStackParamList } from './types';
+import FacultyChatsScreen from '../screens/FacultyChatsScreen';
+import { FacultyChatsTopTabsParamList, RootStackParamList } from './types';
 
-const TopTab = createMaterialTopTabNavigator<ChatsTopTabsParamList>();
+const TopTab = createMaterialTopTabNavigator<FacultyChatsTopTabsParamList>();
 
-export default function ChatsTopTabs() {
+export default function FacultyChatsTopTabs() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const handleCreateGroup = () => {
@@ -41,28 +41,28 @@ export default function ChatsTopTabs() {
       >
         <TopTab.Screen 
           name="All" 
-          component={ChatsScreen}
+          component={FacultyChatsScreen}
           options={{
             tabBarLabel: 'All',
           }}
         />
         <TopTab.Screen 
           name="Unread" 
-          component={ChatsScreen}
+          component={FacultyChatsScreen}
           options={{
             tabBarLabel: 'Unread 20',
           }}
         />
         <TopTab.Screen 
           name="Favourites" 
-          component={ChatsScreen}
+          component={FacultyChatsScreen}
           options={{
             tabBarLabel: 'Favourites',
           }}
         />
         <TopTab.Screen 
           name="Groups" 
-          component={ChatsScreen}
+          component={FacultyChatsScreen}
           options={{
             tabBarLabel: 'Groups 3',
           }}

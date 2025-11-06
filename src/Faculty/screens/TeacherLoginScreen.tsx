@@ -102,7 +102,7 @@ const TeacherLoginScreen = () => {
                     console.log("Found stored token. Auto-logging in...");
                     dispatch(setToken({ token: storedToken }));
                     // Navigate directly to the authenticated screen
-                    navigation.reset({ index: 0, routes: [{ name: "Chats" }] });
+                    navigation.reset({ index: 0, routes: [{ name: "FacultyChats" }] });
                 }
             } catch (e) {
                 console.error("Failed to retrieve token from storage:", e);
@@ -188,7 +188,7 @@ const TeacherLoginScreen = () => {
                 dispatch(setToken({ token: response.data.token }));
                 await AsyncStorage.setItem("TOKEN", response.data.token);
 
-                console.log("✅ OTP verified successfully. Navigating to Chats...");
+                console.log("✅ OTP verified successfully. Navigating to FacultyChats...");
 
                 setShowOtpModal(false);
                 setOtp("");

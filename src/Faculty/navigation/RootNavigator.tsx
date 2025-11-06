@@ -6,7 +6,6 @@ import AudioCallScreen from '../screens/AudioCallScreen';
 import CalendarScreen from '../screens/CalendarScreen';
 import CallsScreen from '../screens/CallsScreen';
 import CameraScreen from '../screens/CameraScreen';
-import ChatScreen from '../screens/ChatScreen';
 import CourseDetailsScreen from '../screens/CourseDetailsScreen';
 import CoursesScreen from '../screens/CoursesScreen';
 import CreateGroupScreen from '../screens/CreateGroupScreen';
@@ -41,7 +40,7 @@ const RootNavigator = () => {
 
       <Stack.Screen name="Groups" component={GroupsScreen} />
       <Stack.Screen name="Calls" component={CallsScreen} />
-      <Stack.Screen name="Chat" component={ChatScreen} options={{ presentation: 'modal' }} />
+      <Stack.Screen name="Chat" component={FacultyChatsScreen} options={{ presentation: 'modal' }} />
       <Stack.Screen 
         name="GroupChat" 
         component={GroupChatScreen} 

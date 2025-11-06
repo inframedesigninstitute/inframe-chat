@@ -448,7 +448,7 @@ const ChatScreen = () => {
 
     return (
         <View style={styles.rowLayout}>
-            <LeftSidebarNav active={'Chats'} />
+            <LeftSidebarNav active={'FacultyChats'} />
             <ChatList
                 title="Inbox"
                 customers={customers}
