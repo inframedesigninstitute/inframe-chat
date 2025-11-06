@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,9 @@ import {
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import LocalDatabase from '../services/LocalDatabase';
+import axios from 'axios';
+
+const API_BASE_URL = "http://localhost:5200/web";
 
 interface Channel {
   id: string;
@@ -26,14 +29,26 @@ interface ChannelItemWithLongPressProps {
   channel: Channel;
   onPress: () => void;
   onUpdate: () => void;
+  onDelete: (channelId: string) => void;
 }
 
 const ChannelItemWithLongPress: React.FC<ChannelItemWithLongPressProps> = ({
   channel,
   onPress,
   onUpdate,
+  onDelete,
 }) => {
   const [showActions, setShowActions] = useState(false);
+  const [token, setToken] = useState<string | null>(null);
+
+  // ✅ Load token once when component mounts
+  useEffect(() => {
+    const loadToken = async () => {
+      const t = await LocalDatabase.getToken();
+      setToken(t);
+    };
+    loadToken();
+  }, []);
 
   const handleLongPress = () => {
     setShowActions(true);
@@ -50,48 +65,59 @@ const ChannelItemWithLongPress: React.FC<ChannelItemWithLongPressProps> = ({
     }
   };
 
-  const handleDelete = () => {
-    Alert.alert(
-      'Delete Chat',
-      `Are you sure you want to delete "${channel.name}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await LocalDatabase.deleteChannel(channel.id);
-              setShowActions(false);
-              onUpdate();
-              Alert.alert('Success', 'Chat deleted');
-            } catch (error) {
-              Alert.alert('Error', 'Failed to delete chat');
-            }
-          },
-        },
-      ]
-    );
-  };
-
   const handleStar = () => {
     Alert.alert('Star Chat', `Star "${channel.name}"?`, [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Star', onPress: () => {
-        setShowActions(false);
-        Alert.alert('Success', 'Chat starred');
-      }},
+      {
+        text: 'Star',
+        onPress: () => {
+          setShowActions(false);
+          Alert.alert('Success', 'Chat starred');
+        },
+      },
     ]);
   };
 
   const handleForward = () => {
     Alert.alert('Forward', `Forward "${channel.name}" info?`, [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Forward', onPress: () => {
-        setShowActions(false);
-        Alert.alert('Success', 'Info forwarded');
-      }},
+      {
+        text: 'Forward',
+        onPress: () => {
+          setShowActions(false);
+          Alert.alert('Success', 'Info forwarded');
+        },
+      },
     ]);
+  };
+
+  const handleDelete = async (mId: string) => {
+    try {
+      const facultyId = channel.id; // Backend expects this as request body
+
+      const { data } = await axios.post(
+        `${API_BASE_URL}/faculty/remove-from-group/${mId}`,
+        { facultyId },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (data.status === 1) {
+        onDelete(channel.id);
+        Alert.alert('Success', 'Channel deleted successfully');
+      } else {
+        Alert.alert('Error', 'Failed to delete channel');
+      }
+    } catch (error) {
+      console.error(error);
+      Alert.alert('Error', 'An error occurred while deleting the channel');
+    } finally {
+      setShowActions(false);
+    }
   };
 
   return (
@@ -159,10 +185,10 @@ const ChannelItemWithLongPress: React.FC<ChannelItemWithLongPressProps> = ({
         >
           <View style={styles.actionsMenu}>
             <TouchableOpacity style={styles.actionItem} onPress={handlePin}>
-              <Ionicons 
-                name={channel.isPinned ? "pin" : "pin-outline"} 
-                size={20} 
-                color="#075E54" 
+              <Ionicons
+                name={channel.isPinned ? 'pin' : 'pin-outline'}
+                size={20}
+                color="#075E54"
               />
               <Text style={styles.actionText}>
                 {channel.isPinned ? 'Unpin' : 'Pin'}
@@ -179,9 +205,14 @@ const ChannelItemWithLongPress: React.FC<ChannelItemWithLongPressProps> = ({
               <Text style={styles.actionText}>Forward</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.actionItem} onPress={handleDelete}>
+            <TouchableOpacity
+              style={styles.actionItem}
+              onPress={() => handleDelete(channel.id)} // ✅ Correct type
+            >
               <Ionicons name="trash" size={20} color="#FF3B30" />
-              <Text style={[styles.actionText, { color: '#FF3B30' }]}>Delete</Text>
+              <Text style={[styles.actionText, { color: '#FF3B30' }]}>
+                Delete
+              </Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
