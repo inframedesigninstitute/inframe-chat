@@ -37,11 +37,11 @@ interface Contact {
   bgColor?: string
 }
 
-interface FacultyGroup {
+interface AdminGroup {
   _id: string; // Group ID
-  facultyGroupName: string;
-  facultyGroupDescription: string;
-  facultyGroupCreatedAt: string;
+  AdminGroupName: string;
+  AdminGroupDescription: string;
+  AdminGroupCreatedAt: string;
 }
 
 interface ChatItem {
@@ -76,10 +76,10 @@ const ACTION_BUTTONS = [
   },
 ]
 
-interface FacultyStoreSlice {
+interface AdminStoreSlice {
   token: string | null;
-  facultyData?: {
-    facultyId?: string;
+  AdminData?: {
+    AdminId?: string;
     _id?: string;
     id?: string;
   } | null;
@@ -89,13 +89,16 @@ interface FacultyStoreSlice {
 export default function AddMemberModal({ visible, onClose, onGroupCreated }: AddMemberModalProps) {
   const [searchQuery, setSearchQuery] = useState("")
   const [activeModal, setActiveModal] = useState<"main" | "newContact" | "newGroup">("main")
+const admin = useSelector((state: RootState) => state.AdminStore.user);
+const AdminId = admin?.id; // Ensure we have the correct admin ID
 
-  const facultyStore = useSelector((state: RootState) => state.facultyStore) as FacultyStoreSlice;
-  const facultyData = facultyStore?.facultyData;
+const AdminStore = useSelector((state: RootState) => state.AdminStore);
+// const AdminId = AdminStore.user?.id;
+const token = AdminStore.token;
   const [contacts, setContacts] = useState<Contact[]>([])
   const [isContactsLoading, setIsContactsLoading] = useState(false)
   const [contactsError, setContactsError] = useState<string | null>(null)
-  const [groups, setGroups] = useState<FacultyGroup[]>([])
+  const [groups, setGroups] = useState<AdminGroup[]>([])
   const [isGroupsLoading, setIsGroupsLoading] = useState(false)
   const [groupsError, setGroupsError] = useState<string | null>(null)
   const [dialogVisible, setDialogVisible] = useState(false);
@@ -111,11 +114,13 @@ export default function AddMemberModal({ visible, onClose, onGroupCreated }: Add
   const [groupCreationLoading, setGroupCreationLoading] = useState(false); // Group creation loading state
   const [selectedMembers, setSelectedMembers] = useState<Set<string>>(new Set())
   const [groupSearchQuery, setGroupSearchQuery] = useState("")
+  const [rawContacts, setRawContacts] = useState<StudentContact[]>([]);
 
   // States for Group Details Modal
   const [groupDetailsModalVisible, setGroupDetailsModalVisible] = useState(false)
   const [groupName, setGroupName] = useState("")
   const [groupDescription, setGroupDescription] = useState("")
+  const [error, setError] = useState<string | null>(null);
 
 
   const filteredContacts = contacts.filter(
@@ -123,7 +128,6 @@ export default function AddMemberModal({ visible, onClose, onGroupCreated }: Add
       contact.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       contact.phone.toLowerCase().includes(searchQuery.toLowerCase()),
   )
-
   const filteredGroupContacts = contacts.filter(
     (contact) =>
       contact.name.toLowerCase().includes(groupSearchQuery.toLowerCase()) ||
@@ -138,67 +142,41 @@ export default function AddMemberModal({ visible, onClose, onGroupCreated }: Add
     }
   }
 
-  const token = facultyStore.token;
-
-  const facultyId = facultyData?.facultyId || facultyData?._id || facultyData?.id;
 
 
-  const fetchAllContacts = async () => {
-    if (!token) {
-      setContactsError("Authentication token not found.")
-      return
-    }
 
-    setIsContactsLoading(true)
-    setContactsError(null)
-
-    try {
-      const API_URL = `${API_BASE_URL}/main-admin/view-contacts`
-
-      const response = await axios.post(
-        API_URL,
-        {},
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      )
-
-      const data = response.data
-      if (
-        data?.status === 1 &&
-        Array.isArray(data.facultyContactsList) &&
-        data.facultyContactsList[0]?.facultyContacts
-      ) {
-        const studentContacts: StudentContact[] = data.facultyContactsList[0].facultyContacts
-        const formattedContacts: Contact[] = studentContacts.map((c) => {
-          const namePart = (c.studentName || c.studentEmail || '').toUpperCase().split(' ');
-          const initials = namePart.length > 1 ? `${namePart[0][0]}${namePart[1][0]}` : namePart[0].substring(0, 2);
-          const randomColor = `#${Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')}`
-
-          return {
-            id: c.studentId,
-            name: c.studentName || c.studentEmail || "No Name",
-            phone: c.studentEmail || "Email not available",
-            initials: initials,
-            bgColor: randomColor,
-          }
-        })
-        setContacts(formattedContacts)
-      } else {
-        setContactsError(data?.msg || "Failed to load contacts data.")
-        setContacts([])
-      }
-    } catch (err: any) {
-      console.error("🔥 Error fetching contacts in modal:", err.response?.data || err.message)
-      setContactsError(err.response?.data?.msg || "Network error. Failed to fetch contacts.")
-      setContacts([])
-    } finally {
-      setIsContactsLoading(false)
-    }
+ 
+const fetchAllStudentContacts = async () => {
+  if (!token?.trim()) {
+    setContactsError("Authentication token not found.");
+    return;
   }
+
+  setIsContactsLoading(true);  // ✅ Add loading state
+  setContactsError(null);
+
+  try {
+    const response = await axios.get(`${API_BASE_URL}/main-admin/view-all-students`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (response.data?.status === 1) {
+      const contacts = response.data.allStudentData.map((s: any) => ({
+        id: s._id || s.id,
+        name: s.studentName,
+        phone: s.studentEmail,
+      }));
+      setContacts(contacts);
+    } else {
+      setContacts([]);
+      setContactsError(response.data?.msg || "Failed to load contacts.");
+    }
+  } catch (err: any) {
+    console.error("Error fetching contacts:", err.response?.data || err.message);
+    setContactsError(err.response?.data?.msg || "Failed to fetch student contacts.");
+  } finally {
+    setIsContactsLoading(false);
+  }
+};
 
   // 🎯 FIX: Groups Fetch Function updated to be more robust
   const fetchGroups = async () => {
@@ -231,17 +209,17 @@ export default function AddMemberModal({ visible, onClose, onGroupCreated }: Add
 
       if (data.status === 1 && Array.isArray(data.data)) {
         setGroups(data.data.map((g: any) => ({
-          _id: g._id || g.groupId || g.facultyGroupId,
-          facultyGroupName: g.facultyGroupName || g.groupName || "Unnamed Group",
-          facultyGroupDescription: g.facultyGroupDescription || "",
-          facultyGroupCreatedAt: g.facultyGroupCreatedAt || new Date().toISOString(),
+          _id: g._id || g.groupId || g.AdminGroupId,
+          AdminGroupName: g.AdminGroupName || g.groupName || "Unnamed Group",
+          AdminGroupDescription: g.AdminGroupDescription || "",
+          AdminGroupCreatedAt: g.AdminGroupCreatedAt || new Date().toISOString(),
         })));
         console.log("🎯 Groups fetched successfully:", data.data.length);
       }
       else {
         console.warn("⚠️ No valid group data found or status is not 1");
         setGroups([]);
-        setGroupsError(data.msg || "No groups found for this faculty.");
+        setGroupsError(data.msg || "No groups found for this Admin.");
       }
     } catch (error: any) {
       console.error("❌ Error fetching groups:", error.response?.data || error.message);
@@ -254,18 +232,19 @@ export default function AddMemberModal({ visible, onClose, onGroupCreated }: Add
   };
 
 
-  useEffect(() => {
-    console.log("👀 useEffect triggered - visible:", visible, "token:", token);
-
-    if (visible && token) {
-
-      fetchAllContacts();
-      fetchGroups();
-    } else if (visible && !token) {
-      setGroupsError("Authentication token not found.");
-      setContactsError("Authentication token not found.");
-    }
-  }, [visible, token]);
+useEffect(() => {
+  console.log("👀 useEffect triggered - visible:", visible, "token:", token);
+  
+  if (visible && token?.trim()) {
+    setContactsError(null);
+    setGroupsError(null);
+    fetchAllStudentContacts();
+    fetchGroups();
+  } else if (visible && !token) {
+    setContactsError("Authentication token not found.");
+    setGroupsError("Authentication token not found.");
+  }
+}, [visible, token]);
 
 
   const toggleMemberSelection = (contactId: string) => {
@@ -286,91 +265,109 @@ export default function AddMemberModal({ visible, onClose, onGroupCreated }: Add
     setGroupDetailsModalVisible(true)
   }
 
-  const handleCreateGroupAPI = async () => {
-    if (!groupName.trim()) {
-      Alert.alert("Group Name Required", "Please enter a name for the new group.")
-      return
-    }
-    if (selectedMembers.size === 0) {
-      Alert.alert("No Members Selected", "Please select members for the group.")
-      return
-    }
+ const handleCreateGroupAPI = async () => {
+  if (!groupName.trim()) {
+    Alert.alert("Group Name Required", "Please enter a name for the new group.");
+    console.log("111111111111")
+    return;
+  }
 
-    setGroupCreationLoading(true)
-    const memberIds = Array.from(selectedMembers)
+  if (selectedMembers.size === 0) {
+        console.log("111111111111000000000")
 
-    try {
-      const API_URL = `${API_BASE_URL}/main-admin/create-group`
+    Alert.alert("No Members Selected", "Please select members for the group.");
+    return;
+  }
 
-      const response = await axios.post(
-        API_URL,
-        {
-          facultyGroupName: groupName.trim(),
-          facultyGroupDescription: groupDescription.trim(),
-          facultyGroupMembers: memberIds,
+  if (!token) {
+        console.log("zzzzzzzzz111111111111")
+
+    Alert.alert("Authentication Error", "Admin token not found. Please login again.");
+    return;
+  }
+
+  if (!AdminId) {
+        console.log("aaaaaaaaa111111111111")
+
+    Alert.alert("Admin Error", "Admin ID not found. Cannot create group.");
+    return;
+  }
+
+  setGroupCreationLoading(true);
+  const memberIds = Array.from(selectedMembers);
+
+  try {
+    const API_URL = `${API_BASE_URL}/main-admin/create-group`;
+
+    const response = await axios.post(
+      API_URL,
+      {
+        mainAdminId: AdminId, // ✅ ensure AdminId is valid
+        mainAdminGroupName: groupName.trim(),
+        mainAdminGroupDescription: groupDescription.trim(),
+        mainAdminGroupMembers: memberIds,
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      )
-
-      const result = response.data;
-
-      if (result.status === 1) {
-        const newGroup: ChatItem = {
-          id: result.groupId || result.data?.groupId || `group-${Date.now()}`,
-          name: groupName.trim(),
-          type: "group" as const,
-          lastMessage: `Group created with ${selectedMembers.size} members.`,
-          time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-          unread: 0,
-          isStarred: false,
-          isPinned: false,
-        }
-
-        if (onGroupCreated) {
-          onGroupCreated(newGroup)
-        }
-        fetchGroups();
-        setDialogData({
-          type: "success",
-          title: "Success",
-          message: result.msg || "Group created successfully! Chat list is updated.",
-        });
-        setDialogVisible(true);
-
-        setSelectedMembers(new Set())
-        setGroupSearchQuery("")
-        setGroupName("")
-        setGroupDescription("")
-        setGroupDetailsModalVisible(false)
-        setActiveModal("main")
-        onClose()
-
-      } else {
-        setDialogData({
-          type: "error",
-          title: "Group Creation Failed",
-          message: result.msg || "Failed to create group. Please try again.",
-        });
-        setDialogVisible(true);
       }
+    );
 
-    } catch (error: any) {
-      console.error("Create Group Error:", error.response?.data || error.message);
+    const result = response.data;
+
+    if (result.status === 1) {
+      const newGroup: ChatItem = {
+        id: result.groupId || result.data?.groupId || `group-${Date.now()}`,
+        name: groupName.trim(),
+        type: "group",
+        lastMessage: `Group created with ${selectedMembers.size} members.`,
+        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        unread: 0,
+        isStarred: false,
+        isPinned: false,
+      };
+
+      onGroupCreated?.(newGroup);
+      fetchGroups();
+
       setDialogData({
-        type: "error",
-        title: "Server Error",
-        message: error.response?.data?.msg || "An unexpected error occurred during group creation. Please try again later.",
+        type: "success",
+        title: "Success",
+        message: result.msg || "Group created successfully! Chat list is updated.",
       });
       setDialogVisible(true);
-    } finally {
-      setGroupCreationLoading(false)
+
+      // Reset form
+      setSelectedMembers(new Set());
+      setGroupSearchQuery("");
+      setGroupName("");
+      setGroupDescription("");
+      setGroupDetailsModalVisible(false);
+      setActiveModal("main");
+      onClose();
+    } else {
+      setDialogData({
+        type: "error",
+        title: "Group Creation Failed",
+        message: result.msg || "Failed to create group. Please try again.",
+      });
+      setDialogVisible(true);
     }
+  } catch (error: any) {
+    console.error("Create Group Error:", error.response?.data || error.message);
+    setDialogData({
+      type: "error",
+      title: "Server Error",
+      message: error.response?.data?.msg || "An unexpected error occurred during group creation. Please try again later.",
+    });
+    setDialogVisible(true);
+  } finally {
+    setGroupCreationLoading(false);
   }
+};
+
 
 
   const handleCloseDialog = () => {
@@ -417,12 +414,12 @@ export default function AddMemberModal({ visible, onClose, onGroupCreated }: Add
           title: "Success",
           message: "Student added successfully! Please re-open the modal to see updated list.",
         });
-        await fetchAllContacts();
+        await fetchAllStudentContacts();
       } else if (result.status === -1) {
         setDialogData({
           type: "error",
           title: "Error",
-          message: "Faculty not found.",
+          message: "Admin not found.",
         });
       } else if (result.status === -2) {
         setDialogData({
@@ -469,14 +466,14 @@ export default function AddMemberModal({ visible, onClose, onGroupCreated }: Add
     </TouchableOpacity>
   )
 
-  const renderGroupItem = ({ item }: { item: FacultyGroup }) => (
-    <TouchableOpacity style={styles.contactItem} onPress={() => Alert.alert(`Open Group: ${item.facultyGroupName}`)}>
+  const renderGroupItem = ({ item }: { item: AdminGroup }) => (
+    <TouchableOpacity style={styles.contactItem} onPress={() => Alert.alert(`Open Group: ${item.AdminGroupName}`)}>
       <View style={[styles.contactAvatar, { backgroundColor: '#66bb6a' }]}>
         <Ionicons name="people" size={24} color="#fff" />
       </View>
       <View style={styles.contactDetails}>
-        <Text style={styles.contactName}>{item.facultyGroupName}</Text>
-        <Text style={styles.contactStatus}>{item.facultyGroupDescription || "No description"}</Text>
+        <Text style={styles.contactName}>{item.AdminGroupName}</Text>
+        <Text style={styles.contactStatus}>{item.AdminGroupDescription || "No description"}</Text>
       </View>
     </TouchableOpacity>
   )
@@ -653,7 +650,7 @@ export default function AddMemberModal({ visible, onClose, onGroupCreated }: Add
               <View style={styles.centeredMessage}>
                 <Ionicons name="alert-circle-outline" size={30} color="#FF6347" />
                 <Text style={styles.messageTextContent}>Error: {contactsError}</Text>
-                <TouchableOpacity onPress={fetchAllContacts} style={styles.retryButton}>
+                <TouchableOpacity onPress={fetchAllStudentContacts} style={styles.retryButton}>
                   <Text style={styles.retryButtonText}>Retry</Text>
                 </TouchableOpacity>
               </View>
@@ -807,7 +804,7 @@ export default function AddMemberModal({ visible, onClose, onGroupCreated }: Add
               <View style={styles.centeredMessage}>
                 <Ionicons name="alert-circle-outline" size={30} color="#FF6347" />
                 <Text style={styles.messageTextContent}>Error loading members: {contactsError}</Text>
-                <TouchableOpacity onPress={fetchAllContacts} style={styles.retryButton}>
+                <TouchableOpacity onPress={fetchAllStudentContacts} style={styles.retryButton}>
                   <Text style={styles.retryButtonText}>Retry</Text>
                 </TouchableOpacity>
               </View>
@@ -858,6 +855,9 @@ export default function AddMemberModal({ visible, onClose, onGroupCreated }: Add
 
   return renderMainScreen()
 }
+
+
+
 const styles = StyleSheet.create({
   container: {
     width: 500,

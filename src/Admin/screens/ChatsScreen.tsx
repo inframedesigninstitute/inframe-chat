@@ -29,7 +29,7 @@ import WebBackButton from "../components/WebBackButton";
 import type { MainTabsParamList, RootStackParamList } from "../navigation/types";
 import UserProfileScreen from "./UserProfileScreen";
 
-const API_BASE_URL = "http://localhost:5200/web";
+const API_BASE_URL = "http://localhost:5200/web"
 
 type StudentContact = {
   studentId: string;
@@ -61,7 +61,7 @@ type ChatsNavigationProp = CompositeNavigationProp<
 >;
 
 const ChatsScreen = () => {
-  const token = useSelector((state: RootState) => state.facultyStore.token);
+  const token = useSelector((state: RootState) => state.AdminStore.token);
   const navigation = useNavigation<ChatsNavigationProp>();
 
   const [rawContacts, setRawContacts] = useState<StudentContact[]>([]);
@@ -146,85 +146,110 @@ const ChatsScreen = () => {
   };
 
   // ✅ Fetch all students (MainAdmin)
-  const fetchAllContacts = async () => {
-    if (!token) return setError("Authentication token not found. Please log in.");
+const fetchAllStudentContacts = async () => {
+  if (!token) {
+    setError("Authentication token not found. Please log in.");
+    return;
+  }
 
-    try {
-      const response = await axios.get(`${API_BASE_URL}/main-admin/view-all-students`, {
+  try {
+    const API_URL = `${API_BASE_URL}/main-admin/view-all-students`;
+
+    // Correct axios.get usage (2 arguments)
+    const response = await axios.get(API_URL, {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const data = response.data;
+    console.log("API response:", data);
+
+    if (data?.status === 1 && Array.isArray(data.allStudentData)) {
+      const contacts: StudentContact[] = data.allStudentData.map((student: any) => ({
+        studentId: student._id || student.id,
+        studentName: student.studentName || "Unnamed Student",
+        studentEmail: student.studentEmail || "N/A",
+      }));
+      setRawContacts(contacts);
+    } else {
+      setRawContacts([]);
+      setError(data?.msg || "Failed to load student contacts.");
+    }
+  } catch (err: any) {
+    console.error("Error fetching contacts:", err.response?.data || err.message);
+    setError("Failed to fetch student contacts.");
+  }
+};
+  // ✅ Fetch all groups (MainAdmin)
+  const fetchAllGroups = async () => {
+  if (!token) {
+    setError("Authentication token not found. Please log in.");
+    return;
+  }
+
+  try {
+    const API_URL = `${API_BASE_URL}/main-admin/view-group`;
+
+    // POST with body and headers
+    const response = await axios.post(
+      API_URL,
+      { }, 
+      {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-      });
-
-      const data = response.data;
-      if (data?.status === 1 && Array.isArray(data.allStudentData)) {
-        const contacts: StudentContact[] = data.allStudentData.map((student: any) => ({
-          studentId: student._id,
-          studentName: student.studentName || "Unnamed Student",
-          studentEmail: student.studentEmail || "N/A",
-        }));
-        setRawContacts(contacts);
-      } else {
-        setRawContacts([]);
-        setError(data?.msg || "Failed to load student contacts.");
       }
-    } catch (err: any) {
-      console.error("Error fetching contacts:", err.response?.data || err.message);
-      setError("Failed to fetch student contacts.");
+    );
+
+    const data = response.data;
+
+    if (data?.status === 1 && Array.isArray(data.data)) {
+      const groups: GroupContact[] = data.data.map((g: any) => ({
+        groupId: g._id,
+        groupName: g.mainAdminGroupName || g.groupName || "Unnamed Group",
+        membersCount: g.mainAdminGroupMembers?.length || 0,
+      }));
+      setRawGroups(groups);
+    } else {
+      setRawGroups([]);
+      setError(data?.msg || "Failed to load groups.");
     }
-  };
-
-  // ✅ Fetch all groups (MainAdmin)
-  const fetchAllGroups = async () => {
-    if (!token) return setError("Authentication token not found. Please log in.");
-
-    try {
-      const response = await axios.post(
-        `${API_BASE_URL}/main-admin/view-group`,
-        { mainAdminId: "YOUR_MAIN_ADMIN_ID" }, // 🔧 Replace with dynamic ID later
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      const data = response.data;
-      if (data?.status === 1 && Array.isArray(data.data)) {
-        const groups: GroupContact[] = data.data.map((g: any) => ({
-          groupId: g._id,
-          groupName: g.mainAdminGroupName || g.groupName || "Unnamed Group",
-          membersCount: g.mainAdminGroupMembers?.length || 0,
-        }));
-        setRawGroups(groups);
-      } else {
-        setRawGroups([]);
-      }
-    } catch (err: any) {
-      console.error("Error fetching groups:", err.response?.data || err.message);
-      setError("Failed to fetch groups.");
-    }
-  };
+  } catch (err: any) {
+    console.error("Error fetching groups:", err.response?.data || err.message);
+    setError("Failed to fetch groups.");
+  }
+};
 
   useFocusEffect(
     useCallback(() => {
       if (token) {
-        fetchAllContacts();
+        fetchAllStudentContacts();
         fetchAllGroups();
       }
     }, [token])
   );
 
-  useEffect(() => {
-    if (token) {
-      setIsLoading(true);
-      Promise.all([fetchAllContacts(), fetchAllGroups()])
-        .catch((e) => console.error(e))
-        .finally(() => setIsLoading(false));
+ useEffect(() => {
+  if (!token) return; // wait until token is available
+
+  const fetchData = async () => {
+    setIsLoading(true);
+    try {
+      await fetchAllStudentContacts();
+      await fetchAllGroups();
+    } catch (err) {
+      console.error("Error in fetching data:", err);
+    } finally {
+      setIsLoading(false);
     }
-  }, [token]);
+  };
+
+  fetchData();
+}, [token]);
+
 
   const ListLoadingOrError = () => {
     if (isLoading)
@@ -248,7 +273,7 @@ const ChatsScreen = () => {
           <Text style={styles.messageTextContent}>Error: {error}</Text>
           <TouchableOpacity
             onPress={() => {
-              fetchAllContacts();
+              fetchAllStudentContacts();
               fetchAllGroups();
             }}
             style={styles.retryButton}
@@ -338,7 +363,7 @@ const ChatsScreen = () => {
                     isPinned: item.isPinned,
                   }}
                   onPress={() => handleChannelPress(item)}
-                  onUpdate={() => fetchAllContacts()}
+                  onUpdate={() => fetchAllStudentContacts()}
                   onDelete={(id) => handleDeleteChannel(id)}
                 />
               )}
