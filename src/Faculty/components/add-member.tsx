@@ -21,7 +21,6 @@ import CustomDialog from "./CustomDialog";
 
 const API_BASE_URL = "http://localhost:5200/web"
 
-// ChatsScreen से StudentContact टाइप
 type StudentContact = {
   studentId: string
   studentName: string
@@ -77,36 +76,28 @@ const ACTION_BUTTONS = [
   },
 ]
 
-// 🚀 FIX: Define the expected structure of the facultyStore slice for type safety
 interface FacultyStoreSlice {
-    token: string | null;
-    facultyData?: {
-      facultyId?: string;
-      _id?: string;
-      id?: string;
-      // Include any other properties facultyData might have
-    } | null;
+  token: string | null;
+  facultyData?: {
+    facultyId?: string;
+    _id?: string;
+    id?: string;
+  } | null;
 }
 
 
 export default function AddMemberModal({ visible, onClose, onGroupCreated }: AddMemberModalProps) {
   const [searchQuery, setSearchQuery] = useState("")
   const [activeModal, setActiveModal] = useState<"main" | "newContact" | "newGroup">("main")
-  
-  // 🎯 FIX: Use the FacultyStoreSlice structure to access facultyData safely
+
   const facultyStore = useSelector((state: RootState) => state.facultyStore) as FacultyStoreSlice;
   const facultyData = facultyStore?.facultyData;
-
-  // Contacts States
   const [contacts, setContacts] = useState<Contact[]>([])
   const [isContactsLoading, setIsContactsLoading] = useState(false)
   const [contactsError, setContactsError] = useState<string | null>(null)
-
-  // Groups States
   const [groups, setGroups] = useState<FacultyGroup[]>([])
   const [isGroupsLoading, setIsGroupsLoading] = useState(false)
   const [groupsError, setGroupsError] = useState<string | null>(null)
-
   const [dialogVisible, setDialogVisible] = useState(false);
   const [dialogData, setDialogData] = useState({
     type: "success" as "success" | "error" | "warning",
@@ -116,10 +107,8 @@ export default function AddMemberModal({ visible, onClose, onGroupCreated }: Add
 
   const [studentName, setStudentName] = useState("")
   const [studentEmail, setStudentEmail] = useState('')
-
   const [loading, setLoading] = useState(false) // Add Contact button loading state
   const [groupCreationLoading, setGroupCreationLoading] = useState(false); // Group creation loading state
-
   const [selectedMembers, setSelectedMembers] = useState<Set<string>>(new Set())
   const [groupSearchQuery, setGroupSearchQuery] = useState("")
 
@@ -149,10 +138,8 @@ export default function AddMemberModal({ visible, onClose, onGroupCreated }: Add
     }
   }
 
-  // 🎯 FIX: Get token directly from the typed facultyStore
   const token = facultyStore.token;
-  
-  // 🎯 FIX: Get facultyId using optional chaining on the typed facultyData
+
   const facultyId = facultyData?.facultyId || facultyData?._id || facultyData?.id;
 
 
@@ -170,7 +157,7 @@ export default function AddMemberModal({ visible, onClose, onGroupCreated }: Add
 
       const response = await axios.post(
         API_URL,
-        {}, 
+        {},
         {
           headers: {
             "Content-Type": "application/json",
@@ -224,12 +211,12 @@ export default function AddMemberModal({ visible, onClose, onGroupCreated }: Add
     setGroupsError(null);
 
     try {
-      const API_URL = `${API_BASE_URL}/faculty/view-group`; 
+      const API_URL = `${API_BASE_URL}/faculty/view-group`;
       console.log("📤 Fetching groups:", API_URL);
 
       const response = await axios.post(
         API_URL,
-        {}, 
+        {},
         {
           headers: {
             "Content-Type": "application/json",
@@ -244,17 +231,17 @@ export default function AddMemberModal({ visible, onClose, onGroupCreated }: Add
 
       if (data.status === 1 && Array.isArray(data.data)) {
         setGroups(data.data.map((g: any) => ({
-             _id: g._id || g.groupId || g.facultyGroupId,
-             facultyGroupName: g.facultyGroupName || g.groupName || "Unnamed Group",
-             facultyGroupDescription: g.facultyGroupDescription || "",
-             facultyGroupCreatedAt: g.facultyGroupCreatedAt || new Date().toISOString(),
+          _id: g._id || g.groupId || g.facultyGroupId,
+          facultyGroupName: g.facultyGroupName || g.groupName || "Unnamed Group",
+          facultyGroupDescription: g.facultyGroupDescription || "",
+          facultyGroupCreatedAt: g.facultyGroupCreatedAt || new Date().toISOString(),
         })));
         console.log("🎯 Groups fetched successfully:", data.data.length);
-      } 
+      }
       else {
         console.warn("⚠️ No valid group data found or status is not 1");
         setGroups([]);
-        setGroupsError(data.msg || "No groups found for this faculty."); 
+        setGroupsError(data.msg || "No groups found for this faculty.");
       }
     } catch (error: any) {
       console.error("❌ Error fetching groups:", error.response?.data || error.message);
@@ -263,28 +250,23 @@ export default function AddMemberModal({ visible, onClose, onGroupCreated }: Add
     } finally {
       setIsGroupsLoading(false);
     }
-    
+
   };
 
 
-  // ✅ Wait until token exists before fetching (facultyId check removed from here since view-group might not need it)
   useEffect(() => {
     console.log("👀 useEffect triggered - visible:", visible, "token:", token);
 
     if (visible && token) {
-      // 💡 If contacts are not showing, they might rely on facultyId. 
-      // But for now, using the less strict check based on ChatsScreen.
-      fetchAllContacts(); 
+
+      fetchAllContacts();
       fetchGroups();
     } else if (visible && !token) {
       setGroupsError("Authentication token not found.");
       setContactsError("Authentication token not found.");
     }
-  }, [visible, token]); // Removed facultyId from dependencies for broader compatibility
+  }, [visible, token]);
 
-
-  // --- All other functions (toggleMemberSelection, handleOpenGroupDetails, handleCreateGroupAPI, handleCloseDialog, handleSubmit, render functions) remain the same ---
-  // ... (Rest of the component code, including all render functions and other handlers) ...
 
   const toggleMemberSelection = (contactId: string) => {
     const newSelected = new Set(selectedMembers)
@@ -296,7 +278,6 @@ export default function AddMemberModal({ visible, onClose, onGroupCreated }: Add
     setSelectedMembers(newSelected)
   }
 
-  // Function to open the Group Details Modal
   const handleOpenGroupDetails = () => {
     if (selectedMembers.size === 0) {
       Alert.alert("Please select at least one member")
@@ -305,7 +286,6 @@ export default function AddMemberModal({ visible, onClose, onGroupCreated }: Add
     setGroupDetailsModalVisible(true)
   }
 
-  // Function to handle the actual API call for group creation
   const handleCreateGroupAPI = async () => {
     if (!groupName.trim()) {
       Alert.alert("Group Name Required", "Please enter a name for the new group.")
@@ -354,9 +334,7 @@ export default function AddMemberModal({ visible, onClose, onGroupCreated }: Add
         if (onGroupCreated) {
           onGroupCreated(newGroup)
         }
-
         fetchGroups();
-
         setDialogData({
           type: "success",
           title: "Success",

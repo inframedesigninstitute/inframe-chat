@@ -198,12 +198,10 @@ const AdvancedLoginScreen = () => {
                 if (storedToken) {
                     console.log("Found stored token. Auto-logging in...");
                     dispatch(setToken({ token: storedToken }));
-                    // Navigate directly to the authenticated screen
                     navigation.reset({ index: 0, routes: [{ name: "Chats" }] });
                 }
             } catch (e) {
                 console.error("Failed to retrieve token from storage:", e);
-                // Continue to login screen if storage check fails
             }
         };
 

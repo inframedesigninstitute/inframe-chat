@@ -71,15 +71,17 @@ const GroupMembersModal: React.FC<GroupMembersModalProps> = ({
 
                 if (Array.isArray(membersList) && membersList.length > 0) {
                     const formatted: GroupMember[] = membersList.map(
+
                         (m: any, i: number) => ({
                             _id: m._id,
                             phone: m.memberId,
-                            name: `${m.memberName} ${i + 1}`,
+                            name: ` ${i + 1} ${m.memberName} `,
                             status: "Active",
                             isAdmin: i === 0,
                             profilePicture: "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png",
                         })
                     );
+
                     setMembers(formatted);
                 } else {
                     setError("No members found.");
@@ -97,7 +99,7 @@ const GroupMembersModal: React.FC<GroupMembersModalProps> = ({
 
 
     const handleRemoveMember = async (mId: string) => {
-        console.log(groupId)
+        console.log('group id ', groupId)
         console.log('member id which is deleted', mId)
         if (!token) {
             setError("Authentication token not found.");

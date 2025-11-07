@@ -1,21 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import type { RootState } from '@/src/Redux/Store/store';
+import axios from 'axios';
+import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Modal,
   Alert,
   Image,
+  Modal,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import LocalDatabase from '../services/LocalDatabase';
-import axios from 'axios';
+import { useSelector } from 'react-redux';
 
 const API_BASE_URL = "http://localhost:5200/web";
 
 interface Channel {
-  id: string;
+  id: string; // yahan id = member id (mId)
   name: string;
   lastMessage: string;
   timestamp: string;
@@ -29,7 +30,7 @@ interface ChannelItemWithLongPressProps {
   channel: Channel;
   onPress: () => void;
   onUpdate: () => void;
-  onDelete: (channelId: string) => void;
+  onDelete: (mId: string) => void; // member id delete hone ke baad callback
 }
 
 const ChannelItemWithLongPress: React.FC<ChannelItemWithLongPressProps> = ({
@@ -39,86 +40,77 @@ const ChannelItemWithLongPress: React.FC<ChannelItemWithLongPressProps> = ({
   onDelete,
 }) => {
   const [showActions, setShowActions] = useState(false);
-  const [token, setToken] = useState<string | null>(null);
 
-  // ✅ Load token once when component mounts
-  useEffect(() => {
-    const loadToken = async () => {
-      const t = await LocalDatabase.getToken();
-      setToken(t);
-    };
-    loadToken();
-  }, []);
+  // ✅ Redux se token & facultyId nikal rahe hain
+  const token = useSelector((state: RootState) => state.facultyStore.token);
+  const facultyId = useSelector((state: RootState) => state.facultyStore.user?.id);
 
-  const handleLongPress = () => {
-    setShowActions(true);
-  };
+  const handleLongPress = () => setShowActions(true);
 
   const handlePin = async () => {
     try {
-      await LocalDatabase.pinChannel(channel.id, !channel.isPinned);
       setShowActions(false);
       onUpdate();
       Alert.alert('Success', `Chat ${channel.isPinned ? 'unpinned' : 'pinned'}`);
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'Failed to pin/unpin chat');
     }
   };
 
-  const handleStar = () => {
-    Alert.alert('Star Chat', `Star "${channel.name}"?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Star',
-        onPress: () => {
-          setShowActions(false);
-          Alert.alert('Success', 'Chat starred');
-        },
-      },
-    ]);
-  };
-
-  const handleForward = () => {
-    Alert.alert('Forward', `Forward "${channel.name}" info?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Forward',
-        onPress: () => {
-          setShowActions(false);
-          Alert.alert('Success', 'Info forwarded');
-        },
-      },
-    ]);
-  };
-
+  // ✅ Backend ke accoding fix kiya gaya function
   const handleDelete = async (mId: string) => {
-    try {
-      const facultyId = channel.id; // Backend expects this as request body
 
-      const { data } = await axios.post(
-        `${API_BASE_URL}/faculty/remove-from-group/${mId}`,
-        { facultyId },
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (data.status === 1) {
-        onDelete(channel.id);
-        Alert.alert('Success', 'Channel deleted successfully');
-      } else {
-        Alert.alert('Error', 'Failed to delete channel');
+    const { data } = await axios.post(
+      `${API_BASE_URL}/faculty/remove-member/${mId}`,
+      {},
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
       }
-    } catch (error) {
-      console.error(error);
-      Alert.alert('Error', 'An error occurred while deleting the channel');
-    } finally {
-      setShowActions(false);
-    }
+    );
+    console.log(data)
+
+    // try {
+    //   if (!token) {
+    //     Alert.alert('Error', 'Authentication token not found.');
+    //     return;
+    //   }
+    //   if (!facultyId) {
+    //     Alert.alert('Error', 'Faculty ID not found.');
+    //     return;
+    //   }
+
+    //   const { data } = await axios.post(
+    //     `${API_BASE_URL}/faculty/remove-member/${mId}`,
+    //     {},
+    //     {
+    //       headers: {
+    //         "Content-Type": "application/json",
+    //         Authorization: `Bearer ${token}`,
+    //       },
+    //     }
+    //   );
+
+    //   console.log("Delete API response:", data);
+
+    //   if (data.status === 1) {
+    //     onDelete(mId);
+    //     console.log("Delete clicked, mId sfsadf");
+
+    //     Alert.alert('Success', 'Member removed successfully');
+    //   } else {
+    //     Alert.alert('Error', data.msg || 'Failed to remove member');
+    //   }
+    // } catch (error) {
+    //   console.error("Error deleting member:", error);
+    //   Alert.alert('Error', 'An error occurred while removing the member');
+    // } finally {
+    //   setShowActions(false);
+    // }
   };
+
 
   return (
     <>
@@ -127,7 +119,6 @@ const ChannelItemWithLongPress: React.FC<ChannelItemWithLongPressProps> = ({
         onPress={onPress}
         onLongPress={handleLongPress}
       >
-        {/* Pin indicator */}
         {channel.isPinned && (
           <View style={styles.pinIndicator}>
             <Ionicons name="pin" size={12} color="#075E54" />
@@ -172,17 +163,18 @@ const ChannelItemWithLongPress: React.FC<ChannelItemWithLongPressProps> = ({
         )}
       </TouchableOpacity>
 
-      {/* Actions Modal */}
       <Modal
         visible={showActions}
         transparent
         animationType="fade"
         onRequestClose={() => setShowActions(false)}
       >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          onPress={() => setShowActions(false)}
-        >
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            onPress={() => setShowActions(false)}
+          />
+
           <View style={styles.actionsMenu}>
             <TouchableOpacity style={styles.actionItem} onPress={handlePin}>
               <Ionicons
@@ -195,19 +187,12 @@ const ChannelItemWithLongPress: React.FC<ChannelItemWithLongPressProps> = ({
               </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.actionItem} onPress={handleStar}>
-              <Ionicons name="star-outline" size={20} color="#FFD700" />
-              <Text style={styles.actionText}>Star</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.actionItem} onPress={handleForward}>
-              <Ionicons name="arrow-forward" size={20} color="#075E54" />
-              <Text style={styles.actionText}>Forward</Text>
-            </TouchableOpacity>
-
             <TouchableOpacity
               style={styles.actionItem}
-              onPress={() => handleDelete(channel.id)} // ✅ Correct type
+              onPress={() => {
+                // console.log('Deleting member ID:', channel.id);
+                handleDelete(channel.id);
+              }}
             >
               <Ionicons name="trash" size={20} color="#FF3B30" />
               <Text style={[styles.actionText, { color: '#FF3B30' }]}>
@@ -215,8 +200,9 @@ const ChannelItemWithLongPress: React.FC<ChannelItemWithLongPressProps> = ({
               </Text>
             </TouchableOpacity>
           </View>
-        </TouchableOpacity>
+        </View>
       </Modal>
+
     </>
   );
 };
@@ -230,26 +216,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
-    position: 'relative',
   },
-  pinnedChannel: {
-    backgroundColor: '#f8f9fa',
-  },
-  pinIndicator: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    zIndex: 1,
-  },
-  avatarContainer: {
-    position: 'relative',
-    marginRight: 12,
-  },
-  avatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-  },
+  pinnedChannel: { backgroundColor: '#f8f9fa' },
+  pinIndicator: { position: 'absolute', top: 8, right: 8 },
+  avatarContainer: { position: 'relative', marginRight: 12 },
+  avatar: { width: 50, height: 50, borderRadius: 25 },
   defaultAvatar: {
     width: 50,
     height: 50,
@@ -258,11 +229,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  avatarText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
+  avatarText: { fontSize: 18, fontWeight: 'bold', color: '#fff' },
   groupIndicator: {
     position: 'absolute',
     bottom: -2,
@@ -274,31 +241,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  channelInfo: {
-    flex: 1,
-    marginRight: 12,
-  },
+  channelInfo: { flex: 1, marginRight: 12 },
   channelHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
     marginBottom: 4,
   },
-  channelName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000',
-    flex: 1,
-    marginRight: 8,
-  },
-  timestamp: {
-    fontSize: 12,
-    color: '#999',
-  },
-  lastMessage: {
-    fontSize: 14,
-    color: '#666',
-  },
+  channelName: { fontSize: 16, fontWeight: '600', color: '#000', flex: 1 },
+  timestamp: { fontSize: 12, color: '#999' },
+  lastMessage: { fontSize: 14, color: '#666' },
   unreadBadge: {
     backgroundColor: '#075E54',
     borderRadius: 10,
@@ -308,11 +259,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 6,
   },
-  unreadText: {
-    fontSize: 11,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
+  unreadText: { fontSize: 11, fontWeight: 'bold', color: '#fff' },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -324,10 +271,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 8,
     minWidth: 200,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
     elevation: 5,
   },
   actionItem: {
@@ -336,11 +279,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
   },
-  actionText: {
-    marginLeft: 12,
-    fontSize: 16,
-    color: '#000',
-  },
+  actionText: { marginLeft: 12, fontSize: 16, color: '#000' },
 });
 
 export default ChannelItemWithLongPress;
