@@ -144,7 +144,7 @@ const AddGroupMembersModal: React.FC<AddMembersModalProps> = ({
             setError(null);
 
             const response = await axios.post(
-                `${API_BASE_URL}/faculty/view-contacts`,
+                `${API_BASE_URL}/main-admin/view-contacts`,
                 {},
                 {
                     headers: {
@@ -245,7 +245,7 @@ const AddGroupMembersModal: React.FC<AddMembersModalProps> = ({
                 console.log("📤 Sending add member payload:", payload);
 
                 const response = await axios.post(
-                    `${API_BASE_URL}/faculty/add-new-member`,
+                    `${API_BASE_URL}/main-admin/add-new-member`,
                     payload,
                     {
                         headers: {
@@ -411,7 +411,7 @@ const GroupMembersModal: React.FC<GroupMembersModalProps> = ({
             setError(null);
 
             const { data } = await axios.post(
-                `${API_BASE_URL}/faculty/view-group-members`,
+                `${API_BASE_URL}/main-admin/view-group-members`,
                 { groupId },
                 {
                     headers: {
@@ -462,7 +462,7 @@ const GroupMembersModal: React.FC<GroupMembersModalProps> = ({
             setError(null);
 
             const { data } = await axios.post(
-                `${API_BASE_URL}/faculty/remove-from-group/${mId}`,
+                `${API_BASE_URL}/main-admin/remove-from-group/${mId}`,
                 { groupId },
                 {
                     headers: {

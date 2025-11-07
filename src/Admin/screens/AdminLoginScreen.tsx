@@ -213,7 +213,6 @@ const AdvancedLoginScreen = () => {
             setShowOtpModal(false);
             return;
         }
-        // Prefer native back if available; otherwise return to Login as a fallback
         if (navigation.canGoBack()) {
             navigation.goBack();
         } else {

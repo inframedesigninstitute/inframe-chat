@@ -1,6 +1,9 @@
-import { RootState } from "@/src/Redux/Store/store";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
-import { CompositeNavigationProp, useFocusEffect, useNavigation } from "@react-navigation/native";
+import {
+  CompositeNavigationProp,
+  useFocusEffect,
+  useNavigation,
+} from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import axios from "axios";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -16,6 +19,8 @@ import {
 import Ionicons from "react-native-vector-icons/Ionicons";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import { useSelector } from "react-redux";
+import { RootState } from "../../Redux/Store/store";
+import AddMemberModal from "../components/add-member";
 import ChannelItemWithLongPress from "../components/ChannelItemWithLongPress";
 import ChatThread from "../components/ChatThread";
 import MainLayout from "../components/MainLayout";
@@ -58,6 +63,7 @@ type ChatsNavigationProp = CompositeNavigationProp<
 const ChatsScreen = () => {
   const token = useSelector((state: RootState) => state.facultyStore.token);
   const navigation = useNavigation<ChatsNavigationProp>();
+
   const [rawContacts, setRawContacts] = useState<StudentContact[]>([]);
   const [rawGroups, setRawGroups] = useState<GroupContact[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -66,8 +72,9 @@ const ChatsScreen = () => {
   const [activeTab, setActiveTab] = useState("All");
   const [showUserProfile, setShowUserProfile] = useState(false);
   const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
+  const [showAddMemberModal, setShowAddMemberModal] = useState(false);
 
-  // Combine both contacts & groups
+  // 🧩 Combine student & group data into channel list
   const channels = useMemo<Channel[]>(() => {
     const studentChannels = rawContacts.map((contact) => ({
       id: contact.studentId,
@@ -96,12 +103,15 @@ const ChatsScreen = () => {
     return [...studentChannels, ...groupChannels];
   }, [rawContacts, rawGroups]);
 
-  // Filter logic
+  // 🔍 Filter logic
   const filteredChannels = useMemo(() => {
     let filtered = channels;
-    if (activeTab === "Unread") filtered = channels.filter((c) => (c.unread || 0) > 0);
-    else if (activeTab === "Favourites") filtered = channels.filter((c) => c.isStarred);
-    else if (activeTab === "Groups") filtered = channels.filter((c) => c.type === "group");
+    if (activeTab === "Unread")
+      filtered = channels.filter((c) => (c.unread || 0) > 0);
+    else if (activeTab === "Favourites")
+      filtered = channels.filter((c) => c.isStarred);
+    else if (activeTab === "Groups")
+      filtered = channels.filter((c) => c.type === "group");
 
     if (searchText.trim()) {
       filtered = filtered.filter(
@@ -123,58 +133,81 @@ const ChatsScreen = () => {
     setRawGroups((prev) => {
       const exists = prev.some((g) => g.groupId === newGroup.id);
       if (exists) return prev;
-      return [...prev, { groupId: newGroup.id, groupName: newGroup.name, membersCount: 1 }];
+      return [
+        ...prev,
+        { groupId: newGroup.id, groupName: newGroup.name, membersCount: 1 },
+      ];
     });
   };
 
-  // Fetch student contacts
+  const handleDeleteChannel = (id: string) => {
+    setRawContacts((prev) => prev.filter((c) => c.studentId !== id));
+    setRawGroups((prev) => prev.filter((g) => g.groupId !== id));
+  };
+
+  // ✅ Fetch all students (MainAdmin)
   const fetchAllContacts = async () => {
     if (!token) return setError("Authentication token not found. Please log in.");
 
     try {
-      const response = await axios.post(
-        `${API_BASE_URL}/faculty/view-contacts`,
-        {},
-        { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
-      );
+      const response = await axios.get(`${API_BASE_URL}/main-admin/view-all-students`, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       const data = response.data;
-      if (data?.status === 1 && data.facultyContactsList?.[0]?.facultyContacts) {
-        const contacts: StudentContact[] = data.facultyContactsList[0].facultyContacts;
+      if (data?.status === 1 && Array.isArray(data.allStudentData)) {
+        const contacts: StudentContact[] = data.allStudentData.map((student: any) => ({
+          studentId: student._id,
+          studentName: student.studentName || "Unnamed Student",
+          studentEmail: student.studentEmail || "N/A",
+        }));
         setRawContacts(contacts);
-      } else setError(data?.msg || "Failed to load contacts data.");
+      } else {
+        setRawContacts([]);
+        setError(data?.msg || "Failed to load student contacts.");
+      }
     } catch (err: any) {
       console.error("Error fetching contacts:", err.response?.data || err.message);
-      setError("Failed to fetch contacts.");
+      setError("Failed to fetch student contacts.");
     }
   };
 
-  // Fetch faculty groups
+  // ✅ Fetch all groups (MainAdmin)
   const fetchAllGroups = async () => {
     if (!token) return setError("Authentication token not found. Please log in.");
+
     try {
       const response = await axios.post(
-        `${API_BASE_URL}/faculty/view-group`,
-        {},
-        { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+        `${API_BASE_URL}/main-admin/view-group`,
+        { mainAdminId: "YOUR_MAIN_ADMIN_ID" }, // 🔧 Replace with dynamic ID later
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
       );
 
       const data = response.data;
       if (data?.status === 1 && Array.isArray(data.data)) {
         const groups: GroupContact[] = data.data.map((g: any) => ({
-          groupId: g._id || g.groupId || g.facultyGroupId,
-          groupName: g.facultyGroupName || g.groupName || "Unnamed Group",
-          membersCount: g.groupMembers?.length || 0,
+          groupId: g._id,
+          groupName: g.mainAdminGroupName || g.groupName || "Unnamed Group",
+          membersCount: g.mainAdminGroupMembers?.length || 0,
         }));
         setRawGroups(groups);
-      } else setRawGroups([]);
+      } else {
+        setRawGroups([]);
+      }
     } catch (err: any) {
       console.error("Error fetching groups:", err.response?.data || err.message);
-      
+      setError("Failed to fetch groups.");
     }
   };
 
-  // 🔁 Auto-refresh whenever screen refocuses (e.g., after adding contact/group)
   useFocusEffect(
     useCallback(() => {
       if (token) {
@@ -198,13 +231,20 @@ const ChatsScreen = () => {
       return (
         <View style={styles.centeredMessage}>
           <ActivityIndicator size="large" color="#075E54" />
-          <Text style={styles.messageTextContent}>Loading student contacts & groups...</Text>
+          <Text style={styles.messageTextContent}>
+            Loading student contacts & groups...
+          </Text>
         </View>
       );
     if (error)
       return (
         <View style={styles.centeredMessage}>
-          <Ionicons name="alert-circle-outline" size={30} color="#FF6347" style={{ marginBottom: 10 }} />
+          <Ionicons
+            name="alert-circle-outline"
+            size={30}
+            color="#FF6347"
+            style={{ marginBottom: 10 }}
+          />
           <Text style={styles.messageTextContent}>Error: {error}</Text>
           <TouchableOpacity
             onPress={() => {
@@ -228,6 +268,7 @@ const ChatsScreen = () => {
         selectedChannel ? (
           <UserProfileScreen
             userProfile={{
+              id: selectedChannel.id,
               name: selectedChannel.name,
               email: selectedChannel.lastMessage.replace("Email: ", ""),
               phone: "+91 98765 43210",
@@ -235,6 +276,7 @@ const ChatsScreen = () => {
               fatherName: "Father Name",
               operator: "John Doe",
               department: "Sales",
+              groupMembers: [],
             }}
             onClose={() => setShowUserProfile(false)}
           />
@@ -250,19 +292,26 @@ const ChatsScreen = () => {
             </View>
 
             <View style={styles.searchContainer}>
-              <MaterialIcons name="search" size={20} color="#666" style={styles.searchIcon} />
+              <MaterialIcons
+                name="search"
+                size={20}
+                color="#666"
+                style={styles.searchIcon}
+              />
               <TextInput
                 placeholder="Ask Meta AI or Search"
                 value={searchText}
                 onChangeText={setSearchText}
                 style={styles.searchInput}
               />
+
               <TouchableOpacity
-                style={styles.qrButton}
-                onPress={() => navigation.navigate("QRScanner")}
+                style={styles.attachButton}
+                onPress={() => setShowAddMemberModal(true)}
               >
-                <Ionicons name="qr-code" size={20} color="#1a1b1bff" />
+                <Ionicons name="add" size={30} color="#000" />
               </TouchableOpacity>
+
               <TouchableOpacity
                 style={styles.cameraButton}
                 onPress={() => navigation.navigate("Camera")}
@@ -290,6 +339,7 @@ const ChatsScreen = () => {
                   }}
                   onPress={() => handleChannelPress(item)}
                   onUpdate={() => fetchAllContacts()}
+                  onDelete={(id) => handleDeleteChannel(id)}
                 />
               )}
               ListEmptyComponent={
@@ -313,12 +363,23 @@ const ChatsScreen = () => {
               />
             ) : (
               <View style={styles.emptyChat}>
-                <Text style={styles.emptyChatText}>Select a chat to start messaging</Text>
+                <Text style={styles.emptyChatText}>
+                  Select a chat to start messaging
+                </Text>
               </View>
             )}
           </View>
         </View>
       </View>
+
+      <AddMemberModal
+        visible={showAddMemberModal}
+        onClose={() => setShowAddMemberModal(false)}
+        onGroupCreated={(group) => {
+          handleGroupCreated(group);
+          setShowAddMemberModal(false);
+        }}
+      />
     </MainLayout>
   );
 };
@@ -336,6 +397,7 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 22,
     elevation: 10,
   },
+  attachButton: { marginRight: 8 },
   headerTitle: { fontSize: 18, fontWeight: "600", color: "#075E54" },
   rootRow: { flex: 1, flexDirection: "row" },
   listColumn: {
@@ -364,7 +426,6 @@ const styles = StyleSheet.create({
   },
   searchIcon: { marginRight: 12, color: "#333" },
   searchInput: { flex: 1, fontSize: 16, color: "#000" },
-  qrButton: { marginLeft: 10, padding: 6 },
   cameraButton: {
     width: 42,
     height: 42,
@@ -374,10 +435,25 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: 8,
   },
-  emptyChat: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#f2f6fa" },
+  emptyChat: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f2f6fa",
+  },
   emptyChatText: { color: "#64748b", fontSize: 15, fontWeight: "500" },
-  centeredMessage: { justifyContent: "center", alignItems: "center", padding: 20, marginTop: 50 },
-  messageTextContent: { marginTop: 10, fontSize: 15, color: "#555", textAlign: "center" },
+  centeredMessage: {
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+    marginTop: 50,
+  },
+  messageTextContent: {
+    marginTop: 10,
+    fontSize: 15,
+    color: "#555",
+    textAlign: "center",
+  },
   retryButton: {
     backgroundColor: "#075E54",
     paddingVertical: 8,
