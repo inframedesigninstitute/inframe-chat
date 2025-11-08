@@ -1,3 +1,4 @@
+
 import type { RootState } from '@/src/Redux/Store/store';
 import axios from 'axios';
 import React, { useState } from 'react';
@@ -42,8 +43,8 @@ const ChannelItemWithLongPress: React.FC<ChannelItemWithLongPressProps> = ({
   const [showActions, setShowActions] = useState(false);
 
   // ✅ Redux se token & facultyId nikal rahe hain
-  const token = useSelector((state: RootState) => state.facultyStore.token);
-  const facultyId = useSelector((state: RootState) => state.facultyStore.user?.id);
+  const token = useSelector((state: RootState) => state.AdminStore.token);
+  const minAdminId = useSelector((state: RootState) => state.AdminStore.user?.id);
 
   const handleLongPress = () => setShowActions(true);
 
@@ -283,3 +284,7 @@ const styles = StyleSheet.create({
 });
 
 export default ChannelItemWithLongPress;
+
+
+
+

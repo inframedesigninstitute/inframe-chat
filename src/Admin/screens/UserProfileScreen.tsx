@@ -1,4 +1,3 @@
-import type { RootState } from "../../Redux/Store/store"; // 2. Import RootState (adjust path if needed)
 import React, { useState } from 'react';
 import {
     Image,
@@ -11,6 +10,7 @@ import {
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useSelector } from 'react-redux'; // 1. Import useSelector
+import type { RootState } from "../../Redux/Store/store"; // 2. Import RootState (adjust path if needed)
 import GroupMembersModal from '../components/GroupMembersModal';
 
 interface GroupMember {
@@ -54,7 +54,7 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
     const [isModalVisible, setIsModalVisible] = useState(false);
     const memberCount = userProfile.groupMembers.length;
     
-    const token = useSelector((state: RootState) => state.facultyStore.token);
+  const token = useSelector((state: RootState) => state.AdminStore.token);
 
     const handleStatusPress = () => {
         setIsModalVisible(true);

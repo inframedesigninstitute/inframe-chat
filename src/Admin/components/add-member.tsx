@@ -259,7 +259,7 @@ useEffect(() => {
     const memberIds = Array.from(selectedMembers)
 
     try {
-      const API_URL = `${API_BASE_URL}/faculty/create-group`
+      const API_URL = `${API_BASE_URL}/main-admin/create-group`
 
       const response = await axios.post(
         API_URL,
@@ -356,7 +356,7 @@ const handleSubmit = async () => {
 
     setLoading(true);
     try {
-      const API_URL = `${API_BASE_URL}/faculty/add-contacts`;
+      const API_URL = `${API_BASE_URL}/main-admin/add-contacts`;
 
       const response = await axios.post(
         API_URL,
