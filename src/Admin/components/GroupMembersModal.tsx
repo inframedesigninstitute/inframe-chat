@@ -404,52 +404,53 @@ const GroupMembersModal: React.FC<GroupMembersModalProps> = ({
     const [showAddMemberModal, setShowAddMemberModal] = useState(false);
 
     const fetchContacts = async () => {
-        if (!token) return setError("Authentication token not found. Please log in.");
-
-        try {
-            setLoading(true);
-            setError(null);
-
-            const { data } = await axios.post(
-                `${API_BASE_URL}/main-admin/view-group-members`,
-                { groupId },
-                {
-                    headers: {
-                        "Content-Type": "application/json",
-                        Authorization: `Bearer ${token}`,
-                    },
-                }
-            );
-
-            if (data?.status === 1) {
-                const groupData = data?.facultyGroup?.[0];
-                const membersList = groupData?.facultyGroupMembers || [];
-
-                if (Array.isArray(membersList) && membersList.length > 0) {
-                    const formatted: GroupMember[] = membersList.map((m: any, i: number) => ({
-                        _id: m._id,
-                        phone: m.memberId,
-                        name: ` ${m.memberName} `,
-                        status: "Active",
-                        isAdmin: i === 0,
-                        profilePicture:
-                            "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png",
-                    }));
-
-                    setMembers(formatted);
-                } else {
-                    setError("No members found.");
-                }
-            } else {
-                setError(data?.msg || "Failed to load members.");
-            }
-        } catch (err: any) {
-            console.error("Error fetching contacts:", err.response?.data || err.message);
-            setError("Network error occurred while fetching members.");
-        } finally {
-            setLoading(false);
-        }
-    };
+           if (!token) return setError("Authentication token not found. Please log in.");
+   
+           try {
+               setLoading(true);
+               setError(null);
+   
+               const { data } = await axios.post(
+                   `${API_BASE_URL}/faculty/view-group-members`,
+                   { groupId },
+                   {
+                       headers: {
+                           "Content-Type": "application/json",
+                           Authorization: `Bearer ${token}`,
+                       },
+                   }
+               );
+   
+               if (data?.status === 1) {
+                   const groupData = data?.facultyGroup?.[0];
+                   const membersList = groupData?.facultyGroupMembers || [];
+   
+                   if (Array.isArray(membersList) && membersList.length > 0) {
+                       const formatted: GroupMember[] = membersList.map((m: any, i: number) => ({
+                           _id: m._id,
+                           phone: m.memberId,
+                           name: ` ${m.memberName} `,
+                           status: "Active",
+                           isAdmin: i === 0,
+                           profilePicture:
+                               "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png",
+                       }));
+   
+                       setMembers(formatted);
+                   } else {
+                       setError("No members found.");
+                   }
+               } else {
+                   setError(data?.msg || "Failed to load members.");
+               }
+           } catch (err: any) {
+               console.error("Error fetching contacts:", err.response?.data || err.message);
+               setError("Network error occurred while fetching members.");
+           } finally {
+               setLoading(false);
+           }
+       };
+   
 
     const handleRemoveMember = async (mId: string) => {
         if (!token) {

@@ -2,14 +2,13 @@ import axios from "axios";
 import React, { useEffect, useState } from "react";
 import {
     ActivityIndicator,
-    Alert,
     Image,
     ScrollView,
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
-    View,
+    View
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
@@ -131,8 +130,15 @@ const AddGroupMembersModal: React.FC<AddMembersModalProps> = ({
     const [isAdding, setIsAdding] = useState(false);
     const [contacts, setContacts] = useState<Contact[]>([]);
     const [filteredContacts, setFilteredContacts] = useState<Contact[]>([]);
+      const [studentEmail, setStudentEmail] = useState('')
+  const [studentName, setStudentName] = useState("")
     const [groupCreationLoading, setGroupCreationLoading] = useState(false); // Group creation loading state
-
+const [dialogVisible, setDialogVisible] = useState(false);
+  const [dialogData, setDialogData] = useState({
+    type: "success" as "success" | "error" | "warning",
+    title: "",
+    message: "",
+  });
     // ✅ Fetch Faculty Contacts
     const fetchContacts = async () => {
         if (!token) return setError("Authentication token not found.");
@@ -211,72 +217,171 @@ const AddGroupMembersModal: React.FC<AddMembersModalProps> = ({
         console.log(memberIds)
     }
 
-    const handleCreatAddMemberGroupAPI = async () => {
-        if (!token) {
-            Alert.alert("Error", "Authentication token missing!");
-            return;
+    // const handleCreatAddMemberGroupAPI = async () => {
+    //     if (!token) {
+    //         Alert.alert("Error", "Authentication token missing!");
+    //         return;
+    //     }
+
+    //     if (!groupId) {
+    //         Alert.alert("Error", "Group ID missing!");
+    //         return;
+    //     }
+
+    //     if (selectedMembers.length === 0) {
+    //         Alert.alert("No Members Selected", "Please select at least one member to add.");
+    //         return;
+    //     }
+
+    //     setIsAdding(true);
+
+    //     try {
+    //         for (const memberId of selectedMembers) {
+    //             const selectedMember = contacts.find((c) => c.studentId === memberId);
+    //             if (!selectedMember) continue;
+
+    //             const payload = {
+
+    //                 groupId: groupId,
+    //                 memberId: memberId,
+    //                 memberName: selectedMember.studentName,
+    //                 memberType: "student",
+    //             };
+
+    //             console.log("📤 Sending add member payload:", payload);
+
+    //             const response = await axios.post(
+    //                 `${API_BASE_URL}/faculty/add-new-member`,
+    //                 payload,
+    //                 {
+    //                     headers: {
+    //                         "Content-Type": "application/json",
+    //                         Authorization: `Bearer ${token}`,
+    //                     },
+    //                 }
+    //             );
+
+    //             const result = response.data;
+
+    //             if (result.status !== 1) {
+    //                 console.error("❌ Failed to add member:", result.msg);
+    //                 Alert.alert("Failed", result.msg || "Something went wrong");
+    //                 continue;
+    //             }
+
+    //             console.log("✅ Member added:", result.updatedGroup);
+    //         }
+
+    //         Alert.alert("Success", "All selected members added successfully!");
+    //         onClose();
+
+    //     } catch (error: any) {
+    //         console.error("Error adding new members:", error.response?.data || error.message);
+    //         Alert.alert("Error", error.response?.data?.msg || "Something went wrong while adding members.");
+    //     } finally {
+    //         setIsAdding(false);
+    //     }
+    // };
+
+const handleCreatAddMemberGroupAPI = async () => {
+  if (!token) {
+    setDialogData({
+      type: "error",
+      title: "Unauthorized",
+      message: "Authentication token missing. Please log in again.",
+    });
+    setDialogVisible(true);
+    return;
+  }
+
+  if (!facultyId || !groupId) {
+    setDialogData({
+      type: "error",
+      title: "Missing Data",
+      message: "Faculty ID or Group ID is missing.",
+    });
+    setDialogVisible(true);
+    return;
+  }
+
+  if (selectedMembers.length === 0) {
+    setDialogData({
+      type: "warning",
+      title: "No Members Selected",
+      message: "Please select at least one member to add.",
+    });
+    setDialogVisible(true);
+    return;
+  }
+
+  setIsAdding(true);
+
+  try {
+    for (const memberId of selectedMembers) {
+      const selectedMember = contacts.find((m) => m.studentId === memberId);
+      if (!selectedMember) continue;
+
+      // ✅ Build payload exactly as backend expects
+      const payload = {
+        facultyId,
+        groupId,
+        memberId: selectedMember.studentId,
+        memberName: selectedMember.studentName,
+        memberType: "student",
+      };
+
+      console.log("📤 Sending payload:", payload);
+
+      const response = await axios.post(
+        `${API_BASE_URL}/faculty/add-new-member`,
+        payload,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
         }
+      );
 
-        if (!groupId) {
-            Alert.alert("Error", "Group ID missing!");
-            return;
-        }
+      const result = response.data;
+      console.log("✅ Response:", result);
 
-        if (selectedMembers.length === 0) {
-            Alert.alert("No Members Selected", "Please select at least one member to add.");
-            return;
-        }
+      if (result.status !== 1) {
+        console.error("❌ Add Member Failed:", result.msg);
+        setDialogData({
+          type: "error",
+          title: "Add Failed",
+          message: result.msg || "Could not add member to the group.",
+        });
+        setDialogVisible(true);
+        continue;
+      }
+    }
 
-        setIsAdding(true);
+    // ✅ All done successfully
+    setDialogData({
+      type: "success",
+      title: "Success",
+      message: "All selected members have been added successfully!",
+    });
+    setDialogVisible(true);
 
-        try {
-            for (const memberId of selectedMembers) {
-                const selectedMember = contacts.find((c) => c.studentId === memberId);
-                if (!selectedMember) continue;
-
-                const payload = {
-
-                    groupId: groupId,
-                    memberId: memberId,
-                    memberName: selectedMember.studentName,
-                    memberType: "student",
-                };
-
-                console.log("📤 Sending add member payload:", payload);
-
-                const response = await axios.post(
-                    `${API_BASE_URL}/faculty/add-new-member`,
-                    payload,
-                    {
-                        headers: {
-                            "Content-Type": "application/json",
-                            Authorization: `Bearer ${token}`,
-                        },
-                    }
-                );
-
-                const result = response.data;
-
-                if (result.status !== 1) {
-                    console.error("❌ Failed to add member:", result.msg);
-                    Alert.alert("Failed", result.msg || "Something went wrong");
-                    continue;
-                }
-
-                console.log("✅ Member added:", result.updatedGroup);
-            }
-
-            Alert.alert("Success", "All selected members added successfully!");
-            onClose();
-
-        } catch (error: any) {
-            console.error("Error adding new members:", error.response?.data || error.message);
-            Alert.alert("Error", error.response?.data?.msg || "Something went wrong while adding members.");
-        } finally {
-            setIsAdding(false);
-        }
-    };
-
+    // Refresh updated data
+    await fetchContacts();
+    onClose();
+  } catch (error: any) {
+    console.error("Error adding member:", error.response?.data || error.message);
+    setDialogData({
+      type: "error",
+      title: "Server Error",
+      message:
+        error.response?.data?.msg || "Something went wrong while adding member.",
+    });
+    setDialogVisible(true);
+  } finally {
+    setIsAdding(false);
+  }
+};
 
 
     const renderContactItem = (contact: Contact) => {

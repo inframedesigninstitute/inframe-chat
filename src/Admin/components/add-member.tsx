@@ -1,4 +1,5 @@
 import { RootState } from "@/src/Redux/Store/store";
+import { MaterialIcons } from "@expo/vector-icons";
 import axios from "axios";
 import { useEffect, useState } from "react";
 import {
@@ -84,7 +85,11 @@ interface AdminStoreSlice {
     id?: string;
   } | null;
 }
-
+type GroupContact = {
+  groupId: string;
+  groupName: string;
+  membersCount?: number;
+};
 
 export default function AddMemberModal({ visible, onClose, onGroupCreated }: AddMemberModalProps) {
   const [searchQuery, setSearchQuery] = useState("")
@@ -122,6 +127,7 @@ const token = AdminStore.token;
   const [groupDescription, setGroupDescription] = useState("")
   const [error, setError] = useState<string | null>(null);
 
+  const [rawGroups, setRawGroups] = useState<GroupContact[]>([]);
 
   const filteredContacts = contacts.filter(
     (contact) =>
@@ -178,22 +184,12 @@ const fetchAllStudentContacts = async () => {
   }
 };
 
-  // 🎯 FIX: Groups Fetch Function updated to be more robust
-  const fetchGroups = async () => {
-    if (!token) {
-      setGroupsError("Authentication token missing.");
-      return;
-    }
-
-    setIsGroupsLoading(true);
-    setGroupsError(null);
+ const fetchGroups = async () => {
+    if (!token) return setError("Authentication token not found. Please log in.");
 
     try {
-      const API_URL = `${API_BASE_URL}/main-admin/view-group`;
-      console.log("📤 Fetching groups:", API_URL);
-
       const response = await axios.post(
-        API_URL,
+        `${API_BASE_URL}/main-admin/view-group`,
         {},
         {
           headers: {
@@ -203,35 +199,19 @@ const fetchAllStudentContacts = async () => {
         }
       );
 
-      console.log("✅ Group Response:", response.data);
-
       const data = response.data;
-
-      if (data.status === 1 && Array.isArray(data.data)) {
-        setGroups(data.data.map((g: any) => ({
-          _id: g._id || g.groupId || g.AdminGroupId,
-          AdminGroupName: g.AdminGroupName || g.groupName || "Unnamed Group",
-          AdminGroupDescription: g.AdminGroupDescription || "",
-          AdminGroupCreatedAt: g.AdminGroupCreatedAt || new Date().toISOString(),
-        })));
-        console.log("🎯 Groups fetched successfully:", data.data.length);
-      }
-      else {
-        console.warn("⚠️ No valid group data found or status is not 1");
-        setGroups([]);
-        setGroupsError(data.msg || "No groups found for this Admin.");
-      }
-    } catch (error: any) {
-      console.error("❌ Error fetching groups:", error.response?.data || error.message);
-      setGroups([]);
-      setGroupsError(error.response?.data?.msg || "Failed to fetch groups. Try again.");
-    } finally {
-      setIsGroupsLoading(false);
+      if (data?.status === 1 && Array.isArray(data.data)) {
+        const groups: GroupContact[] = data.data.map((g: any) => ({
+          mainAdminId: g._id || g.mainAdminId || g.mainAdminGroupsId,
+          groupName: g.mainAdminGroupName || g.groupName || "Unnamed Group",
+          membersCount: g.groupMembers?.length || 0,
+        }));
+        setRawGroups(groups);
+      } else setRawGroups([]);
+    } catch (err: any) {
+      console.error("Error fetching groups:", err.response?.data || err.message);
     }
-
   };
-
-
 useEffect(() => {
   console.log("👀 useEffect triggered - visible:", visible, "token:", token);
   
@@ -266,107 +246,90 @@ useEffect(() => {
   }
 
  const handleCreateGroupAPI = async () => {
-  if (!groupName.trim()) {
-    Alert.alert("Group Name Required", "Please enter a name for the new group.");
-    console.log("111111111111")
-    return;
-  }
+    if (!groupName.trim()) {
+      Alert.alert("Group Name Required", "Please enter a name for the new group.")
+      return
+    }
+    if (selectedMembers.size === 0) {
+      Alert.alert("No Members Selected", "Please select members for the group.")
+      return
+    }
 
-  if (selectedMembers.size === 0) {
-        console.log("111111111111000000000")
+    setGroupCreationLoading(true)
+    const memberIds = Array.from(selectedMembers)
 
-    Alert.alert("No Members Selected", "Please select members for the group.");
-    return;
-  }
+    try {
+      const API_URL = `${API_BASE_URL}/faculty/create-group`
 
-  if (!token) {
-        console.log("zzzzzzzzz111111111111")
-
-    Alert.alert("Authentication Error", "Admin token not found. Please login again.");
-    return;
-  }
-
-  if (!AdminId) {
-        console.log("aaaaaaaaa111111111111")
-
-    Alert.alert("Admin Error", "Admin ID not found. Cannot create group.");
-    return;
-  }
-
-  setGroupCreationLoading(true);
-  const memberIds = Array.from(selectedMembers);
-
-  try {
-    const API_URL = `${API_BASE_URL}/main-admin/create-group`;
-
-    const response = await axios.post(
-      API_URL,
-      {
-        mainAdminId: AdminId, // ✅ ensure AdminId is valid
-        mainAdminGroupName: groupName.trim(),
-        mainAdminGroupDescription: groupDescription.trim(),
-        mainAdminGroupMembers: memberIds,
-      },
-      {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+      const response = await axios.post(
+        API_URL,
+        {
+          facultyGroupName: groupName.trim(),
+          facultyGroupDescription: groupDescription.trim(),
+          facultyGroupMembers: memberIds,
         },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      )
+
+      const result = response.data;
+
+      if (result.status === 1) {
+        const newGroup: ChatItem = {
+          id: result.groupId || result.data?.groupId || `group-${Date.now()}`,
+          name: groupName.trim(),
+          type: "group" as const,
+          lastMessage: `Group created with ${selectedMembers.size} members.`,
+          time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          unread: 0,
+          isStarred: false,
+          isPinned: false,
+        }
+
+        if (onGroupCreated) {
+          onGroupCreated(newGroup)
+        }
+        fetchGroups();
+        setDialogData({
+          type: "success",
+          title: "Success",
+          message: result.msg || "Group created successfully! Chat list is updated.",
+        });
+        setDialogVisible(true);
+
+        setSelectedMembers(new Set())
+        setGroupSearchQuery("")
+        setGroupName("")
+        setGroupDescription("")
+        setGroupDetailsModalVisible(false)
+        setActiveModal("main")
+        onClose()
+
+      } else {
+        setDialogData({
+          type: "error",
+          title: "Group Creation Failed",
+          message: result.msg || "Failed to create group. Please try again.",
+        });
+        setDialogVisible(true);
       }
-    );
 
-    const result = response.data;
-
-    if (result.status === 1) {
-      const newGroup: ChatItem = {
-        id: result.groupId || result.data?.groupId || `group-${Date.now()}`,
-        name: groupName.trim(),
-        type: "group",
-        lastMessage: `Group created with ${selectedMembers.size} members.`,
-        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        unread: 0,
-        isStarred: false,
-        isPinned: false,
-      };
-
-      onGroupCreated?.(newGroup);
-      fetchGroups();
-
-      setDialogData({
-        type: "success",
-        title: "Success",
-        message: result.msg || "Group created successfully! Chat list is updated.",
-      });
-      setDialogVisible(true);
-
-      // Reset form
-      setSelectedMembers(new Set());
-      setGroupSearchQuery("");
-      setGroupName("");
-      setGroupDescription("");
-      setGroupDetailsModalVisible(false);
-      setActiveModal("main");
-      onClose();
-    } else {
+    } catch (error: any) {
+      console.error("Create Group Error:", error.response?.data || error.message);
       setDialogData({
         type: "error",
-        title: "Group Creation Failed",
-        message: result.msg || "Failed to create group. Please try again.",
+        title: "Server Error",
+        message: error.response?.data?.msg || "An unexpected error occurred during group creation. Please try again later.",
       });
       setDialogVisible(true);
+    } finally {
+      setGroupCreationLoading(false)
     }
-  } catch (error: any) {
-    console.error("Create Group Error:", error.response?.data || error.message);
-    setDialogData({
-      type: "error",
-      title: "Server Error",
-      message: error.response?.data?.msg || "An unexpected error occurred during group creation. Please try again later.",
-    });
-    setDialogVisible(true);
-  } finally {
-    setGroupCreationLoading(false);
   }
-};
 
 
 
@@ -380,7 +343,7 @@ useEffect(() => {
   };
 
 
-  const handleSubmit = async () => {
+const handleSubmit = async () => {
     if (!studentEmail) {
       setDialogData({
         type: "warning",
@@ -393,7 +356,7 @@ useEffect(() => {
 
     setLoading(true);
     try {
-      const API_URL = `${API_BASE_URL}/main-admin/add-contacts`;
+      const API_URL = `${API_BASE_URL}/faculty/add-contacts`;
 
       const response = await axios.post(
         API_URL,
@@ -419,7 +382,7 @@ useEffect(() => {
         setDialogData({
           type: "error",
           title: "Error",
-          message: "Admin not found.",
+          message: "Faculty not found.",
         });
       } else if (result.status === -2) {
         setDialogData({
@@ -453,7 +416,7 @@ useEffect(() => {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   // --- Render Functions (Same as before) ---
 
@@ -468,9 +431,13 @@ useEffect(() => {
 
   const renderGroupItem = ({ item }: { item: AdminGroup }) => (
     <TouchableOpacity style={styles.contactItem} onPress={() => Alert.alert(`Open Group: ${item.AdminGroupName}`)}>
-      <View style={[styles.contactAvatar, { backgroundColor: '#66bb6a' }]}>
-        <Ionicons name="people" size={24} color="#fff" />
-      </View>
+      <View style={[styles.contactAvatar, { backgroundColor: '#b9b9b9ff' }]}>
+ <MaterialIcons
+          name="person" // choose any icon you like
+          size={20}
+          color="#050404ff"
+          style={{ position: "absolute", bottom: 15, right: 15 }}
+        />      </View>
       <View style={styles.contactDetails}>
         <Text style={styles.contactName}>{item.AdminGroupName}</Text>
         <Text style={styles.contactStatus}>{item.AdminGroupDescription || "No description"}</Text>
@@ -481,13 +448,21 @@ useEffect(() => {
 
   const renderContactItem = ({ item }: { item: Contact }) => (
     <TouchableOpacity style={styles.contactItem}>
-      <View style={[styles.contactAvatar, { backgroundColor: item.bgColor || "#E8E8E8" }]}>
+      <View style={[styles.contactAvatar, { backgroundColor: "#b9b4b4ff" }]}>
         {item.initials ? (
           <Text style={styles.initialsText}>{item.initials}</Text>
         ) : (
           <Text style={styles.avatarEmoji}>{item.avatar}</Text>
         )}
+        {/* Add an icon in the avatar */}
+        <MaterialIcons
+          name="person" // choose any icon you like
+          size={20}
+          color="#050404ff"
+          style={{ position: "absolute", bottom: 15, right: 15 }}
+        />
       </View>
+
       <View style={styles.contactDetails}>
         <Text style={styles.contactName}>{item.name}</Text>
         {item.phone && <Text style={styles.contactStatus}>{item.phone}</Text>}
@@ -802,7 +777,7 @@ useEffect(() => {
               </View>
             ) : contactsError ? (
               <View style={styles.centeredMessage}>
-                <Ionicons name="alert-circle-outline" size={30} color="#FF6347" />
+                <Ionicons name="alert-circle-outline" size={30} color="#0a0707ff" />
                 <Text style={styles.messageTextContent}>Error loading members: {contactsError}</Text>
                 <TouchableOpacity onPress={fetchAllStudentContacts} style={styles.retryButton}>
                   <Text style={styles.retryButtonText}>Retry</Text>
@@ -1157,13 +1132,13 @@ const styles = StyleSheet.create({
   },
   retryButton: {
     marginTop: 15,
-    backgroundColor: "#25D366",
+    backgroundColor: "#c1cec5ff",
     paddingHorizontal: 15,
     paddingVertical: 8,
     borderRadius: 8,
   },
   retryButtonText: {
-    color: "#fff",
+    color: "#000000ff",
     fontWeight: "600",
     fontSize: 14,
   },

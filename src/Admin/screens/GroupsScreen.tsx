@@ -63,37 +63,64 @@ const GroupsScreen = () => {
   const [rawGroups, setRawGroups] = useState<GroupContact[]>([]); 
 
   // ✅ Fetch groups
-  const fetchAllGroups = async () => {
+  // const fetchAllGroups = async () => {
+  //   if (!token) return setError("Authentication token not found. Please log in.");
+  //   setLoading(true); // 👈 Loading शुरू करें
+  //   setError(null);
+  //   try {
+  //     const response = await axios.post(
+  //       `${API_BASE_URL}/main-admin/view-group`,
+  //       {},
+  //       { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+  //     );
+
+  //     const data = response.data;
+  //     if (data?.status === 1 && Array.isArray(data.data)) {
+  //       const groups: GroupContact[] = data.data.map((g: any) => ({
+  //         groupId: g._id || g.groupId || g.facultyGroupId,
+  //         groupName: g.facultyGroupName || g.groupName || "Unnamed Group",
+  //         membersCount: g.groupMembers?.length || 0,
+  //       }));
+  //       setRawGroups(groups); 
+  //     } else {
+  //       setRawGroups([]);
+   
+  //     }
+  //   } catch (err: any) {
+  //     console.error("Error fetching groups:", err.response?.data || err.message);
+  //     setError("Failed to load groups. Please try again.");
+  //   } finally {
+  //     setLoading(false); 
+  //   }
+  // };
+const fetchGroups = async () => {
     if (!token) return setError("Authentication token not found. Please log in.");
-    setLoading(true); // 👈 Loading शुरू करें
-    setError(null);
+
     try {
       const response = await axios.post(
         `${API_BASE_URL}/main-admin/view-group`,
         {},
-        { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
       );
 
       const data = response.data;
       if (data?.status === 1 && Array.isArray(data.data)) {
         const groups: GroupContact[] = data.data.map((g: any) => ({
-          groupId: g._id || g.groupId || g.facultyGroupId,
-          groupName: g.facultyGroupName || g.groupName || "Unnamed Group",
+          mainAdminId: g._id || g.mainAdminId || g.mainAdminGroupsId,
+          groupName: g.mainAdminGroupName || g.groupName || "Unnamed Group",
           membersCount: g.groupMembers?.length || 0,
         }));
-        setRawGroups(groups); 
-      } else {
-        setRawGroups([]);
-   
-      }
+        setRawGroups(groups);
+      } else setRawGroups([]);
     } catch (err: any) {
       console.error("Error fetching groups:", err.response?.data || err.message);
-      setError("Failed to load groups. Please try again.");
-    } finally {
-      setLoading(false); 
     }
   };
-
   useEffect(() => {
     const mappedChannels: Channel[] = rawGroups.map((group) => ({
       id: group.groupId,
@@ -111,13 +138,13 @@ const GroupsScreen = () => {
   // ✅ Refresh on focus
   useFocusEffect(
     useCallback(() => {
-      fetchAllGroups();
+      fetchGroups();
     }, [])
   );
 
   useEffect(() => {
     // Initial fetch for the first load
-    fetchAllGroups();
+    fetchGroups();
   }, []);
 
 
@@ -189,7 +216,7 @@ const userProfile = selectedChannel
             style={{ marginBottom: 10 }}
           />
           <Text style={styles.messageTextContent}>{error}</Text>
-          <TouchableOpacity onPress={fetchAllGroups} style={styles.retryButton}>
+          <TouchableOpacity onPress={fetchGroups} style={styles.retryButton}>
             <Text style={styles.retryButtonText}>Retry</Text>
           </TouchableOpacity>
         </View>
@@ -263,10 +290,10 @@ const userProfile = selectedChannel
                       isPinned: item.isPinned,
                     }}
                     onPress={() => handleChannelPress(item)}
-                    onUpdate={() => fetchAllGroups()}
+                    onUpdate={() => fetchGroups()}
                      onDelete={(mId) => {
     setChannels((prev) => prev.filter((c) => c.id !== mId));
-    fetchAllGroups();
+    fetchGroups();
   }}
                   />
                 )}

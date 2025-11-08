@@ -182,46 +182,36 @@ const fetchAllStudentContacts = async () => {
     setError("Failed to fetch student contacts.");
   }
 };
-  // ✅ Fetch all groups (MainAdmin)
-  const fetchAllGroups = async () => {
-  if (!token) {
-    setError("Authentication token not found. Please log in.");
-    return;
-  }
+  // ✅ Fetch all groups (mainAdmin)
+ const fetchAllGroups = async () => {
+    if (!token) return setError("Authentication token not found. Please log in.");
 
-  try {
-    const API_URL = `${API_BASE_URL}/main-admin/view-group`;
+    try {
+      const response = await axios.post(
+        `${API_BASE_URL}/main-admin/view-group`,
+        {},
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
-    // POST with body and headers
-    const response = await axios.post(
-      API_URL,
-      { }, 
-      {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
-
-    const data = response.data;
-
-    if (data?.status === 1 && Array.isArray(data.data)) {
-      const groups: GroupContact[] = data.data.map((g: any) => ({
-        groupId: g._id,
-        groupName: g.mainAdminGroupName || g.groupName || "Unnamed Group",
-        membersCount: g.mainAdminGroupMembers?.length || 0,
-      }));
-      setRawGroups(groups);
-    } else {
-      setRawGroups([]);
-      setError(data?.msg || "Failed to load groups.");
+      const data = response.data;
+      if (data?.status === 1 && Array.isArray(data.data)) {
+        const groups: GroupContact[] = data.data.map((g: any) => ({
+          mainAdminId: g._id || g.mainAdminId || g.mainAdminGroupsId,
+          groupName: g.mainAdminGroupName || g.groupName || "Unnamed Group",
+          membersCount: g.groupMembers?.length || 0,
+        }));
+        setRawGroups(groups);
+      } else setRawGroups([]);
+    } catch (err: any) {
+      console.error("Error fetching groups:", err.response?.data || err.message);
     }
-  } catch (err: any) {
-    console.error("Error fetching groups:", err.response?.data || err.message);
-    setError("Failed to fetch groups.");
-  }
-};
+  };
+
 
   useFocusEffect(
     useCallback(() => {
