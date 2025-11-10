@@ -20,8 +20,8 @@ import { useDispatch } from 'react-redux';
 import { RootStackParamList } from '../navigation/types';
 import StudentSignupScreen from './StudentSignupScreen';
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'AdvancedLogin'>;
-type RouteProps = RouteProp<RootStackParamList, 'AdvancedLogin'>;
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'StudentLogin'>;
+type RouteProps = RouteProp<RootStackParamList, 'StudentLogin'>;
 
 const API_BASE_URL = 'http://localhost:5200/web';
 
@@ -122,7 +122,7 @@ const AdvancedLoginScreen = () => {
         setShowOtpModal(false);
         navigation.reset({
             index: 0,
-            routes: [{ name: 'AdvancedLogin' }],
+            routes: [{ name: 'StudentLogin' }],
         });
         setOtp('');
         console.log('✅ Navigation successful after error modal');

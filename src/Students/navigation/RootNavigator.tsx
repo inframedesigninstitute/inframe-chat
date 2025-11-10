@@ -1,6 +1,5 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import AddContactScreen from '../screens/AddContactScreen';
-import AdvancedLoginScreen from '../screens/AdvancedLoginScreen';
 import AppInfoScreen from '../screens/AppInfoScreen';
 import AttendanceScreen from '../screens/AttendanceScreen';
 import AudioCallScreen from '../screens/AudioCallScreen';
@@ -27,12 +26,13 @@ import StudentSignupScreen from '../screens/StudentSignupScreen';
 import TermsScreen from '../screens/TermsScreen';
 import VideoCallScreen from '../screens/VideoCallScreen';
 import { RootStackParamList } from './types';
+import StudentLoginScreen from '../screens/StudentLoginScreen';
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const RootNavigator = () => {
   return (
-    <Stack.Navigator initialRouteName="AdvancedLogin" screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="AdvancedLogin" component={AdvancedLoginScreen} />
+    <Stack.Navigator initialRouteName="StudentLogin" screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="StudentLogin" component={StudentLoginScreen} />
       <Stack.Screen name="StudentSignup" component={StudentSignupScreen} />
 
 

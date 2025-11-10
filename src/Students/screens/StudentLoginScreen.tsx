@@ -20,8 +20,8 @@ import { useDispatch } from 'react-redux';
 import { RootStackParamList } from '../navigation/types';
 import StudentSignupScreen from './StudentSignupScreen';
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'AdvancedLogin'>;
-type RouteProps = RouteProp<RootStackParamList, 'AdvancedLogin'>;
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'StudentLogin'>;
+type RouteProps = RouteProp<RootStackParamList, 'StudentLogin'>;
 
 // ⚠️ IMPORTANT: Ensure this matches your backend API
 const API_BASE_URL = 'http://localhost:5200/web';
@@ -80,10 +80,10 @@ const SuccessModal: React.FC<{
 );
 
 
-const AdvancedLoginScreen = () => {
+const StudentLoginScreen = () => {
     const navigation = useNavigation<NavigationProp>();
     const route = useRoute<RouteProps>();
-    const isAdmin = route.params?.admin === true;
+    const isStudentLogin = route.params?.admin === true;
     const prefillEmail = route.params?.emailPrefill || '';
 
     const [email, setEmail] = useState(prefillEmail);
@@ -131,7 +131,7 @@ const AdvancedLoginScreen = () => {
         if (!email.trim()) return showCustomError('Validation Error', 'Please enter your email.');
         if (!validateEmail(email)) return showCustomError('Validation Error', 'Please enter a valid email.');
 
-        if (isAdmin) {
+        if (isStudentLogin) {
             if (email !== 'admin@inframe.edu' || password !== 'Admin@123') {
                 return showCustomError('Admin Login Failed', 'Invalid credentials.');
             }
@@ -270,7 +270,7 @@ const AdvancedLoginScreen = () => {
 
                     {activeTab === 'old' && (
                         <>
-                            <Text style={styles.subtitle}>{isAdmin ? 'Admin Login' : 'Login with your Email'}</Text>
+                            <Text style={styles.subtitle}>{isStudentLogin ? 'Admin Login' : 'Login with your Email'}</Text>
 
                             <TextInput
                                 style={styles.input}
@@ -282,7 +282,7 @@ const AdvancedLoginScreen = () => {
                                 autoCapitalize="none"
                             />
 
-                            {isAdmin ? (
+                            {isStudentLogin ? (
                                 <>
                                     <TextInput
                                         style={styles.input}
@@ -293,7 +293,7 @@ const AdvancedLoginScreen = () => {
                                         secureTextEntry
                                     />
                                     <TouchableOpacity style={styles.loginButton} onPress={handleSendOtp}>
-                                        <Text style={styles.loginButtonText}>Login as Admin</Text>
+                                        <Text style={styles.loginButtonText}>Login as Student</Text>
                                     </TouchableOpacity>
                                 </>
                             ) : (
@@ -384,7 +384,7 @@ const AdvancedLoginScreen = () => {
     );
 };
 
-export default AdvancedLoginScreen;
+export default StudentLoginScreen;
 
 const styles = StyleSheet.create({
     // ... (styles remain unchanged)
