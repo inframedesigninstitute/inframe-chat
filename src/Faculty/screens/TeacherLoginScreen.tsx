@@ -97,7 +97,7 @@ const TeacherLoginScreen = () => {
     useEffect(() => {
         const checkToken = async () => {
             try {
-                const storedToken = await AsyncStorage.getItem('TOKEN');
+                const storedToken = await AsyncStorage.getItem('FACULTYTOKEN');
                 if (storedToken) {
                     console.log("Found stored token. Auto-logging in...");
                     dispatch(setToken({ token: storedToken }));
@@ -186,7 +186,7 @@ const TeacherLoginScreen = () => {
             // Checking for both success flag and token to ensure navigation
             if ((response.data?.success || response.status === 200) && response.data?.token) {
                 dispatch(setToken({ token: response.data.token }));
-                await AsyncStorage.setItem("TOKEN", response.data.token);
+                await AsyncStorage.setItem("FACULTYTOKEN", response.data.token);
 
                 console.log("✅ OTP verified successfully. Navigating to FacultyChats...");
 

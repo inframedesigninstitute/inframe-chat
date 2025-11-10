@@ -4,6 +4,7 @@ import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { MainTabsParamList } from './types';
+import AdminChatsScreen from '../screens/AdminChatsScreen';
 
 type NavigationProp = BottomTabNavigationProp<MainTabsParamList>;
 
@@ -16,7 +17,7 @@ type NavItem = {
 };
 
 const items: NavItem[] = [
-  { key: 'Chats', icon: 'chatbubbles-sharp', label: 'Chat' },
+  { key: 'AdminChats', icon: 'chatbubbles-sharp', label: 'Chat' },
   { key: 'Groups', icon: 'people-sharp', label: 'Groups' },
   { key: 'Calls', icon: 'call', label: 'Calls' },
   { key: 'Settings', icon: 'settings', label: 'Settings' },
@@ -47,7 +48,7 @@ const LeftSidebarNav = ({ active }: { active: NavKey }) => {
               />
 
               {/* Chats badge */}
-              {item.key === 'Chats' && (
+              {item.key === 'AdminChats' && (
                 <View style={styles.badge}>
                   <Text style={styles.badgeText}>20</Text>
                 </View>

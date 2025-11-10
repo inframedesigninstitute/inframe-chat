@@ -67,14 +67,14 @@ type Channel = {
   isPinned?: boolean;
 };
 
-type ChatsNavigationProp = CompositeNavigationProp<
-  BottomTabNavigationProp<MainTabsParamList, "Chats">,
+type AdminChatsNavigationProp = CompositeNavigationProp<
+  BottomTabNavigationProp<MainTabsParamList, "AdminChats">,
   NativeStackNavigationProp<RootStackParamList>
 >;
 
-const ChatsScreen = () => {
+const AdminChatsScreen = () => {
   const token = useSelector((state: RootState) => state.AdminStore.token);
-  const navigation = useNavigation<ChatsNavigationProp>();
+  const navigation = useNavigation<AdminChatsNavigationProp>();
 
   const [rawContacts, setRawContacts] = useState<UnifiedContact[]>([]);
   const [rawGroups, setRawGroups] = useState<GroupContact[]>([]);
@@ -325,7 +325,7 @@ const ChatsScreen = () => {
 
   return (
     <MainLayout
-      activeTab="Chats"
+      activeTab="AdminChats"
       showRightContent={showUserProfile}
       rightContent={
         selectedChannel ? (
@@ -351,7 +351,7 @@ const ChatsScreen = () => {
           <View style={styles.listColumn}>
             <View style={styles.header}>
               <WebBackButton />
-              <Text style={styles.headerTitle}>Chats</Text>
+              <Text style={styles.headerTitle}>AdminChats</Text>
             </View>
 
             <View style={styles.searchContainer}>
@@ -445,7 +445,7 @@ const ChatsScreen = () => {
   );
 };
 
-export default ChatsScreen;
+export default AdminChatsScreen;
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#e6ecf3" },

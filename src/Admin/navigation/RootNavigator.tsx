@@ -1,5 +1,6 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import AddContactScreen from '../screens/AddContactScreen';
+import AdminChatsScreen from '../screens/AdminChatsScreen';
 import AdminLoginScreen from '../screens/AdminLoginScreen';
 import AdminSignupScreen from '../screens/AdminSignInScreen';
 import AppInfoScreen from '../screens/AppInfoScreen';
@@ -9,7 +10,6 @@ import CalendarScreen from '../screens/CalendarScreen';
 import CallsScreen from '../screens/CallsScreen';
 import CameraScreen from '../screens/CameraScreen';
 import ChatScreen from '../screens/ChatScreen';
-import ChatsScreen from '../screens/ChatsScreen';
 import CourseDetailsScreen from '../screens/CourseDetailsScreen';
 import CoursesScreen from '../screens/CoursesScreen';
 import CreateGroupScreen from '../screens/CreateGroupScreen';
@@ -18,6 +18,7 @@ import EnhancedSettingsScreen from '../screens/EnhancedSettingsScreen';
 import GalleryScreen from '../screens/GalleryScreen';
 import GroupChatScreen from '../screens/GroupChatScreen';
 import GroupsScreen from '../screens/GroupsScreen';
+import LiveVideoCall from '../screens/LiveVideoCall';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import PrivacyScreen from '../screens/PrivacyScreen';
 import ProfileScreen from '../screens/ProfileScreen';
@@ -27,6 +28,7 @@ import StatusScreen from '../screens/StatusScreen';
 import TermsScreen from '../screens/TermsScreen';
 import VideoCallScreen from '../screens/VideoCallScreen';
 import { RootStackParamList } from './types';
+
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const RootNavigator = () => {
@@ -36,7 +38,7 @@ const RootNavigator = () => {
       <Stack.Screen name="AdminSignInScreen" component={AdminSignupScreen} />
 
 
-      <Stack.Screen name="Chats" component={ChatsScreen} />
+      <Stack.Screen name="AdminChats" component={AdminChatsScreen} />
      {/* <Stack.Screen name="AdminChats" component={AdminChatsScreen} /> */}
 
 
@@ -68,6 +70,11 @@ const RootNavigator = () => {
       <Stack.Screen name="Privacy" component={PrivacyScreen} />
       <Stack.Screen name="AppInfo" component={AppInfoScreen} />
       <Stack.Screen name="Status" component={StatusScreen} />
+<Stack.Screen
+  name="LiveVideoCall"
+  component={LiveVideoCall}
+  options={{ presentation: "fullScreenModal" }}
+/>
 
     </Stack.Navigator>
   );

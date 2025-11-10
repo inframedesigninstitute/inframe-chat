@@ -1,4 +1,4 @@
-import { setToken } from '@/src/Redux/Slices/adminTokenSlice';
+import { setToken, setUser } from '@/src/Redux/Slices/studentTokenSlice'; // Import setUser
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -18,7 +18,7 @@ import {
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useDispatch } from 'react-redux';
 import { RootStackParamList } from '../navigation/types';
-import AdminSignupScreen from './AdminSignInScreen';
+import StudentSignupScreen from './StudentSignupScreen';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'AdvancedLogin'>;
 type RouteProps = RouteProp<RootStackParamList, 'AdvancedLogin'>;
@@ -76,8 +76,7 @@ const SuccessModal: React.FC<{
 );
 
 
-const AdminLoginScreen = () => {
-    const dispatch = useDispatch()
+const AdvancedLoginScreen = () => {
     const navigation = useNavigation<NavigationProp>();
     const route = useRoute<RouteProps>();
     const isAdmin = route.params?.admin === true;
@@ -99,6 +98,8 @@ const AdminLoginScreen = () => {
     const [successMessage, setSuccessMessage] = useState('');
 
     const otpInputRef = useRef<TextInput>(null);
+    const dispatch = useDispatch()
+
 
     const validateEmail = (value: string): boolean => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -121,10 +122,10 @@ const AdminLoginScreen = () => {
         setShowOtpModal(false);
         navigation.reset({
             index: 0,
-            routes: [{ name: 'Login' as never }],
+            routes: [{ name: 'AdvancedLogin' }],
         });
         setOtp('');
-        console.log('Navigation successful after error modal');
+        console.log('✅ Navigation successful after error modal');
     };
 
     const handleSendOtp = async () => {
@@ -137,15 +138,12 @@ const AdminLoginScreen = () => {
             }
             console.log('Admin login successful, navigating to AdminDashboard...');
 
-            // For the hardcoded admin, let's manually set a dummy token for Redux/AsyncStorage
-            const DUMMY_ADMIN_TOKEN = 'hardcoded_admin_token_12345';
             try {
-                await AsyncStorage.setItem('ADMINTOKEN', DUMMY_ADMIN_TOKEN);
-                dispatch(setToken({ token: DUMMY_ADMIN_TOKEN }));
+                // Admin login is direct, no OTP for them in this logic
                 navigation.navigate('AdminDashboard' as never);
-                console.log('Direct admin navigation successful with token set');
-            } catch (error) {
-                console.error('Error setting admin token or navigating:', error);
+                console.log('Direct admin navigation successful');
+            } catch (navError) {
+                console.log('Direct admin navigation failed, trying reset:', navError);
                 navigation.reset({
                     index: 0,
                     routes: [{ name: 'AdminDashboard' as never }],
@@ -156,7 +154,7 @@ const AdminLoginScreen = () => {
 
         setIsLoading(true);
         try {
-            const response = await axios.post(`${API_BASE_URL}/main-admin/send-otp`, { mainAdminEmail: email });
+            const response = await axios.post(`${API_BASE_URL}/student/send-otp`, { studentEmail: email });
             console.log('OTP Response:', response.data);
 
             if (response.data?.success || response.status === 200) {
@@ -178,82 +176,80 @@ const AdminLoginScreen = () => {
         }
     };
 
-    useEffect(() => {
-        const checkToken = async () => {
-            try {
-                const storedToken = await AsyncStorage.getItem('ADMINTOKEN');
-                if (storedToken) {
-                    console.log("Found stored token. Auto-logging in...");
-                    dispatch(setToken({ token: storedToken }));
-                    // Using AdminChats as a representative admin-only route
-                    navigation.reset({ index: 0, routes: [{ name: "AdminChats" as never }] });
-                }
-            } catch (e) {
-                console.error("Failed to retrieve token from storage:", e);
+    // New function to fetch student details after successful login/verification
+    const fetchStudentDetails = async (token: string) => {
+        try {
+            // Note: You must have an endpoint on your backend like '/student/me'
+            // which takes the JWT token and returns the student's data {id, name, email}.
+            const response = await axios.get(`${API_BASE_URL}/student/me`, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+            
+            console.log('User details fetched:', response.data);
+
+            if (response.data?.success && response.data.user) {
+                // Assuming the user object has the structure { id, name, email }
+                const { _id, studentName, studentEmail } = response.data.user;
+                
+                // Dispatch the user details to Redux
+                dispatch(setUser({
+                    id: _id,
+                    name: studentName,
+                    email: studentEmail,
+                }));
+            } else {
+                 // Handle case where token is valid but user data fetch fails
+                console.error("Failed to fetch user details after login.");
             }
-        };
 
-        checkToken();
-    }, []);
-
-    const handleBack = () => {
-        if (showOtpModal) {
-            setShowOtpModal(false);
-            return;
+        } catch (err) {
+            console.error("Error fetching user details:", err);
+            // Non-critical error, but might lead to chat screen failing later
         }
-        if (navigation.canGoBack()) {
-            navigation.goBack();
-        } else {
-            navigation.reset({ index: 0, routes: [{ name: 'Login' as never }] });
-        }
-    };
+    }
 
-    // --- Handle Verify OTP ---
+
     const handleVerifyOtp = async () => {
         console.log('=== OTP Verification Started ===');
 
         if (otp.trim().length !== 6) {
-            console.log('OTP length validation failed');
             showCustomError('Validation Error', 'Please enter a valid 6-digit OTP.');
             return;
         }
 
         setIsVerifying(true);
 
-        console.log(`Starting API call to: ${API_BASE_URL}/main-admin/verify-otp`);
-
         try {
-            const requestData = { mainAdminEmail: email, enteredOtp: otp };
-            console.log('Request data:', requestData);
+            const requestData = { studentEmail: email, enteredOtp: otp };
+            const response = await axios.post(`${API_BASE_URL}/student/verify-otp`, requestData);
+            console.log('=== API Response ===', response.data);
 
-            const response = await axios.post(`${API_BASE_URL}/main-admin/verify-otp`, requestData);
-            console.log('=== API Response ===');
+            if ((response.data?.success || response.status === 200) && response.data?.token) {
+                const { token } = response.data;
 
-            if (response.data?.success || response.status === 200) {
-                // TOKEN FIX: Save the token received from the backend
-                const token = response.data.token; // Assuming the token is returned in response.data.token
-                if (token) {
-                    await AsyncStorage.setItem('ADMINTOKEN', token);
-                    dispatch(setToken({ token: token }));
-                    console.log('✅ Token saved and set in Redux.');
-                } else {
-                    console.warn('Backend verification successful but no token received.');
-                }
+                // 1. Save token to AsyncStorage
+                await AsyncStorage.setItem('STUDENTTOKEN', token);
 
-                console.log('✅ OTP verification successful, navigating to AdminChats...');
+                dispatch(setToken({ token: token }));
+                
+                await fetchStudentDetails(token);
+
+
+                console.log('✅ OTP verification successful, Token and User saved. Navigating to StudentChats...');
+
                 setShowOtpModal(false);
                 navigation.reset({
                     index: 0,
-                    routes: [{ name: 'AdminChats' as never }],
+                    routes: [{ name: 'StudentChats' }],
                 });
                 setOtp('');
-                console.log('✅ Navigation successful');
             } else {
-                console.log('❌ OTP verification failed - showing mismatch popup');
-                showCustomError('OTP Not Match', 'The OTP you entered is incorrect. Please try again.');
+                showCustomError('OTP Not Match', response.data?.message || 'The OTP you entered is incorrect. Please try again.');
             }
         } catch (err: any) {
-            console.error('=== OTP Verification Error ===', err);
+            console.error('=== OTP Verification Error ===', err.response?.data || err);
 
             let message = 'Network error. Please try again.';
             if (err.response?.status === 400 || err.response?.data?.message) {
@@ -268,6 +264,29 @@ const AdminLoginScreen = () => {
         }
     };
 
+
+    useEffect(() => {
+        const checkToken = async () => {
+            try {
+                const storedToken = await AsyncStorage.getItem('TOKEN');
+                if (storedToken) {
+                    console.log("Found stored token. Auto-logging in...");
+                    dispatch(setToken({ token: storedToken }));
+                    
+                    // FIX: Also fetch user details on auto-login using the stored token
+                    await fetchStudentDetails(storedToken);
+
+                    // Navigate only after attempting to fetch user details
+                    navigation.reset({ index: 0, routes: [{ name: "StudentChats" }] });
+                }
+            } catch (e) {
+                console.error("Failed to retrieve token from storage:", e);
+            }
+        };
+
+        checkToken();
+    }, []);
+
     return (
         <KeyboardAvoidingView
             style={styles.container}
@@ -275,16 +294,14 @@ const AdminLoginScreen = () => {
         >
             <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
                 <View style={styles.card}>
-                    {/* Header with back and title */}
                     <View style={styles.headerRow}>
-                        <TouchableOpacity onPress={handleBack} style={styles.backButtonHitSlop}>
+                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButtonHitSlop}>
                             <Ionicons name="chevron-back" size={22} color="#212121" />
                         </TouchableOpacity>
-                        <Text style={styles.headerTitle}>Admin Login</Text>
+                        <Text style={styles.headerTitle}>Student Login</Text>
                         <View style={{ width: 22 }} />
                     </View>
 
-                    {/* Tabs */}
                     <View style={styles.tabsContainer}>
                         <TouchableOpacity
                             style={[styles.tab, activeTab === 'new' && styles.tabActive]}
@@ -302,15 +319,10 @@ const AdminLoginScreen = () => {
                         </TouchableOpacity>
                     </View>
 
-                    {/* Section title */}
                     {activeTab === 'old' && (
                         <>
-                            <Text style={styles.sectionTitle}></Text>
                             <Text style={styles.subtitle}>{isAdmin ? 'Admin Login' : 'Login with your Email'}</Text>
-                        </>
-                    )}
-                    {activeTab === 'old' ? (
-                        <>
+
                             <TextInput
                                 style={styles.input}
                                 value={email}
@@ -347,15 +359,17 @@ const AdminLoginScreen = () => {
                                 </TouchableOpacity>
                             )}
                         </>
-                    ) : (
-                        <View style={styles.embeddedContainer}>
-                            <AdminSignupScreen />
+                    )}
+
+                    {activeTab === 'new' && (
+                        <View style={{ maxHeight: 520, overflow: 'hidden' }}>
+                            <StudentSignupScreen />
                         </View>
                     )}
                 </View>
             </ScrollView>
 
-            {/* OTP Entry Modal */}
+            {/* OTP Entry Modal (Existing, Unchanged) */}
             <Modal
                 visible={showOtpModal}
                 animationType="fade"
@@ -402,7 +416,7 @@ const AdminLoginScreen = () => {
                 </View>
             </Modal>
 
-            {/* Success Modal */}
+            {/* Success Modal (Used for OTP sent confirmation) */}
             <SuccessModal
                 isVisible={showSuccessModal}
                 title="Success!"
@@ -410,7 +424,7 @@ const AdminLoginScreen = () => {
                 onClose={() => setShowSuccessModal(false)}
             />
 
-            {/* Error Modal */}
+            {/* Error Modal (Used for validation, send failure, verify failure, admin failure) */}
             <ErrorModal
                 isVisible={showErrorModal}
                 title={errorModalTitle}
@@ -421,7 +435,7 @@ const AdminLoginScreen = () => {
     );
 };
 
-export default AdminLoginScreen;
+export default AdvancedLoginScreen;
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#fff' },
@@ -440,61 +454,20 @@ const styles = StyleSheet.create({
         alignSelf: 'center',
         maxWidth: 520,
     },
-    headerRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: 14,
-    },
+    headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
     backButtonHitSlop: { padding: 4 },
-    headerTitle: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: '#212121',
-        textAlign: 'center',
-    },
-    tabsContainer: {
-        flexDirection: 'row',
-        borderBottomWidth: 1,
-        borderBottomColor: '#eeeeee',
-        paddingHorizontal: 0,
-        paddingBottom: 8,
-        marginBottom: 18,
-    },
-    tab: {
-        width: '50%',
-        alignItems: 'center',
-        paddingBottom: 8,
-    },
-    tabActive: {
-        borderBottomWidth: 2,
-        borderBottomColor: '#4a90e2',
-    },
-    tabText: {
-        fontSize: 14,
-        color: '#9e9e9e',
-        fontWeight: '600',
-    },
-    tabTextActive: {
-        color: '#4a90e2',
-    },
-    embeddedContainer: {
-        maxHeight: 520,
-        overflow: 'hidden',
-    },
+    headerTitle: { fontSize: 18, fontWeight: '700', color: '#212121', textAlign: 'center' },
+    tabsContainer: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#eeeeee', paddingBottom: 8, marginBottom: 18 },
+    tab: { width: '50%', alignItems: 'center', paddingBottom: 8 },
+    tabActive: { borderBottomWidth: 2, borderBottomColor: '#4a90e2' },
+    tabText: { fontSize: 14, color: '#9e9e9e', fontWeight: '600' },
+    tabTextActive: { color: '#4a90e2' },
     title: {
         fontSize: 26,
         fontWeight: 'bold',
         color: '#212121',
         marginBottom: 8,
         textAlign: 'center',
-    },
-    sectionTitle: {
-        fontSize: 22,
-        fontWeight: '800',
-        color: '#212121',
-        textAlign: 'center',
-        marginTop: 8,
     },
     subtitle: {
         fontSize: 16,
@@ -514,14 +487,14 @@ const styles = StyleSheet.create({
         borderColor: '#e0e0e0',
     },
     loginButton: {
-        backgroundColor: '#dbdbdbff',
+        backgroundColor: '#e1e2e2ff',
         borderRadius: 8,
         paddingVertical: 14,
         alignItems: 'center',
         marginBottom: 16,
     },
-    loginButtonDisabled: { backgroundColor: '#dbdbdbff' },
-    loginButtonText: { fontSize: 18, fontWeight: '600', color: '#000000ff', paddingLeft: 30, paddingRight: 30 },
+    loginButtonDisabled: { backgroundColor: '#b0bec5' },
+    loginButtonText: { fontSize: 16, fontWeight: '600', color: '#000000ff', paddingLeft: 30, paddingRight: 30 },
     modalOverlay: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.3)',
@@ -534,7 +507,7 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         padding: 24,
         elevation: 5,
-        alignItems: 'center',
+        alignItems: 'center', // Added for centering icon/text
     },
     modalTitle: {
         fontSize: 20,

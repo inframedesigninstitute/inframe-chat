@@ -3,7 +3,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import CallsScreen from '../screens/CallsScreen';
-import ChatsScreen from '../screens/ChatsScreen';
+import AdminChatsScreen from '../screens/AdminChatsScreen';
 import EnhancedSettingsScreen from '../screens/EnhancedSettingsScreen';
 import GroupsScreen from '../screens/GroupsScreen';
 import { MainTabsParamList } from './types';
@@ -28,7 +28,7 @@ const MainTabs = () => {
         tabBarIcon: ({ focused, color, size }) => {
           let iconName = 'ellipse';
 
-          if (route.name === 'Chats') {
+          if (route.name === 'AdminChats') {
             iconName = focused ? 'chatbubbles' : 'chatbubbles-sharp';
           } else if (route.name === 'Groups') {
             iconName = focused ? 'people' : 'people-sharp';
@@ -41,7 +41,7 @@ const MainTabs = () => {
           return (
             <View style={{ position: 'relative' }}>
               <Ionicons name={iconName} size={size} color={color} />
-              {route.name === 'Chats' && (
+              {route.name === 'AdminChats' && (
                 <View style={styles.badge}>
                   <Text style={styles.badgeText}>12</Text>
                 </View>
@@ -61,8 +61,8 @@ const MainTabs = () => {
       })}
     >
       <Tab.Screen 
-        name="Chats" 
-        component={ChatsScreen}
+        name="AdminChats" 
+        component={AdminChatsScreen}
         options={{
           tabBarLabel: 'Chats',
         }}

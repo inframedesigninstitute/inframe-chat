@@ -1,3 +1,5 @@
+import { setToken } from '@/src/Redux/Slices/studentTokenSlice';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import axios from 'axios';
@@ -13,20 +15,19 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import { RootStackParamList } from '../navigation/types';
-// Assuming you have vector icons installed for better visual alerts
-import { setToken } from '@/src/Redux/Slices/studentTokenSlice';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useDispatch } from 'react-redux';
+import { RootStackParamList } from '../navigation/types';
 import StudentSignupScreen from './StudentSignupScreen';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'AdvancedLogin'>;
 type RouteProps = RouteProp<RootStackParamList, 'AdvancedLogin'>;
 
+// ⚠️ IMPORTANT: Ensure this matches your backend API
 const API_BASE_URL = 'http://localhost:5200/web';
+const TOKEN_KEY = 'STUDENTTOKEN'; // Consistent AsyncStorage Key
 
-// 🆕 Custom Error Modal Component
+// Custom Error Modal Component (kept unchanged)
 const ErrorModal: React.FC<{
     isVisible: boolean;
     title: string;
@@ -52,7 +53,7 @@ const ErrorModal: React.FC<{
     </Modal>
 );
 
-// 🆕 Custom Success Modal Component
+// Custom Success Modal Component (kept unchanged)
 const SuccessModal: React.FC<{
     isVisible: boolean;
     title: string;
@@ -93,70 +94,52 @@ const AdvancedLoginScreen = () => {
     const [showOtpModal, setShowOtpModal] = useState(false);
     const [activeTab, setActiveTab] = useState<'old' | 'new'>('old');
 
-    // 🔄 Error/Admin Error States
+    // Error/Success States
     const [showErrorModal, setShowErrorModal] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
     const [errorModalTitle, setErrorModalTitle] = useState('Error');
-
-    // 🆕 Success State
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [successMessage, setSuccessMessage] = useState('');
 
     const otpInputRef = useRef<TextInput>(null);
+    const dispatch = useDispatch(); // Initialized here
 
     const validateEmail = (value: string): boolean => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         return emailRegex.test(value);
     };
 
-    // 🔄 Updated function for all general errors/validations
     const showCustomError = (title: string, message: string) => {
         setErrorModalTitle(title);
         setErrorMessage(message);
         setShowErrorModal(true);
     };
 
-    // 🆕 Function for showing success message
     const showCustomSuccess = (message: string) => {
         setSuccessMessage(message);
         setShowSuccessModal(true);
     };
 
+    // Minor fix to handleErrorModalOK - it was using `navigation.reset` which is too drastic for a simple error
     const handleErrorModalOK = () => {
-        // Reset state and navigate back on serious error
         setShowErrorModal(false);
-        setShowOtpModal(false);
-        navigation.reset({
-            index: 0,
-            routes: [{ name: 'AdvancedLogin' }],
-        });
-        setOtp('');
-        console.log('✅ Navigation successful after error modal');
+        // Do not reset navigation here unless the error is critical (e.g., authentication system failure)
+        // Just dismiss the error modal.
     };
 
     const handleSendOtp = async () => {
-        // 🔄 Replaced Alert.alert with Modal
         if (!email.trim()) return showCustomError('Validation Error', 'Please enter your email.');
-        // 🔄 Replaced Alert.alert with Modal
         if (!validateEmail(email)) return showCustomError('Validation Error', 'Please enter a valid email.');
 
         if (isAdmin) {
             if (email !== 'admin@inframe.edu' || password !== 'Admin@123') {
-                // 🔄 Replaced Alert.alert with Modal for Admin Login Failure
                 return showCustomError('Admin Login Failed', 'Invalid credentials.');
             }
-            console.log('Admin login successful, navigating to AdminDashboard...');
-
+            // Admin login is direct
             try {
-                // Admin login is direct, no OTP for them in this logic
-                navigation.navigate('AdminDashboard' as never);
-                console.log('Direct admin navigation successful');
+                navigation.reset({ index: 0, routes: [{ name: 'AdminDashboard' as never }] });
             } catch (navError) {
-                console.log('Direct admin navigation failed, trying reset:', navError);
-                navigation.reset({
-                    index: 0,
-                    routes: [{ name: 'AdminDashboard' as never }],
-                });
+                console.log('Admin navigation failed:', navError);
             }
             return;
         }
@@ -164,106 +147,94 @@ const AdvancedLoginScreen = () => {
         setIsLoading(true);
         try {
             const response = await axios.post(`${API_BASE_URL}/student/send-otp`, { studentEmail: email });
-            console.log('OTP Response:', response.data);
-
+            
             if (response.data?.success || response.status === 200) {
                 setShowOtpModal(true);
                 setTimeout(() => otpInputRef.current?.focus(), 100);
-                // 🔄 Replaced Alert.alert with Modal for OTP Send Success
                 showCustomSuccess(`OTP sent to ${email}`);
             } else {
-                // 🔄 Replaced Alert.alert with Modal for OTP Send Failure
                 showCustomError('OTP Send Failed', response.data?.message || 'Failed to send OTP.');
             }
         } catch (err: any) {
-            console.error('Send OTP Error:', err);
-            let message = 'Network error. Please try again.';
-            if (err.response?.data?.message) {
-                message = err.response.data.message;
-            }
-            // 🔄 Replaced Alert.alert with Modal for Network Error
+            let message = err.response?.data?.message || 'Network error. Please try again.';
             showCustomError('Error', message);
         } finally {
             setIsLoading(false);
         }
     };
 
-    // --- Handle Verify OTP ---
+    // 🌟 FIX: Implemented Token Handling and Dispatch 🌟
     const handleVerifyOtp = async () => {
-        console.log('=== OTP Verification Started ===');
-        console.log('Email:', email);
-        console.log('OTP:', otp);
-        console.log('OTP Length:', otp.trim().length);
-
         if (otp.trim().length !== 6) {
-            console.log('OTP length validation failed');
-            // 🔄 Replaced Alert.alert with Modal
-            showCustomError('Validation Error', 'Please enter a valid 6-digit OTP.');
-            return;
+            return showCustomError('Validation Error', 'Please enter a valid 6-digit OTP.');
         }
 
         setIsVerifying(true);
-        console.log(`Starting API call to: ${API_BASE_URL}/student/verify-otp`);
 
         try {
-            const requestData = { studentEmail: email, enteredOtp: otp };
-            console.log('Request data:', requestData);
+            const response = await axios.post(`${API_BASE_URL}/student/verify-otp`, {
+                studentEmail: email,
+                enteredOtp: otp,
+            });
 
-            const response = await axios.post(`${API_BASE_URL}/student/verify-otp`, requestData);
-            console.log('=== API Response ===');
+            // 🎯 ASSUMPTION: The backend returns the authentication token in response.data.token
+            const token = response.data?.token; 
+            
+            if ((response.data?.success || response.status === 200) && token) {
+                console.log('✅ OTP verified successfully. Saving token...');
+                
+                // 1️⃣ Save Token to AsyncStorage
+                await AsyncStorage.setItem(TOKEN_KEY, token);
+                
+                // 2️⃣ Dispatch Token to Redux
+                dispatch(setToken({ token }));
 
-            if (response.data?.success || response.status === 200) {
-                console.log('✅ OTP verification successful, navigating to Chats...');
+                // 3️⃣ Close Modal and Navigate
                 setShowOtpModal(false);
-                navigation.reset({
-                    index: 0,
-                    routes: [{ name: 'Chats' }],
-                });
                 setOtp('');
-                console.log('✅ Navigation successful');
+                
+                // We use a small delay to prevent navigation conflicts while the modal closes, 
+                // which is common in React Native
+                setTimeout(() => {
+                    navigation.reset({
+                        index: 0,
+                        routes: [{ name: 'StudentChats' }], // Ensure 'StudentChats' is correct
+                    });
+                    console.log('✅ Navigation to StudentChats successful.');
+                }, 100); 
+
             } else {
-                console.log('❌ OTP verification failed - showing mismatch popup');
-                // 🔄 Replaced direct error modal call with custom function
-                showCustomError('OTP Not Match', 'The OTP you entered is incorrect. Please try again.');
+                showCustomError('OTP Not Match', response.data?.message || 'The OTP you entered is incorrect. Please try again.');
             }
         } catch (err: any) {
-            console.error('=== OTP Verification Error ===');
-
-            let message = 'Network error. Please try again.';
-            if (err.response?.status === 400 || err.response?.data?.message) {
-                message = err.response?.data?.message || 'The OTP you entered is incorrect or expired. Please try again.';
-            }
-
-            // 🔄 Replaced direct error modal call with custom function
+            console.error('Verification Error:', err.response?.data || err.message);
+            let message = err.response?.data?.message || 'Network error. Please try again.';
             showCustomError('Verification Failed', message);
-
         } finally {
-            console.log('=== OTP Verification Finished ===');
             setIsVerifying(false);
         }
     };
 
-    const dispatch = useDispatch()
 
-
+    // 🛠️ FIX: Using the correct TOKEN_KEY
     useEffect(() => {
         const checkToken = async () => {
             try {
-                const storedToken = await AsyncStorage.getItem('TOKEN');
+                // Ensure the key matches the one used in handleVerifyOtp
+                const storedToken = await AsyncStorage.getItem(TOKEN_KEY); 
                 if (storedToken) {
                     console.log("Found stored token. Auto-logging in...");
                     dispatch(setToken({ token: storedToken }));
-                    // Navigate directly to the authenticated screen
-                    navigation.reset({ index: 0, routes: [{ name: "Chats" }] });
+                    // Use navigation.reset for a clean start to the authenticated area
+                    navigation.reset({ index: 0, routes: [{ name: "StudentChats" }] });
                 }
             } catch (e) {
                 console.error("Failed to retrieve token from storage:", e);
-                // Continue to login screen if storage check fails
             }
         };
 
         checkToken();
-    }, []);
+    }, [dispatch, navigation]); // Added dependencies for useEffect best practices
 
     return (
         <KeyboardAvoidingView
@@ -347,7 +318,7 @@ const AdvancedLoginScreen = () => {
                 </View>
             </ScrollView>
 
-            {/* OTP Entry Modal (Existing, Unchanged) */}
+            {/* OTP Entry Modal */}
             <Modal
                 visible={showOtpModal}
                 animationType="fade"
@@ -394,7 +365,7 @@ const AdvancedLoginScreen = () => {
                 </View>
             </Modal>
 
-            {/* 🆕 Success Modal (Used for OTP sent confirmation) */}
+            {/* Success Modal */}
             <SuccessModal
                 isVisible={showSuccessModal}
                 title="Success!"
@@ -402,7 +373,7 @@ const AdvancedLoginScreen = () => {
                 onClose={() => setShowSuccessModal(false)}
             />
 
-            {/* 🔄 Error Modal (Used for validation, send failure, verify failure, admin failure) */}
+            {/* Error Modal */}
             <ErrorModal
                 isVisible={showErrorModal}
                 title={errorModalTitle}
@@ -416,6 +387,7 @@ const AdvancedLoginScreen = () => {
 export default AdvancedLoginScreen;
 
 const styles = StyleSheet.create({
+    // ... (styles remain unchanged)
     container: { flex: 1, backgroundColor: '#fff' },
     content: { flexGrow: 1, paddingHorizontal: 24, justifyContent: 'center' },
     card: {

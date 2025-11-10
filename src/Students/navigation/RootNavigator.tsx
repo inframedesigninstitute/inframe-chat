@@ -8,7 +8,7 @@ import CalendarScreen from '../screens/CalendarScreen';
 import CallsScreen from '../screens/CallsScreen';
 import CameraScreen from '../screens/CameraScreen';
 import ChatScreen from '../screens/ChatScreen';
-import ChatsScreen from '../screens/ChatsScreen';
+import StudentChatsScreen from '../screens/StudentChatsScreen';
 import CourseDetailsScreen from '../screens/CourseDetailsScreen';
 import CoursesScreen from '../screens/CoursesScreen';
 import CreateGroupScreen from '../screens/CreateGroupScreen';
@@ -36,7 +36,7 @@ const RootNavigator = () => {
       <Stack.Screen name="StudentSignup" component={StudentSignupScreen} />
 
 
-      <Stack.Screen name="Chats" component={ChatsScreen} />
+      <Stack.Screen name="StudentChats" component={StudentChatsScreen} />
 
 
       <Stack.Screen name="Groups" component={GroupsScreen} />

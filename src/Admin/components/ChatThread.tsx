@@ -1,9 +1,10 @@
-"use client"
+"use client";
 
-import Clipboard from "@react-native-clipboard/clipboard"
-import { type RouteProp, useNavigation, useRoute } from "@react-navigation/native"
-import type { NativeStackNavigationProp } from "@react-navigation/native-stack"
-import { useState } from "react"
+import Clipboard from "@react-native-clipboard/clipboard";
+import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import axios from "axios";
+import { useEffect, useState } from "react";
 import {
     Alert,
     Dimensions,
@@ -17,61 +18,35 @@ import {
     TextInput,
     TouchableOpacity,
     View,
-} from "react-native"
-import Ionicons from "react-native-vector-icons/Ionicons"
-import MaterialIcons from "react-native-vector-icons/MaterialIcons"
-import { useStarredMessages } from "../context/StarredMessagesContext"
-import type { RootStackParamList } from "../navigation/types"
-import BackButton from "./BackButton"
-import { openDocumentPicker } from "./DocumentPicker"
-import { openGallery } from "./GalleryPicker"
-import LocationModal from "./LocationModal"
-import MarqueeText from "./MarqueeText"
-import MessageOptionsModal from "./MessageOptionsModal"
-import QuizPollModal from "./QuizPollModal"
-import AddMemberModal from "./add-member"
+} from "react-native";
+import Ionicons from "react-native-vector-icons/Ionicons";
+import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 
-declare global {
-    interface MediaStreamConstraints {
-        video?: boolean | MediaTrackConstraints
-        audio?: boolean | MediaTrackConstraints
-    }
+import { useStarredMessages } from "../context/StarredMessagesContext";
+import type { RootStackParamList } from "../navigation/types";
+import BackButton from "./BackButton";
+import { openDocumentPicker } from "./DocumentPicker";
+import { openGallery } from "./GalleryPicker";
+import LocationModal from "./LocationModal";
+import MarqueeText from "./MarqueeText";
+import MessageOptionsModal from "./MessageOptionsModal";
+import QuizPollModal from "./QuizPollModal";
+import AddMemberModal from "./add-member";
 
-    class MediaRecorder {
-        constructor(stream: MediaStream, options?: MediaRecorderOptions)
-        ondataavailable: ((this: MediaRecorder, ev: BlobEvent) => any) | null
-        onstop: ((this: MediaRecorder, ev: Event) => any) | null
-        start: () => void
-        stop: () => void
-    }
-    interface BlobEvent extends Event {
-        readonly data: Blob
-    }
-    interface MediaStream {}
-    interface MediaTrackConstraints {}
-    interface MediaRecorderOptions {}
+// Agora
+import RtmEngineClass, { MessageEvent } from "agora-react-native-rtm";
 
-    interface Navigator {
-        mediaDevices: {
-            getUserMedia: (constraints: MediaStreamConstraints) => Promise<MediaStream>
-        }
-    }
-    const navigator: Navigator;
-    // FIX: Declare document as an existing global variable of type any to satisfy TypeScript outside of a DOM environment.
-    const document: any;
-}
+const { width } = Dimensions.get("window");
 
-const { width } = Dimensions.get("window")
-
-type ChatScreenRouteProp = RouteProp<RootStackParamList, "Chat">
-type ChatScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>
+type ChatScreenRouteProp = RouteProp<RootStackParamList, "Chat">;
+type ChatScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 interface Message {
-    id: string
-    text: string
-    isSent: boolean
-    timestamp: string
-    status: "sent" | "delivered" | "read"
+    id: string;
+    text: string;
+    isSent: boolean;
+    timestamp: string;
+    status: "sent" | "delivered" | "read";
 }
 
 export default function ChatThread({
@@ -79,81 +54,118 @@ export default function ChatThread({
     onOpenProfile,
     onGroupCreated,
 }: {
-    channel: { id: string; name: string }
-    onOpenProfile: () => void
-    onGroupCreated?: (group: any) => void
+    channel: { id: string; name: string };
+    onOpenProfile: () => void;
+    onGroupCreated?: (group: any) => void;
 }) {
-    const route = useRoute<ChatScreenRouteProp>()
-    const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>()
+    const route = useRoute<ChatScreenRouteProp>();
+    const navigation = useNavigation<ChatScreenNavigationProp>();
 
-    const [messages, setMessages] = useState<Message[]>([
-        { id: "1", text: "Hi there! How are you?", isSent: false, timestamp: "10:10", status: "read" },
-        { id: "2", text: "I am good, fine @@@@!", isSent: true, timestamp: "10:11", status: "read" },
-        { id: "3", text: "Great Admin 😊", isSent: false, timestamp: "10:12", status: "read" },
-    ])
-    const handleOpenCamera = () => {
-        navigation.navigate("Camera")
-    }
-    const [newMessage, setNewMessage] = useState("")
-    const [showAttachments, setShowAttachments] = useState(false)
-    const [modalVisible, setModalVisible] = useState(false)
-    const [recording, setRecording] = useState(false)
-    const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null)
-    const [chunks, setChunks] = useState<BlobPart[]>([])
-    const [optionsModalVisible, setOptionsModalVisible] = useState(false)
-    const [selectedMessage, setSelectedMessage] = useState<Message | null>(null)
-    const { addStarredMessage } = useStarredMessages()
-    const [locationVisible, setLocationVisible] = useState<boolean>(false)
-    const [showAddMemberModal, setShowAddMemberModal] = useState(false)
-    const [chatMembers, setChatMembers] = useState<string[]>([])
+    // Messages per channel
+    const [messages, setMessages] = useState<{ [channelId: string]: Message[] }>({});
+    const [newMessage, setNewMessage] = useState("");
+    const [showAttachments, setShowAttachments] = useState(false);
+    const [modalVisible, setModalVisible] = useState(false);
+    const [optionsModalVisible, setOptionsModalVisible] = useState(false);
+    const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
+    const { addStarredMessage } = useStarredMessages();
+    const [locationVisible, setLocationVisible] = useState<boolean>(false);
+    const [showAddMemberModal, setShowAddMemberModal] = useState(false);
+    const [chatMembers, setChatMembers] = useState<string[]>([]);
 
-    const handlePoll = () => {
-        setModalVisible(true)
-    }
+    // Agora
+    const [rtmEngine, setRtmEngine] = useState<any>(null);
+    const APP_ID = "20e5fa9e1eb24b799e01c45eaca5c901";
+    const API_URL = "http://localhost:5200/web/agora/generate-rtm-token"; // Replace with your backend
 
-    const handleSendMessage = () => {
-        if (newMessage.trim()) {
-            setMessages([
-                ...messages,
-                {
-                    id: Date.now().toString(),
-                    text: newMessage,
-                    isSent: true,
-                    timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-                    status: "sent",
-                },
-            ])
-            setNewMessage("")
+    useEffect(() => {
+        const setupAgora = async () => {
+            try {
+                const uid = `user_${Date.now()}`;
+                const { data } = await axios.post(API_URL, { uid });
+                const token = data.agoraToken;
+
+                const engine = new (RtmEngineClass as any)();
+                await engine.createInstance(APP_ID);
+                await engine.loginV2(token, uid);
+                await engine.joinChannel(channel.id);
+
+                engine.addListener("MessageReceived", (msg: MessageEvent) => {
+                    const incomingMsg: Message = {
+                        id: Date.now().toString(),
+                        text: (msg as any).text || (msg as any).message || "New message",
+                        isSent: false,
+                        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                        status: "delivered",
+                    };
+
+                    setMessages(prev => ({
+                        ...prev,
+                        [channel.id]: [...(prev[channel.id] || []), incomingMsg],
+                    }));
+                });
+
+                setRtmEngine(engine);
+            } catch (err) {
+                console.log("Agora setup error:", err);
+            }
+        };
+
+        setupAgora();
+
+        return () => {
+            if (rtmEngine) {
+                rtmEngine.logout();
+                rtmEngine.destroyClient();
+            }
+        };
+    }, [channel.id]);
+
+    const handleSendMessage = async () => {
+        if (!newMessage.trim()) return;
+
+        const newMsg: Message = {
+            id: Date.now().toString(),
+            text: newMessage,
+            isSent: true,
+            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            status: "sent",
+        };
+
+        setMessages(prev => ({
+            ...prev,
+            [channel.id]: [...(prev[channel.id] || []), newMsg],
+        }));
+
+        if (rtmEngine) {
+            await rtmEngine.sendMessageToChannel({ text: newMessage }, channel.id);
         }
-    }
+
+        setNewMessage("");
+    };
+
+    const handleOpenCamera = () => navigation.navigate("Camera");
+
     const handleDocument = () => {
         openDocumentPicker((fileName) => {
-            setMessages([
-                ...messages,
-                {
-                    id: Date.now().toString(),
-                    text: `📄 Document: ${fileName}`,
-                    isSent: true,
-                    timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-                    status: "sent",
-                },
-            ])
-        })
-    }
-
-    const handleGallery = () => {
-        setShowAttachments(false)
-    }
-
-    const handleCamera = () => {
-        setShowAttachments(false)
-        navigation.navigate("Camera")
-    }
+            const docMsg: Message = {
+                id: Date.now().toString(),
+                text: `📄 Document: ${fileName}`,
+                isSent: true,
+                timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                status: "sent",
+            };
+            setMessages(prev => ({
+                ...prev,
+                [channel.id]: [...(prev[channel.id] || []), docMsg],
+            }));
+        });
+    };
 
     const handleAddMember = (contact: { id: string; name: string; phone: string }) => {
-        setChatMembers([...chatMembers, contact.id])
-        Alert.alert("Success", `${contact.name} added to the chat`)
-    }
+        setChatMembers(prev => [...prev, contact.id]);
+        Alert.alert("Success", `${contact.name} added to the chat`);
+    };
 
     const handleSendLocation = (coords: { latitude: number; longitude: number }) => {
         const locationMessage: Message = {
@@ -162,74 +174,37 @@ export default function ChatThread({
             isSent: true,
             timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
             status: "sent",
-        }
-        setMessages((prevMessages) => [...prevMessages, locationMessage])
-        setLocationVisible(false)
-    }
+        };
+        setMessages(prev => ({
+            ...prev,
+            [channel.id]: [...(prev[channel.id] || []), locationMessage],
+        }));
+        setLocationVisible(false);
+    };
 
-    const handleAudio = async () => {
-        if (typeof MediaRecorder === 'undefined' || typeof navigator.mediaDevices === 'undefined') {
-            console.error("MediaRecorder or navigator.mediaDevices not available. Are you running in a web environment or using a suitable polyfill?");
-            return;
-        }
+    const handleAudio = async () => Alert.alert("Recording", "Audio recording feature coming soon!");
 
-        if (!mediaRecorder) {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-                const recorder = new MediaRecorder(stream)
-
-                recorder.ondataavailable = (e: BlobEvent) => {
-                    setChunks((prev: BlobPart[]) => [...prev, e.data])
-                }
-
-                recorder.onstop = () => {
-                    const blob = new Blob(chunks as any, { type: "audio/webm" } as any)
-                    const url = URL.createObjectURL(blob)
-                    console.log("Audio saved:", url)
-
-                    if (typeof document !== 'undefined' && document.createElement) {
-                        const a = document.createElement("a")
-                        a.href = url
-                        a.download = "recording.webm"
-                        a.click()
-                    }
-
-                    setChunks([])
-                }
-
-                recorder.start()
-                setMediaRecorder(recorder)
-                console.log("Recording started...")
-            } catch (err) {
-                console.error("Error accessing microphone:", err)
-            }
-        } else {
-            mediaRecorder.stop()
-            setMediaRecorder(null)
-            console.log("Recording stopped...")
-        }
-    }
     const handleOpenGallery = () => {
         openGallery((imageUri: string) => {
             const message: Message = {
                 id: Date.now().toString(),
                 text: "📷 Image: " + imageUri,
                 isSent: true,
-                timestamp: new Date().toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                }),
+                timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
                 status: "sent",
-            }
-            setMessages([...messages, message])
-        })
-    }
+            };
+            setMessages(prev => ({
+                ...prev,
+                [channel.id]: [...(prev[channel.id] || []), message],
+            }));
+        });
+    };
 
     const renderMessage = ({ item }: { item: Message }) => (
         <TouchableOpacity
             onLongPress={() => {
-                setSelectedMessage(item)
-                setOptionsModalVisible(true)
+                setSelectedMessage(item);
+                setOptionsModalVisible(true);
             }}
             activeOpacity={0.8}
         >
@@ -249,22 +224,24 @@ export default function ChatThread({
                 </View>
             </View>
         </TouchableOpacity>
-    )
+    );
 
     return (
         <SafeAreaView style={styles.container}>
+            {/* Header */}
             <View style={styles.header}>
                 <BackButton />
-
                 <TouchableOpacity style={styles.contactInfo} onPress={onOpenProfile}>
                     <View style={styles.contactDetails}>
                         <Text style={styles.contactName}>{channel?.name || "User"}</Text>
                         <Text style={styles.contactNumber}>Online</Text>
                     </View>
                 </TouchableOpacity>
-
                 <View style={styles.headerActions}>
-                    <TouchableOpacity style={styles.actionButton}>
+                    <TouchableOpacity
+                        style={styles.actionButton}
+                        onPress={() => navigation.navigate("LiveVideoCall", { channelName: channel.name })}
+                    >
                         <Ionicons name="videocam" size={24} color="#000" />
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.actionButton}>
@@ -282,198 +259,165 @@ export default function ChatThread({
 
             <KeyboardAvoidingView style={styles.messagesContainer} behavior={Platform.OS === "ios" ? "padding" : "height"}>
                 <FlatList
-                    data={messages}
+                    data={messages[channel.id] || []}
                     keyExtractor={(item) => item.id}
                     renderItem={renderMessage}
                     style={styles.messagesList}
                     contentContainerStyle={styles.messagesContent}
                 />
-                <TouchableOpacity style={styles.attachButtons} onPress={() => setShowAddMemberModal(true)}>
-                    <Ionicons name="add" size={40} color="#000" />
+
+                <TouchableOpacity style={styles.addButton} onPress={() => setShowAddMemberModal(true)}>
+                    <Ionicons name="add" size={36} color="#000" />
                 </TouchableOpacity>
 
+                {/* Input Field */}
                 <View style={styles.inputContainer}>
                     <TouchableOpacity style={styles.attachButton} onPress={() => setShowAttachments(!showAttachments)}>
                         <Ionicons name="add" size={26} color="#000" />
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.cameraButton} onPress={handleOpenCamera}>
-                        <Ionicons name="camera" size={20} color="#000000ff" />
+                        <Ionicons name="camera" size={20} color="#000" />
                     </TouchableOpacity>
                     <TextInput
                         style={styles.textInput}
                         placeholder="Type a message..."
-                        placeholderTextColor="#000000ff"
+                        placeholderTextColor="#999"
                         value={newMessage}
                         onChangeText={setNewMessage}
                         multiline
                     />
-
-                    {newMessage.trim().length > 0 ? (
+                    {newMessage.trim() ? (
                         <TouchableOpacity style={styles.sendButton} onPress={handleSendMessage}>
                             <Ionicons name="send" size={20} color="#fff" />
                         </TouchableOpacity>
                     ) : (
-                        <TouchableOpacity
-                            style={styles.sendButton}
-                            onPress={handleAudio}
-                        >
-                            <Ionicons name="mic" size={20} color="#ffffffff" />
+                        <TouchableOpacity style={styles.sendButton} onPress={handleAudio}>
+                            <Ionicons name="mic" size={20} color="#fff" />
                         </TouchableOpacity>
                     )}
                 </View>
             </KeyboardAvoidingView>
+
+            {/* Modals */}
             <MessageOptionsModal
                 visible={optionsModalVisible}
                 onClose={() => setOptionsModalVisible(false)}
                 onReply={() => {
-                    setNewMessage(`Replying to: ${selectedMessage?.text}`)
-                    setOptionsModalVisible(false)
+                    setNewMessage(`Replying to: ${selectedMessage?.text}`);
+                    setOptionsModalVisible(false);
                 }}
                 onCopy={() => {
-                    Clipboard.setString(selectedMessage?.text || "")
-
-                    setOptionsModalVisible(false)
+                    Clipboard.setString(selectedMessage?.text || "");
+                    setOptionsModalVisible(false);
                 }}
                 onPin={() => {
-                    Alert.alert("Pinned", "Message pinned successfully")
-                    setOptionsModalVisible(false)
+                    Alert.alert("Pinned", "Message pinned successfully");
+                    setOptionsModalVisible(false);
                 }}
                 onUnpin={() => {
-                    Alert.alert("Unpinned", "Message unpinned successfully")
-                    setOptionsModalVisible(false)
+                    Alert.alert("Unpinned", "Message unpinned successfully");
+                    setOptionsModalVisible(false);
                 }}
                 onStar={() => {
                     if (selectedMessage) {
                         addStarredMessage({
                             id: selectedMessage.id,
                             text: selectedMessage.text,
-                            senderName: channel.name || "User",
+                            senderName: channel.name,
                             timestamp: new Date(),
-                            chatName: channel.name || "Unknown Chat",
+                            chatName: channel.name,
                             type: "text",
-                        })
-                        Alert.alert("Starred", "Message starred successfully")
-                        setOptionsModalVisible(false)
+                        });
+                        Alert.alert("Starred", "Message starred successfully");
+                        setOptionsModalVisible(false);
                     }
                 }}
                 onDelete={() => {
-                    setMessages(messages.filter((msg) => msg.id !== selectedMessage?.id))
-                    setOptionsModalVisible(false)
+                    setMessages(prev => ({
+                        ...prev,
+                        [channel.id]: prev[channel.id]?.filter((msg) => msg.id !== selectedMessage?.id) || [],
+                    }));
+                    setOptionsModalVisible(false);
                 }}
                 isPinned={false}
             />
-            <Modal
-                visible={showAttachments}
-                transparent
-                animationType="slide"
-                onRequestClose={() => setShowAttachments(false)}
-            >
+
+            <Modal visible={showAttachments} transparent animationType="slide" onRequestClose={() => setShowAttachments(false)}>
                 <TouchableOpacity style={styles.attachmentOverlay} onPress={() => setShowAttachments(false)}>
                     <View style={styles.attachmentContainer}>
-                        <View style={styles.attachmentHeader}>
-                            <Text style={styles.attachmentTitle}>Share Content</Text>
+                        <Text style={styles.attachmentTitle}>Share Content</Text>
+                        <View style={styles.attachmentRow}>
+                            <TouchableOpacity style={styles.attachmentItem} onPress={handleOpenGallery}>
+                                <View style={[styles.attachmentIcon, { backgroundColor: "#9C27B0" }]}>
+                                    <Ionicons name="images" size={24} color="#fff" />
+                                </View>
+                                <Text style={styles.attachmentText}>Gallery</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity style={styles.attachmentItem} onPress={handleOpenCamera}>
+                                <View style={[styles.attachmentIcon, { backgroundColor: "#FF5722" }]}>
+                                    <Ionicons name="camera" size={24} color="#fff" />
+                                </View>
+                                <Text style={styles.attachmentText}>Camera</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity style={styles.attachmentItem} onPress={() => setLocationVisible(true)}>
+                                <View style={[styles.attachmentIcon, { backgroundColor: "#4CAF50" }]}>
+                                    <Ionicons name="location" size={24} color="#fff" />
+                                </View>
+                                <Text style={styles.attachmentText}>Location</Text>
+                            </TouchableOpacity>
                         </View>
 
-                        <View style={styles.attachmentGrid}>
-                            <View style={styles.attachmentRow}>
-                                <TouchableOpacity style={styles.attachmentItem} onPress={handleOpenGallery}>
-                                    <View style={[styles.attachmentIcon, { backgroundColor: "#9C27B0" }]}>
-                                        <Ionicons name="images" size={24} color="#fff" />
-                                    </View>
-                                    <Text style={styles.attachmentLabel}>Gallery</Text>
-                                </TouchableOpacity>
-
-                                <TouchableOpacity style={styles.attachmentItem} onPress={handleCamera}>
-                                    <View style={[styles.attachmentIcon, { backgroundColor: "#FF5722" }]}>
-                                        <Ionicons name="camera" size={24} color="#fff" />
-                                    </View>
-                                    <Text style={styles.attachmentLabel}>Camera</Text>
-                                </TouchableOpacity>
-
-                                <TouchableOpacity style={styles.attachmentItem} onPress={() => setLocationVisible(true)}>
-                                    <View style={[styles.attachmentIcon, { backgroundColor: "#4CAF50" }]}>
-                                        <Ionicons name="location" size={24} color="#fff" />
-                                    </View>
-                                    <Text style={styles.attachmentLabel}>Location</Text>
-                                </TouchableOpacity>
-
-                                <LocationModal
-                                    visible={locationVisible}
-                                    onClose={() => setLocationVisible(false)}
-                                    onSend={handleSendLocation}
-                                />
-                            </View>
-
-                            <View style={styles.attachmentRow}>
-                                <TouchableOpacity style={styles.attachmentItem} onPress={handleDocument}>
-                                    <View style={[styles.attachmentIcon, { backgroundColor: "#673AB7" }]}>
-                                        <Ionicons name="document" size={24} color="#fff" />
-                                    </View>
-                                    <Text style={styles.attachmentLabel}>Document</Text>
-                                </TouchableOpacity>
-
-                                <TouchableOpacity style={styles.attachmentItem} onPress={handleAudio}>
-                                    <View style={[styles.attachmentIcon, { backgroundColor: "#FF9800" }]}>
-                                        <Ionicons name="mic" size={24} color="#fff" />
-                                    </View>
-                                    <Text style={styles.attachmentLabel}>Audio</Text>
-                                </TouchableOpacity>
-
-                                <View style={{ flex: 1 }}>
-                                    <TouchableOpacity style={{ padding: 10 }} onPress={handlePoll}>
-                                        <View style={[styles.attachmentIcon, { backgroundColor: "#673AB7" }]}>
-                                            <MaterialIcons name="poll" size={24} color="#fff" />
-                                        </View>
-                                        <Text>Poll / Quiz</Text>
-                                    </TouchableOpacity>
-
-                                    <QuizPollModal visible={modalVisible} onClose={() => setModalVisible(false)} />
+                        <View style={styles.attachmentRow}>
+                            <TouchableOpacity style={styles.attachmentItem} onPress={handleDocument}>
+                                <View style={[styles.attachmentIcon, { backgroundColor: "#673AB7" }]}>
+                                    <Ionicons name="document" size={24} color="#fff" />
                                 </View>
-                            </View>
+                                <Text style={styles.attachmentText}>Document</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity style={styles.attachmentItem} onPress={handleAudio}>
+                                <View style={[styles.attachmentIcon, { backgroundColor: "#FF9800" }]}>
+                                    <Ionicons name="mic" size={24} color="#fff" />
+                                </View>
+                                <Text style={styles.attachmentText}>Audio</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity style={styles.attachmentItem} onPress={() => setModalVisible(true)}>
+                                <View style={[styles.attachmentIcon, { backgroundColor: "#3F51B5" }]}>
+                                    <MaterialIcons name="poll" size={24} color="#fff" />
+                                </View>
+                                <Text style={styles.attachmentText}>Poll/Quiz</Text>
+                            </TouchableOpacity>
                         </View>
                     </View>
                 </TouchableOpacity>
             </Modal>
 
+            <QuizPollModal visible={modalVisible} onClose={() => setModalVisible(false)} />
+            <LocationModal visible={locationVisible} onClose={() => setLocationVisible(false)} onSend={handleSendLocation} />
             <AddMemberModal
                 visible={showAddMemberModal}
                 onClose={() => setShowAddMemberModal(false)}
                 onGroupCreated={(group) => {
-                    if (onGroupCreated) {
-                        onGroupCreated(group)
-                    }
-                    setShowAddMemberModal(false)
+                    onGroupCreated?.(group);
+                    setShowAddMemberModal(false);
                 }}
             />
         </SafeAreaView>
-    )
+    );
 }
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: "#fff" },
     header: { flexDirection: "row", alignItems: "center", padding: 12, borderBottomWidth: 1, borderColor: "#eee" },
-    backButton: { marginRight: 12 },
     contactInfo: { flex: 1 },
     contactDetails: {},
     contactName: { fontSize: 16, fontWeight: "600" },
     contactNumber: { fontSize: 12, color: "#666" },
     headerActions: { flexDirection: "row" },
     actionButton: { marginLeft: 12 },
-    cameraButton: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: "#f0f0f0",
-        justifyContent: "center",
-        alignItems: "center",
-        marginRight: 8,
-    },
-    attachButtons: {
-        alignSelf: "flex-end",
-        margin: 30,
-        backgroundColor: "#c4e0daff",
-        borderRadius: 30,
-    },
     messagesContainer: { flex: 1 },
     messagesList: { flex: 1 },
     messagesContent: { padding: 12 },
@@ -488,70 +432,17 @@ const styles = StyleSheet.create({
     receivedText: { color: "#000" },
     messageFooter: { flexDirection: "row", alignItems: "center", marginTop: 4 },
     timestamp: { fontSize: 10, color: "#666" },
-
+    addButton: { alignSelf: "flex-end", margin: 20, backgroundColor: "#c4e0da", borderRadius: 30, padding: 8 },
     inputContainer: { flexDirection: "row", alignItems: "center", padding: 12, borderTopWidth: 1, borderColor: "#eee" },
     attachButton: { marginRight: 8 },
-    textInput: {
-        flex: 1,
-        fontSize: 15,
-        padding: 10,
-        backgroundColor: "#f3f3f3",
-        borderRadius: 20,
-        textAlign: "left",
-        color: "#000",
-    },
-    sendButton: { marginLeft: 8, backgroundColor: "#0d0c0e", padding: 10, borderRadius: 20 },
-
+    textInput: { flex: 1, fontSize: 15, padding: 10, backgroundColor: "#f3f3f3", borderRadius: 20, color: "#000" },
+    sendButton: { marginLeft: 8, backgroundColor: "#000", padding: 10, borderRadius: 20 },
+    cameraButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: "#e0e0e0", justifyContent: "center", alignItems: "center", marginRight: 8 },
     attachmentOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
-    attachmentContainer: {
-        backgroundColor: "#fff",
-        padding: 20,
-        width: 700,
-        flex: 0.5,
-        borderRadius: 50,
-        alignSelf: "center",
-    },
-    attachmentTitle: { fontSize: 18, fontWeight: "600", textAlign: "center" },
-
-    attachmentHeader: {
-        paddingVertical: 20,
-        paddingHorizontal: 20,
-        borderBottomWidth: 1,
-        borderBottomColor: "#f0f0f0",
-    },
-
-    attachmentGrid: {
-        paddingHorizontal: 20,
-        paddingTop: 20,
-        gap: 30,
-
-        alignSelf: "center",
-    },
-    attachmentRow: {
-        flexDirection: "row",
-        justifyContent: "space-around",
-        alignItems: "center",
-    },
-    attachmentItem: {
-        alignItems: "center",
-        width: (width - 600) / 6,
-    },
-    attachmentIcon: {
-        width: 65,
-        height: 66,
-        borderRadius: 28,
-        justifyContent: "center",
-        alignItems: "center",
-        marginBottom: 8,
-        elevation: 3,
-        shadowColor: "#000",
-        shadowOpacity: 0.25,
-        shadowRadius: 3.84,
-    },
-    attachmentLabel: {
-        fontSize: 12,
-        color: "#000000ff",
-        textAlign: "center",
-        fontWeight: "500",
-    },
-})
+    attachmentContainer: { backgroundColor: "#fff", padding: 20, width: "90%", borderRadius: 20, alignSelf: "center", marginBottom: 30 },
+    attachmentTitle: { fontSize: 18, fontWeight: "600", textAlign: "center", marginBottom: 10 },
+    attachmentRow: { flexDirection: "row", justifyContent: "space-around", marginVertical: 10 },
+    attachmentItem: { alignItems: "center" },
+    attachmentIcon: { width: 60, height: 60, borderRadius: 30, justifyContent: "center", alignItems: "center", marginBottom: 6 },
+    attachmentText: { fontSize: 12, textAlign: "center" },
+});

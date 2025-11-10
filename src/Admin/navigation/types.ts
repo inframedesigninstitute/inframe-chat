@@ -5,12 +5,12 @@ export type RootStackParamList = {
    TeacherLogin: { emailPrefill?: string; admin?: boolean } | undefined;
 
   OtpVerification: { email: string };
-  Chats: undefined;
+  AdminChats: undefined;
   FacultyChats:undefined;
-AdminChats:undefined;
   Groups: undefined;
   Calls: undefined;
   Settings: undefined;
+  LiveVideoCall: { channelName: string };
   // ChatLayout: undefined;
   Chat: { channelId: string; channelName: string; recipientRole?: 'student' | 'faculty' | 'admin' };
   GroupChat: { groupId: string; groupName: string; isTeacher: boolean };
@@ -41,7 +41,7 @@ AdminChats:undefined;
 };
 
 export type MainTabsParamList = {
-  Chats: undefined;
+  AdminChats: undefined;
   Groups: undefined;
   Calls: undefined;
   Settings: undefined;

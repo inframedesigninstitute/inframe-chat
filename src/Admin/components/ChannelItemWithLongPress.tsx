@@ -58,9 +58,8 @@ const ChannelItemWithLongPress: React.FC<ChannelItemWithLongPressProps> = ({
     }
   };
 
-  // ✅ Backend ke accoding fix kiya gaya function
-  const handleDelete = async (mId: string) => {
-
+ const handleDelete = async (mId: string) => {
+  try {
     const { data } = await axios.post(
       `${API_BASE_URL}/main-admin/remove-member/${mId}`,
       {},
@@ -71,47 +70,24 @@ const ChannelItemWithLongPress: React.FC<ChannelItemWithLongPressProps> = ({
         },
       }
     );
-    console.log(data)
 
-    // try {
-    //   if (!token) {
-    //     Alert.alert('Error', 'Authentication token not found.');
-    //     return;
-    //   }
-    //   if (!facultyId) {
-    //     Alert.alert('Error', 'Faculty ID not found.');
-    //     return;
-    //   }
+    console.log("Delete API response:", data);
 
-    //   const { data } = await axios.post(
-    //     `${API_BASE_URL}/faculty/remove-member/${mId}`,
-    //     {},
-    //     {
-    //       headers: {
-    //         "Content-Type": "application/json",
-    //         Authorization: `Bearer ${token}`,
-    //       },
-    //     }
-    //   );
-
-    //   console.log("Delete API response:", data);
-
-    //   if (data.status === 1) {
-    //     onDelete(mId);
-    //     console.log("Delete clicked, mId sfsadf");
-
-    //     Alert.alert('Success', 'Member removed successfully');
-    //   } else {
-    //     Alert.alert('Error', data.msg || 'Failed to remove member');
-    //   }
-    // } catch (error) {
-    //   console.error("Error deleting member:", error);
-    //   Alert.alert('Error', 'An error occurred while removing the member');
-    // } finally {
-    //   setShowActions(false);
-    // }
-  };
-
+    if (data.status === 1) {
+      onDelete(mId);
+      console.log("Delete clicked, mId sfsadf");
+      Alert.alert('Success', 'Member removed successfully');
+    } else {
+      Alert.alert('Error', data.msg || 'Failed to remove member');
+    }
+  } catch (error) {
+    console.error("Error deleting member:", error);
+    Alert.alert('Error', 'An error occurred while removing the member');
+  } finally {
+    setShowActions(false);
+  }
+};
+ 
 
   return (
     <>
