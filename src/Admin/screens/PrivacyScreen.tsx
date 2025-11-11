@@ -31,6 +31,8 @@ const PrivacyScreen = () => {
   const [isDetailsLoading, setIsDetailsLoading] = useState<boolean>(false);
   const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
   const [fadeAnim] = useState(new Animated.Value(0));
+const [dialogVisible, setDialogVisible] = useState(false);
+const [dialogMessage, setDialogMessage] = useState('');
 
   const fadeIn = () => {
     Animated.timing(fadeAnim, {
@@ -48,7 +50,6 @@ const PrivacyScreen = () => {
     }).start(() => callback && callback());
   };
 
-  // ✅ Fetch all students
   const fetchAllStudentContacts = async (): Promise<UnifiedContact[]> => {
     if (!token) {
       setError('Authentication token not found. Please log in.');
@@ -79,7 +80,6 @@ const PrivacyScreen = () => {
     }
   };
 
-  // ✅ Temporarily deactivate student
   const deactivateStudent = async (userId: string) => {
     if (!token || !userId) return;
     setIsDetailsLoading(true);
@@ -90,8 +90,25 @@ const PrivacyScreen = () => {
       });
 
       console.log('Deactivation Response:', response.data);
+      setRawContacts((prev) => prev.filter((c) => c.id !== userId));
+      fadeOut(() => setIsModalVisible(false));
+    } catch (err: any) {
+      console.error('Error deactivating student:', err.message);
+    } finally {
+      setIsDetailsLoading(false);
+    }
+  };
+const permanentlyDeleteStudent = async (userId: string) => {
+  if (!token || !userId) return;
+  setIsDetailsLoading(true);
 
-      // Update UI after deactivation
+  try {
+    const API_URL = `${API_BASE_URL}/main-admin/delete-user/${userId}`;
+     const response = await axios.get(API_URL, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      console.log('Deactivation Response:', response.data);
       setRawContacts((prev) => prev.filter((c) => c.id !== userId));
       fadeOut(() => setIsModalVisible(false));
     } catch (err: any) {
@@ -101,8 +118,9 @@ const PrivacyScreen = () => {
     }
   };
 
-  // ✅ Permanently delete student
-  const permanentlyDeleteStudent = async (userId: string) => {
+
+
+  const TemporarilyDeleteUsesStudent = async (userId: string) => {
     if (!token || !userId) return;
     setIsDetailsLoading(true);
     try {
@@ -111,13 +129,11 @@ const PrivacyScreen = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      console.log('Permanent Delete Response:', response.data);
-
-      // Remove from list
+      console.log('Temporary Delete Response:', response.data);
       setRawContacts((prev) => prev.filter((c) => c.id !== userId));
       fadeOut(() => setIsModalVisible(false));
     } catch (err: any) {
-      console.error('Error permanently deleting student:', err.message);
+      console.error('Error temporarily deleting student:', err.message);
     } finally {
       setIsDetailsLoading(false);
     }
@@ -197,6 +213,8 @@ const PrivacyScreen = () => {
                 )}
               </Pressable>
 
+             
+
               <Pressable
                 style={[styles.actionBtn, styles.cancelBtn]}
                 onPress={() => fadeOut(() => setIsModalVisible(false))}
@@ -214,21 +232,9 @@ const PrivacyScreen = () => {
 export default PrivacyScreen;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 16,
-    backgroundColor: '#fafafa',
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 16,
-    color: '#007bff',
-  },
-  list: {
-    flexDirection: 'column',
-    gap: 10,
-  },
+  container: { flex: 1, padding: 16, backgroundColor: '#fafafa' },
+  title: { fontSize: 22, fontWeight: 'bold', marginBottom: 16, color: '#007bff' },
+  list: { flexDirection: 'column', gap: 10 },
   card: {
     backgroundColor: '#fff',
     borderRadius: 16,
@@ -241,25 +247,10 @@ const styles = StyleSheet.create({
     elevation: 6,
     transform: [{ perspective: 1000 }, { scale: 1 }],
   },
-  name: {
-    fontWeight: 'bold',
-    fontSize: 16,
-    color: '#050303ff',
-  },
-  email: {
-    color: '#030202ff',
-    marginTop: 4,
-  },
-  error: {
-    color: 'red',
-    marginTop: 8,
-  },
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(156, 145, 145, 0.4)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  name: { fontWeight: 'bold', fontSize: 16, color: '#050303ff' },
+  email: { color: '#030202ff', marginTop: 4 },
+  error: { color: 'red', marginTop: 8 },
+  overlay: { flex: 1, backgroundColor: 'rgba(156, 145, 145, 0.4)', justifyContent: 'center', alignItems: 'center' },
   modal3D: {
     width: '40%',
     backgroundColor: 'rgba(255, 255, 255, 0.92)',
@@ -269,46 +260,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 12,
     elevation: 15,
-    // transform: [{ perspective: 1000 }, { rotateX: '6deg' }],
   },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 600,
-    color: '#000000ff',
-    textAlign: 'center',
-  },
-  modalSub: {
-    textAlign: 'center',
-    color: '#000000ff',
-    marginVertical: 8,
-  },
-  btnContainer: {
-    marginTop: 20,
-    marginHorizontal:70
-  },
-  actionBtn: {
-    paddingVertical: 12,
-    borderRadius: 12,
-    marginVertical: 6,
-    alignItems: 'center',
-  },
-  tempBtn: {
-    backgroundColor: '#d2e0e9ff',
-    shadowColor: '#d2e0e9ff',
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-  },
-  permaBtn: {
-    backgroundColor: '#d2e0e9ff',
-    shadowColor: '#d2e0e9ff',
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-  },
-  cancelBtn: {
-    backgroundColor: '#efaff5ff',
-  },
-  btnText: {
-    color: '#000000ff',
-    fontWeight: 'bold',
-  },
+  modalTitle: { fontSize: 20, fontWeight: '600', color: '#000000ff', textAlign: 'center' },
+  modalSub: { textAlign: 'center', color: '#000000ff', marginVertical: 8 },
+  btnContainer: { marginTop: 20, marginHorizontal: 70 },
+  actionBtn: { paddingVertical: 12, borderRadius: 12, marginVertical: 6, alignItems: 'center' },
+  tempBtn: { backgroundColor: '#d2e0e9ff', shadowColor: '#d2e0e9ff', shadowOpacity: 0.3, shadowRadius: 8 },
+  permaBtn: { backgroundColor: '#d2e0e9ff', shadowColor: '#d2e0e9ff', shadowOpacity: 0.3, shadowRadius: 8 },
+  cancelBtn: { backgroundColor: '#efaff5ff' },
+  btnText: { color: '#000000ff', fontWeight: 'bold' },
 });
