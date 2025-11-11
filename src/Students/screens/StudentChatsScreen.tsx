@@ -1,534 +1,440 @@
-import { setToken, setUser } from '@/src/Redux/Slices/studentTokenSlice'; // Import setUser
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import axios from 'axios';
-import React, { useEffect, useRef, useState } from 'react';
+import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import {
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
-import Ionicons from 'react-native-vector-icons/Ionicons';
-import { useDispatch } from 'react-redux';
-import { RootStackParamList } from '../navigation/types';
-import StudentSignupScreen from './StudentSignupScreen';
+    CompositeNavigationProp,
+    useFocusEffect,
+    useNavigation,
+} from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import axios from "axios";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+    ActivityIndicator,
+    FlatList,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from "react-native";
+import Ionicons from "react-native-vector-icons/Ionicons";
+import MaterialIcons from "react-native-vector-icons/MaterialIcons";
+import { useSelector } from "react-redux";
+import { RootState } from "../../Redux/Store/store";
+import ChannelItemWithLongPress from "../components/ChannelItemWithLongPress";
+import ChatThread from "../components/ChatThread";
+import MainLayout from "../components/MainLayout";
+import TopTabNavigation from "../components/TopTabNavigation";
+import WebBackButton from "../components/WebBackButton";
+import type { MainTabsParamList, RootStackParamList } from "../navigation/types";
+import UserProfileScreen from "./UserProfileScreen";
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'StudentLogin'>;
-type RouteProps = RouteProp<RootStackParamList, 'StudentLogin'>;
+const API_BASE_URL = "http://localhost:5200/web";
 
-const API_BASE_URL = 'http://localhost:5200/web';
+type StudentContact = {
+    studentId: string;
+    studentName: string;
+    studentEmail?: string;
+};
 
-const ErrorModal: React.FC<{
-    isVisible: boolean;
-    title: string;
-    message: string;
-    onClose: () => void;
-}> = ({ isVisible, title, message, onClose }) => (
-    <Modal
-        visible={isVisible}
-        animationType="fade"
-        transparent
-        onRequestClose={onClose}
-    >
-        <View style={styles.modalOverlay}>
-            <View style={styles.modalBox}>
-                <Ionicons name="close-circle" size={40} color="#FF6347" style={styles.modalIcon} />
-                <Text style={styles.modalTitle}>{title}</Text>
-                <Text style={styles.modalSubtitle}>{message}</Text>
-                <TouchableOpacity style={styles.loginButton} onPress={onClose}>
-                    <Text style={styles.loginButtonText}>OK</Text>
-                </TouchableOpacity>
-            </View>
-        </View>
-    </Modal>
-);
+type GroupContact = {
+    groupId: string;
+    groupName: string;
+    membersCount?: number;
+};
 
-const SuccessModal: React.FC<{
-    isVisible: boolean;
-    title: string;
-    message: string;
-    onClose: () => void;
-}> = ({ isVisible, title, message, onClose }) => (
-    <Modal
-        visible={isVisible}
-        animationType="fade"
-        transparent
-        onRequestClose={onClose}
-    >
-        <View style={styles.modalOverlay}>
-            <View style={styles.modalBox}>
-                <Ionicons name="checkmark-circle" size={40} color="#4BB543" style={styles.modalIcon} />
-                <Text style={styles.modalTitle}>{title}</Text>
-                <Text style={styles.modalSubtitle}>{message}</Text>
-                <TouchableOpacity style={styles.loginButton} onPress={onClose}>
-                    <Text style={styles.loginButtonText}>OK</Text>
-                </TouchableOpacity>
-            </View>
-        </View>
-    </Modal>
-);
+type Channel = {
+    id: string;
+    name: string;
+    lastMessage: string;
+    time: string;
+    unread?: number;
+    isArchived?: boolean;
+    isStarred?: boolean;
+    type?: "personal" | "group";
+    isPinned?: boolean;
+};
 
+type FacultyChatsNavigationProp = CompositeNavigationProp<
+    BottomTabNavigationProp<MainTabsParamList, "StudentChats">,
+    NativeStackNavigationProp<RootStackParamList>
+>;
 
-const AdvancedLoginScreen = () => {
-    const navigation = useNavigation<NavigationProp>();
-    const route = useRoute<RouteProps>();
-    const isAdmin = route.params?.admin === true;
-    const prefillEmail = route.params?.emailPrefill || '';
+const StudentChatsScreen = () => {
+    const token = useSelector((state: RootState) => state.facultyStore.token);
+    const navigation = useNavigation<FacultyChatsNavigationProp>();
 
-    const [email, setEmail] = useState(prefillEmail);
-    const [password, setPassword] = useState('');
-    const [otp, setOtp] = useState('');
+    const [rawContacts, setRawContacts] = useState<StudentContact[]>([]);
+    const [rawGroups, setRawGroups] = useState<GroupContact[]>([]);
     const [isLoading, setIsLoading] = useState(false);
-    const [isVerifying, setIsVerifying] = useState(false);
-    const [showOtpModal, setShowOtpModal] = useState(false);
-    const [activeTab, setActiveTab] = useState<'old' | 'new'>('old');
+    const [error, setError] = useState<string | null>(null);
+    const [searchText, setSearchText] = useState("");
+    const [activeTab, setActiveTab] = useState("All");
+    const [showUserProfile, setShowUserProfile] = useState(false);
+    const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
+    const [showAddMemberModal, setShowAddMemberModal] = useState(false);
 
-    const [showErrorModal, setShowErrorModal] = useState(false);
-    const [errorMessage, setErrorMessage] = useState('');
-    const [errorModalTitle, setErrorModalTitle] = useState('Error');
+    // Combine both contacts & groups
+    const channels = useMemo<Channel[]>(() => {
+        const studentChannels = rawContacts.map((contact) => ({
+            id: contact.studentId,
+            name: contact.studentName,
+            lastMessage: `Email: ${contact.studentEmail || "N/A"}`,
+            time: "Now",
+            unread: 0,
+            isStarred: false,
+            type: "personal" as const,
+            isArchived: false,
+            isPinned: false,
+        }));
 
-    const [showSuccessModal, setShowSuccessModal] = useState(false);
-    const [successMessage, setSuccessMessage] = useState('');
+        const groupChannels = rawGroups.map((group) => ({
+            id: group.groupId,
+            name: group.groupName,
+            lastMessage: `Members: ${group.membersCount ?? 0}`,
+            time: "Now",
+            unread: 0,
+            isStarred: false,
+            type: "group" as const,
+            isArchived: false,
+            isPinned: false,
+        }));
 
-    const otpInputRef = useRef<TextInput>(null);
-    const dispatch = useDispatch()
+        return [...studentChannels, ...groupChannels];
+    }, [rawContacts, rawGroups]);
 
+    // Filter logic
+    const filteredChannels = useMemo(() => {
+        let filtered = channels;
+        if (activeTab === "Unread")
+            filtered = channels.filter((c) => (c.unread || 0) > 0);
+        else if (activeTab === "Favourites")
+            filtered = channels.filter((c) => c.isStarred);
+        else if (activeTab === "Groups")
+            filtered = channels.filter((c) => c.type === "group");
 
-    const validateEmail = (value: string): boolean => {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return emailRegex.test(value);
+        if (searchText.trim()) {
+            filtered = filtered.filter(
+                (c) =>
+                    c.name.toLowerCase().includes(searchText.toLowerCase()) ||
+                    c.lastMessage.toLowerCase().includes(searchText.toLowerCase())
+            );
+        }
+        return filtered;
+    }, [channels, activeTab, searchText]);
+
+    const handleTabChange = (tab: string) => setActiveTab(tab);
+    const handleChannelPress = (channel: Channel) => {
+        setSelectedChannel(channel);
+        setShowUserProfile(false);
     };
 
-    const showCustomError = (title: string, message: string) => {
-        setErrorModalTitle(title);
-        setErrorMessage(message);
-        setShowErrorModal(true);
-    };
-
-    const showCustomSuccess = (message: string) => {
-        setSuccessMessage(message);
-        setShowSuccessModal(true);
-    };
-
-    const handleErrorModalOK = () => {
-        setShowErrorModal(false);
-        setShowOtpModal(false);
-        navigation.reset({
-            index: 0,
-            routes: [{ name: 'StudentLogin' }],
+    const handleGroupCreated = (newGroup: Channel) => {
+        setRawGroups((prev) => {
+            const exists = prev.some((g) => g.groupId === newGroup.id);
+            if (exists) return prev;
+            return [
+                ...prev,
+                { groupId: newGroup.id, groupName: newGroup.name, membersCount: 1 },
+            ];
         });
-        setOtp('');
-        console.log('✅ Navigation successful after error modal');
     };
 
-    const handleSendOtp = async () => {
-        if (!email.trim()) return showCustomError('Validation Error', 'Please enter your email.');
-        if (!validateEmail(email)) return showCustomError('Validation Error', 'Please enter a valid email.');
+    // ✅ Handle delete channel (local remove)
+    const handleDeleteChannel = (id: string) => {
+        setRawContacts((prev) => prev.filter((c) => c.studentId !== id));
+        setRawGroups((prev) => prev.filter((g) => g.groupId !== id));
+        console.log("Channel deleted:", id);
+    };
 
-        if (isAdmin) {
-            if (email !== 'admin@inframe.edu' || password !== 'Admin@123') {
-                return showCustomError('Admin Login Failed', 'Invalid credentials.');
-            }
-            console.log('Admin login successful, navigating to AdminDashboard...');
+    // ✅ Fetch student contacts
+    const fetchAllContacts = async () => {
+        if (!token) return setError("Authentication token not found. Please log in.");
 
-            try {
-                // Admin login is direct, no OTP for them in this logic
-                navigation.navigate('AdminDashboard' as never);
-                console.log('Direct admin navigation successful');
-            } catch (navError) {
-                console.log('Direct admin navigation failed, trying reset:', navError);
-                navigation.reset({
-                    index: 0,
-                    routes: [{ name: 'AdminDashboard' as never }],
-                });
-            }
-            return;
-        }
-
-        setIsLoading(true);
         try {
-            const response = await axios.post(`${API_BASE_URL}/student/send-otp`, { studentEmail: email });
-            console.log('OTP Response:', response.data);
+            const response = await axios.post(
+                `${API_BASE_URL}/student/fetch-groups-as-member`,
+                {},
+                {
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${token}`,
+                    },
+                }
+            );
 
-            if (response.data?.success || response.status === 200) {
-                setShowOtpModal(true);
-                setTimeout(() => otpInputRef.current?.focus(), 100);
-                showCustomSuccess(`OTP sent to ${email}`);
-            } else {
-                showCustomError('OTP Send Failed', response.data?.message || 'Failed to send OTP.');
-            }
+            const data = response.data;
+            if (data?.status === 1 && data.facultyContactsList?.[0]?.facultyContacts) {
+                const contacts: StudentContact[] = data.facultyContactsList[0].facultyContacts;
+                setRawContacts(contacts);
+            } else setError(data?.msg || "Failed to load contacts data.");
         } catch (err: any) {
-            console.error('Send OTP Error:', err);
-            let message = 'Network error. Please try again.';
-            if (err.response?.data?.message) {
-                message = err.response.data.message;
-            }
-            showCustomError('Error', message);
-        } finally {
-            setIsLoading(false);
+            console.error("Error fetching contacts:", err.response?.data || err.message);
+            setError("Failed to fetch contacts.");
         }
     };
 
-    // New function to fetch student details after successful login/verification
-    const fetchStudentDetails = async (token: string) => {
-        try {
-            // Note: You must have an endpoint on your backend like '/student/me'
-            // which takes the JWT token and returns the student's data {id, name, email}.
-            const response = await axios.get(`${API_BASE_URL}/student/me`, {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
-            });
-            
-            console.log('User details fetched:', response.data);
+    // ✅ Fetch faculty groups
+    const fetchAllGroups = async () => {
+        if (!token) return setError("Authentication token not found. Please log in.");
 
-            if (response.data?.success && response.data.user) {
-                // Assuming the user object has the structure { id, name, email }
-                const { _id, studentName, studentEmail } = response.data.user;
-                
-                // Dispatch the user details to Redux
-                dispatch(setUser({
-                    id: _id,
-                    name: studentName,
-                    email: studentEmail,
+        try {
+            const response = await axios.post(
+                `${API_BASE_URL}/faculty/view-group`,
+                {},
+                {
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${token}`,
+                    },
+                }
+            );
+
+            const data = response.data;
+            if (data?.status === 1 && Array.isArray(data.data)) {
+                const groups: GroupContact[] = data.data.map((g: any) => ({
+                    groupId: g._id || g.groupId || g.facultyGroupId,
+                    groupName: g.facultyGroupName || g.groupName || "Unnamed Group",
+                    membersCount: g.groupMembers?.length || 0,
                 }));
-            } else {
-                 // Handle case where token is valid but user data fetch fails
-                console.error("Failed to fetch user details after login.");
-            }
-
-        } catch (err) {
-            console.error("Error fetching user details:", err);
-            // Non-critical error, but might lead to chat screen failing later
-        }
-    }
-
-
-    const handleVerifyOtp = async () => {
-        console.log('=== OTP Verification Started ===');
-
-        if (otp.trim().length !== 6) {
-            showCustomError('Validation Error', 'Please enter a valid 6-digit OTP.');
-            return;
-        }
-
-        setIsVerifying(true);
-
-        try {
-            const requestData = { studentEmail: email, enteredOtp: otp };
-            const response = await axios.post(`${API_BASE_URL}/student/verify-otp`, requestData);
-            console.log('=== API Response ===', response.data);
-
-            if ((response.data?.success || response.status === 200) && response.data?.token) {
-                const { token } = response.data;
-
-                // 1. Save token to AsyncStorage
-                await AsyncStorage.setItem('STUDENTTOKEN', token);
-
-                dispatch(setToken({ token: token }));
-                
-                await fetchStudentDetails(token);
-
-
-                console.log('✅ OTP verification successful, Token and User saved. Navigating to StudentChats...');
-
-                setShowOtpModal(false);
-                navigation.reset({
-                    index: 0,
-                    routes: [{ name: 'StudentChats' }],
-                });
-                setOtp('');
-            } else {
-                showCustomError('OTP Not Match', response.data?.message || 'The OTP you entered is incorrect. Please try again.');
-            }
+                setRawGroups(groups);
+            } else setRawGroups([]);
         } catch (err: any) {
-            console.error('=== OTP Verification Error ===', err.response?.data || err);
-
-            let message = 'Network error. Please try again.';
-            if (err.response?.status === 400 || err.response?.data?.message) {
-                message = err.response?.data?.message || 'The OTP you entered is incorrect or expired. Please try again.';
-            }
-
-            showCustomError('Verification Failed', message);
-
-        } finally {
-            console.log('=== OTP Verification Finished ===');
-            setIsVerifying(false);
+            console.error("Error fetching groups:", err.response?.data || err.message);
         }
     };
 
+    useFocusEffect(
+        useCallback(() => {
+            if (token) {
+                fetchAllContacts();
+                fetchAllGroups();
+            }
+        }, [token])
+    );
 
     useEffect(() => {
-        const checkToken = async () => {
-            try {
-                const storedToken = await AsyncStorage.getItem('TOKEN');
-                if (storedToken) {
-                    console.log("Found stored token. Auto-logging in...");
-                    dispatch(setToken({ token: storedToken }));
-                    
-                    // FIX: Also fetch user details on auto-login using the stored token
-                    await fetchStudentDetails(storedToken);
+        if (token) {
+            setIsLoading(true);
+            Promise.all([fetchAllContacts(), fetchAllGroups()])
+                .catch((e) => console.error(e))
+                .finally(() => setIsLoading(false));
+        }
+    }, [token]);
 
-                    // Navigate only after attempting to fetch user details
-                    navigation.reset({ index: 0, routes: [{ name: "StudentChats" }] });
-                }
-            } catch (e) {
-                console.error("Failed to retrieve token from storage:", e);
-            }
-        };
-
-        checkToken();
-    }, []);
+    const ListLoadingOrError = () => {
+        if (isLoading)
+            return (
+                <View style={styles.centeredMessage}>
+                    <ActivityIndicator size="large" color="#075E54" />
+                    <Text style={styles.messageTextContent}>
+                        Loading student contacts & groups...
+                    </Text>
+                </View>
+            );
+        if (error)
+            return (
+                <View style={styles.centeredMessage}>
+                    <Ionicons
+                        name="alert-circle-outline"
+                        size={30}
+                        color="#FF6347"
+                        style={{ marginBottom: 10 }}
+                    />
+                    <Text style={styles.messageTextContent}>Error: {error}</Text>
+                    <TouchableOpacity
+                        onPress={() => {
+                            fetchAllContacts();
+                            fetchAllGroups();
+                        }}
+                        style={styles.retryButton}
+                    >
+                        <Text style={styles.retryButtonText}>Retry</Text>
+                    </TouchableOpacity>
+                </View>
+            );
+        return null;
+    };
 
     return (
-        <KeyboardAvoidingView
-            style={styles.container}
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        <MainLayout
+            activeTab="StudentChats"
+            showRightContent={showUserProfile}
+            rightContent={
+                selectedChannel ? (
+                    <UserProfileScreen
+                        userProfile={{
+                            name: selectedChannel.name,
+                            email: selectedChannel.lastMessage.replace("Email: ", ""),
+                            phone: "+91 98765 43210",
+                            bio: "Sample bio.",
+                            fatherName: "Father Name",
+                            operator: "John Doe",
+                            department: "Sales",
+                        }}
+                        onClose={() => setShowUserProfile(false)}
+                    />
+                ) : null
+            }
         >
-            <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-                <View style={styles.card}>
-                    <View style={styles.headerRow}>
-                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButtonHitSlop}>
-                            <Ionicons name="chevron-back" size={22} color="#212121" />
-                        </TouchableOpacity>
-                        <Text style={styles.headerTitle}>Student Login</Text>
-                        <View style={{ width: 22 }} />
-                    </View>
+            <View style={styles.container}>
+                <View style={styles.rootRow}>
+                    <View style={styles.listColumn}>
+                        <View style={styles.header}>
+                            <WebBackButton />
+                            <Text style={styles.headerTitle}>Chats</Text>
+                        </View>
 
-                    <View style={styles.tabsContainer}>
-                        <TouchableOpacity
-                            style={[styles.tab, activeTab === 'new' && styles.tabActive]}
-                            activeOpacity={0.8}
-                            onPress={() => setActiveTab('new')}
-                        >
-                            <Text style={[styles.tabText, activeTab === 'new' && styles.tabTextActive]}>New Member</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            style={[styles.tab, activeTab === 'old' && styles.tabActive]}
-                            activeOpacity={0.8}
-                            onPress={() => setActiveTab('old')}
-                        >
-                            <Text style={[styles.tabText, activeTab === 'old' && styles.tabTextActive]}>Old Member</Text>
-                        </TouchableOpacity>
-                    </View>
-
-                    {activeTab === 'old' && (
-                        <>
-                            <Text style={styles.subtitle}>{isAdmin ? 'Admin Login' : 'Login with your Email'}</Text>
-
+                        <View style={styles.searchContainer}>
+                            <MaterialIcons
+                                name="search"
+                                size={20}
+                                color="#666"
+                                style={styles.searchIcon}
+                            />
                             <TextInput
-                                style={styles.input}
-                                value={email}
-                                onChangeText={setEmail}
-                                placeholder="Enter your email"
-                                placeholderTextColor="#757575"
-                                keyboardType="email-address"
-                                autoCapitalize="none"
+                                placeholder="Ask Meta AI or Search"
+                                value={searchText}
+                                onChangeText={setSearchText}
+                                style={styles.searchInput}
                             />
 
-                            {isAdmin ? (
-                                <>
-                                    <TextInput
-                                        style={styles.input}
-                                        value={password}
-                                        onChangeText={setPassword}
-                                        placeholder="Admin password"
-                                        placeholderTextColor="#757575"
-                                        secureTextEntry
-                                    />
-                                    <TouchableOpacity style={styles.loginButton} onPress={handleSendOtp}>
-                                        <Text style={styles.loginButtonText}>Login as Admin</Text>
-                                    </TouchableOpacity>
-                                </>
-                            ) : (
-                                <TouchableOpacity
-                                    style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
-                                    onPress={handleSendOtp}
-                                    disabled={isLoading}
-                                >
-                                    <Text style={styles.loginButtonText}>
-                                        {isLoading ? 'Sending OTP...' : 'Send OTP'}
-                                    </Text>
-                                </TouchableOpacity>
-                            )}
-                        </>
-                    )}
+                            <TouchableOpacity
+                                style={styles.attachButton}
+                                onPress={() => setShowAddMemberModal(true)}
+                            >
+                                <Ionicons name="add" size={30} color="#000" />
+                            </TouchableOpacity>
 
-                    {activeTab === 'new' && (
-                        <View style={{ maxHeight: 520, overflow: 'hidden' }}>
-                            <StudentSignupScreen />
+                            <TouchableOpacity
+                                style={styles.cameraButton}
+                                onPress={() => navigation.navigate("Camera")}
+                            >
+                                <Ionicons name="camera" size={20} color="#0a0a0aff" />
+                            </TouchableOpacity>
                         </View>
-                    )}
-                </View>
-            </ScrollView>
 
-            {/* OTP Entry Modal (Existing, Unchanged) */}
-            <Modal
-                visible={showOtpModal}
-                animationType="fade"
-                transparent
-                onRequestClose={() => {
-                    setShowOtpModal(false);
-                }}
-            >
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalBox}>
-                        <Text style={styles.modalTitle}>Enter OTP</Text>
-                        <Text style={styles.modalSubtitle}>OTP sent to {email}</Text>
-                        <TextInput
-                            ref={otpInputRef}
-                            style={styles.input}
-                            value={otp}
-                            onChangeText={setOtp}
-                            placeholder="Enter 6-digit OTP"
-                            placeholderTextColor="#757575"
-                            keyboardType="number-pad"
-                            maxLength={6}
-                            autoFocus
-                            editable={!isVerifying}
+                        <TopTabNavigation onTabChange={handleTabChange} />
+                        <ListLoadingOrError />
+
+                        <FlatList
+                            data={filteredChannels}
+                            keyExtractor={(item) => item.id}
+                            renderItem={({ item }) => (
+                                <ChannelItemWithLongPress
+                                    channel={{
+                                        id: item.id,
+                                        name: item.name,
+                                        lastMessage: item.lastMessage,
+                                        timestamp: item.time,
+                                        unread: item.unread,
+                                        isGroup: item.type === "group",
+                                        isPinned: item.isPinned,
+                                    }}
+                                    onPress={() => handleChannelPress(item)}
+                                    onUpdate={() => fetchAllContacts()}
+                                />
+                            )}
+                            ListEmptyComponent={
+                                !isLoading && !error && filteredChannels.length === 0 ? (
+                                    <View style={styles.centeredMessage}>
+                                        <Text style={styles.messageTextContent}>
+                                            No student contacts or groups found.
+                                        </Text>
+                                    </View>
+                                ) : null
+                            }
                         />
-                        <TouchableOpacity
-                            style={[styles.loginButton, isVerifying && styles.loginButtonDisabled]}
-                            onPress={handleVerifyOtp}
-                            disabled={isVerifying}
-                        >
-                            <Text style={styles.loginButtonText}>
-                                {isVerifying ? 'Verifying...' : 'Verify OTP'}
-                            </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            onPress={() => {
-                                setShowOtpModal(false);
-                                setOtp('');
-                            }}
-                            disabled={isVerifying}
-                        >
-                            <Text style={[styles.cancelText, isVerifying && { opacity: 0.5 }]}>Cancel</Text>
-                        </TouchableOpacity>
+                    </View>
+
+                    <View style={styles.chatColumn}>
+                        {selectedChannel ? (
+                            <ChatThread
+                                channel={selectedChannel}
+                                onOpenProfile={() => setShowUserProfile(true)}
+                                onGroupCreated={handleGroupCreated}
+                            />
+                        ) : (
+                            <View style={styles.emptyChat}>
+                                <Text style={styles.emptyChatText}>
+                                    Select a chat to start messaging
+                                </Text>
+                            </View>
+                        )}
                     </View>
                 </View>
-            </Modal>
+            </View>
 
-            {/* Success Modal (Used for OTP sent confirmation) */}
-            <SuccessModal
-                isVisible={showSuccessModal}
-                title="Success!"
-                message={successMessage}
-                onClose={() => setShowSuccessModal(false)}
-            />
 
-            {/* Error Modal (Used for validation, send failure, verify failure, admin failure) */}
-            <ErrorModal
-                isVisible={showErrorModal}
-                title={errorModalTitle}
-                message={errorMessage}
-                onClose={() => setShowErrorModal(false)}
-            />
-        </KeyboardAvoidingView>
+        </MainLayout>
     );
 };
 
-export default AdvancedLoginScreen;
+export default StudentChatsScreen;
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#fff' },
-    content: { flexGrow: 1, paddingHorizontal: 24, justifyContent: 'center' },
-    card: {
-        backgroundColor: '#ffffff',
-        borderRadius: 16,
-        shadowColor: '#000',
-        shadowOpacity: 0.08,
-        shadowRadius: 12,
-        shadowOffset: { width: 0, height: 4 },
-        elevation: 4,
-        paddingVertical: 22,
-        paddingHorizontal: 20,
-        width: '90%',
-        alignSelf: 'center',
-        maxWidth: 520,
+    container: { flex: 1, backgroundColor: "#e6ecf3" },
+    header: {
+        flexDirection: "row",
+        alignItems: "center",
+        padding: 14,
+        backgroundColor: "#ffffff",
+        borderBottomLeftRadius: 22,
+        borderBottomRightRadius: 22,
+        elevation: 10,
     },
-    headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
-    backButtonHitSlop: { padding: 4 },
-    headerTitle: { fontSize: 18, fontWeight: '700', color: '#212121', textAlign: 'center' },
-    tabsContainer: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#eeeeee', paddingBottom: 8, marginBottom: 18 },
-    tab: { width: '50%', alignItems: 'center', paddingBottom: 8 },
-    tabActive: { borderBottomWidth: 2, borderBottomColor: '#4a90e2' },
-    tabText: { fontSize: 14, color: '#9e9e9e', fontWeight: '600' },
-    tabTextActive: { color: '#4a90e2' },
-    title: {
-        fontSize: 26,
-        fontWeight: 'bold',
-        color: '#212121',
-        marginBottom: 8,
-        textAlign: 'center',
+    attachButton: { marginRight: 8 },
+    headerTitle: { fontSize: 18, fontWeight: "600", color: "#075E54" },
+    rootRow: { flex: 1, flexDirection: "row" },
+    listColumn: {
+        width: 400,
+        maxWidth: 450,
+        minWidth: 260,
+        borderRightWidth: 1,
+        borderRightColor: "#e2e6ea",
+        backgroundColor: "#fefefe",
     },
-    subtitle: {
-        fontSize: 16,
-        color: '#757575',
-        textAlign: 'center',
-        marginBottom: 32,
-    },
-    input: {
-        backgroundColor: '#f5f5f5',
-        borderRadius: 8,
-        paddingHorizontal: 16,
-        paddingVertical: 14,
-        fontSize: 16,
-        color: '#212121',
-        marginBottom: 20,
-        borderWidth: 1,
-        borderColor: '#e0e0e0',
-    },
-    loginButton: {
-        backgroundColor: '#e1e2e2ff',
-        borderRadius: 8,
-        paddingVertical: 14,
-        alignItems: 'center',
-        marginBottom: 16,
-    },
-    loginButtonDisabled: { backgroundColor: '#b0bec5' },
-    loginButtonText: { fontSize: 16, fontWeight: '600', color: '#000000ff', paddingLeft: 30, paddingRight: 30 },
-    modalOverlay: {
+    chatColumn: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.3)',
-        justifyContent: 'center',
-        alignItems: 'center',
+        backgroundColor: "#f9fbfd",
+        borderLeftWidth: 1,
+        borderLeftColor: "#dde2e8",
     },
-    modalBox: {
-        backgroundColor: '#fff',
-        width: '45%',
-        borderRadius: 12,
-        padding: 24,
-        elevation: 5,
-        alignItems: 'center', // Added for centering icon/text
+    searchContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "rgba(255,255,255,0.8)",
+        marginHorizontal: 20,
+        marginVertical: 10,
+        borderRadius: 25,
+        paddingHorizontal: 18,
+        paddingVertical: 8,
     },
-    modalTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: '#212121',
-        textAlign: 'center',
-        marginBottom: 8,
+    searchIcon: { marginRight: 12, color: "#333" },
+    searchInput: { flex: 1, fontSize: 16, color: "#000" },
+    cameraButton: {
+        width: 42,
+        height: 42,
+        borderRadius: 21,
+        backgroundColor: "#e8eaf0",
+        justifyContent: "center",
+        alignItems: "center",
+        marginRight: 8,
     },
-    modalSubtitle: {
-        fontSize: 14,
-        color: '#757575',
-        textAlign: 'center',
-        marginBottom: 16,
+    emptyChat: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        backgroundColor: "#f2f6fa",
     },
-    modalIcon: {
-        marginBottom: 10,
+    emptyChatText: { color: "#64748b", fontSize: 15, fontWeight: "500" },
+    centeredMessage: { justifyContent: "center", alignItems: "center", padding: 20, marginTop: 50 },
+    messageTextContent: { marginTop: 10, fontSize: 15, color: "#555", textAlign: "center" },
+    retryButton: {
+        backgroundColor: "#075E54",
+        paddingVertical: 8,
+        paddingHorizontal: 15,
+        borderRadius: 8,
+        marginTop: 15,
     },
-    cancelText: {
-        fontSize: 15,
-        color: '#4a90e2',
-        textAlign: 'center',
-        marginTop: 10,
-    },
+    retryButtonText: { color: "#fff", fontWeight: "600" },
 });

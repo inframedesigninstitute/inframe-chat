@@ -58,36 +58,37 @@ const ChannelItemWithLongPress: React.FC<ChannelItemWithLongPressProps> = ({
     }
   };
 
- const handleDelete = async (mId: string) => {
-  try {
-    const { data } = await axios.post(
-      `${API_BASE_URL}/main-admin/remove-member/${mId}`,
-      {},
-      {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+  const handleDelete = async (mId: string) => {
+    console.log(token,mId)
+    try {
+      const { data } = await axios.post(
+        `${API_BASE_URL}/main-admin/remove-member/${mId}`,
+        {},
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      console.log("Delete API response:", data);
+
+      if (data.status === 1) {
+        onDelete(mId);
+        console.log("Delete clicked, mId sfsadf");
+        Alert.alert('Success', 'Member removed successfully');
+      } else {
+        Alert.alert('Error', data.msg || 'Failed to remove member');
       }
-    );
-
-    console.log("Delete API response:", data);
-
-    if (data.status === 1) {
-      onDelete(mId);
-      console.log("Delete clicked, mId sfsadf");
-      Alert.alert('Success', 'Member removed successfully');
-    } else {
-      Alert.alert('Error', data.msg || 'Failed to remove member');
+    } catch (error) {
+      console.error("Error deleting member:", error);
+      Alert.alert('Error', 'An error occurred while removing the member');
+    } finally {
+      setShowActions(false);
     }
-  } catch (error) {
-    console.error("Error deleting member:", error);
-    Alert.alert('Error', 'An error occurred while removing the member');
-  } finally {
-    setShowActions(false);
-  }
-};
- 
+  };
+
 
   return (
     <>

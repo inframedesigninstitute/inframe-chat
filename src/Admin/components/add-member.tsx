@@ -264,9 +264,9 @@ useEffect(() => {
       const response = await axios.post(
         API_URL,
         {
-          facultyGroupName: groupName.trim(),
-          facultyGroupDescription: groupDescription.trim(),
-          facultyGroupMembers: memberIds,
+          mainAdminGroupName: groupName.trim(),
+          mainAdminGroupDescription: groupDescription.trim(),
+          mainAdminGroupMembers: memberIds,
         },
         {
           headers: {

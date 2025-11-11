@@ -275,9 +275,11 @@ const AdminChatsScreen = () => {
         const [students, faculties] = await Promise.all([
           fetchAllStudentContacts(),
           fetchAllFacultyContacts(),
+          FacultyAllGroups(),
+
+          fetchAllGroups()
         ]);
         setRawContacts([...students, ...faculties]);
-        await Promise.all([fetchAllGroups(), FacultyAllGroups()]);
       } catch (e) {
         console.error("Data load error:", e);
       } finally {
@@ -399,7 +401,7 @@ const AdminChatsScreen = () => {
                     isPinned: item.isPinned,
                   }}
                   onPress={() => handleChannelPress(item)}
-                  onUpdate={() => {}}
+                  onUpdate={() => { }}
                   onDelete={(id) => handleDeleteChannel(id)}
                 />
               )}
