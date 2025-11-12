@@ -48,9 +48,9 @@ declare global {
   interface BlobEvent extends Event {
     readonly data: Blob
   }
-  interface MediaStream {}
-  interface MediaTrackConstraints {}
-  interface MediaRecorderOptions {}
+  interface MediaStream { }
+  interface MediaTrackConstraints { }
+  interface MediaRecorderOptions { }
 
   interface Navigator {
     mediaDevices: {
@@ -94,7 +94,7 @@ export default function ChatThread({
   const {
     messages: agoraMessages,
     isConnected,
-    error,
+
     sendMessage: agoraSendMessage,
   } = useAgoraRTM({
     channelId: channel.id,
@@ -315,7 +315,7 @@ export default function ChatThread({
           </View>
         </TouchableOpacity>
 
-        {error && <Text style={styles.errorText}>{error}</Text>}
+
 
         <View style={styles.headerActions}>
           <TouchableOpacity style={styles.actionButton}>

@@ -1,131 +1,107 @@
-"use client"
-declare const window: any
+import axios from "axios";
+import { useEffect, useRef, useState } from "react";
+declare const window: any;
 
-import { useCallback, useEffect, useRef, useState } from "react"
-import { generateAgoraToken, saveMessage } from "../services/agoraService"
-
-interface UseAgoraRTMParams {
-  channelId: string
-  userId: string
-  userName: string
+interface UseAgoraRTMProps {
+  channelId: string;
+  userId: string;
+  userName: string;
 }
 
-export interface Message {
-  id: string
-  text: string
-  userId: string
-  userName: string
-  timestamp: string
-  isSent: boolean
-  targetUserId?: string // optional for private messages
-}
+export const useAgoraRTM = ({ channelId, userId, userName }: UseAgoraRTMProps) => {
+  const [client, setClient] = useState<any>(null);
+  const [channel, setChannel] = useState<any>(null);
+  const [messages, setMessages] = useState<any[]>([]);
+  const [receivedMessage, setReceivedMessage] = useState<string | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
+  const tokenRef = useRef<string>("");
 
-export const useAgoraRTM = ({ channelId, userId, userName }: UseAgoraRTMParams) => {
-  const clientRef = useRef<any>(null)
-  const channelRef = useRef<any>(null)
-  const [messages, setMessages] = useState<Message[]>([])
-  const [isConnected, setIsConnected] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  const initializeClient = useCallback(async () => {
+  // ✅ Fetch RTM token from backend
+  const getRTMToken = async (uid: string) => {
     try {
-      if (typeof window === "undefined") return
-
-      const AgoraRTM = (await import("agora-rtm-sdk")).default || (await import("agora-rtm-sdk"))
-      const token = await generateAgoraToken(userId)
-
-      const client = AgoraRTM.createInstance(process.env.REACT_APP_AGORA_APP_ID as string)
-      clientRef.current = client
-
-      await client.login({ uid: userId, token })
-      const channel = client.createChannel(channelId)
-      channelRef.current = channel
-
-      // Listen to channel messages
-      channel.on("ChannelMessage", (msg: any, memberId: string) => {
-        try {
-          const parsed = JSON.parse(msg.text)
-          const newMessage: Message = {
-            id: Date.now().toString(),
-            text: parsed.text,
-            userId: memberId,
-            userName: parsed.userName || "Unknown",
-            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-            isSent: memberId === userId,
-          }
-          setMessages((prev) => [...prev, newMessage])
-        } catch {
-          console.error("Invalid message JSON")
-        }
-      })
-
-      await channel.join()
-      setIsConnected(true)
-      setError(null)
-    } catch (err) {
-      console.error("Agora RTM init error:", err)
-      setError(err instanceof Error ? err.message : "Failed to init Agora RTM")
-    }
-  }, [channelId, userId])
-
-  const sendMessage = useCallback(
-    async (text: string, targetUserId?: string) => {
-      if (!channelRef.current || !isConnected) return false
-      try {
-        const data = JSON.stringify({ text, userName })
-        if (targetUserId) {
-          // Send private message
-          await clientRef.current.sendMessageToPeer({ text: data }, targetUserId)
-        } else {
-          await channelRef.current.sendMessage({ text: data })
-        }
-
-        const newMessage: Message = {
-          id: Date.now().toString(),
-          text,
-          userId,
-          userName,
-          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-          isSent: true,
-          targetUserId,
-        }
-
-        setMessages((prev) => [...prev, newMessage])
-        await saveMessage({
-          channelId,
-          userId,
-          userName,
-          text,
-          timestamp: new Date().toISOString(),
-          
-        })
-
-        return true
-      } catch (err) {
-        console.error("Agora RTM send error:", err)
-        setError(err instanceof Error ? err.message : "Failed to send message")
-        return false
+      const res = await axios.post("http://localhost:5200/agora/generate-rtm-token", { uid });
+      if (res.data?.agoraToken) {
+        tokenRef.current = res.data.agoraToken;
+        return res.data.agoraToken;
+      } else {
+        console.error("RTM token fetch failed:", res.data);
+        return null;
       }
-    },
-    [channelId, userId, userName, isConnected]
-  )
-
-  const disconnect = useCallback(async () => {
-    try {
-      if (channelRef.current) await channelRef.current.leave()
-      if (clientRef.current) await clientRef.current.logout()
-      setIsConnected(false)
     } catch (err) {
-      console.error("Agora RTM disconnect error:", err)
+      console.error("RTM token error:", err);
+      return null;
     }
-  }, [])
+  };
 
+  // ✅ Initialize Agora RTM client
   useEffect(() => {
-    initializeClient()
-    return () => {
-      void disconnect()
-    }
-  }, [initializeClient, disconnect])
+    let AgoraRTM: any;
 
-  return { messages, isConnected, error, sendMessage, disconnect }
-}
+    const initAgora = async () => {
+      try {
+        // ⛔ Only load AgoraRTM on client (window defined)
+        if (typeof window === "undefined") return;
+
+        const mod = await import("agora-rtm-sdk");
+        AgoraRTM = mod.default || mod;
+
+        const token = await getRTMToken(userId);
+        if (!token) {
+          console.error("No RTM token received");
+          return;
+        }
+
+        const rtmClient = AgoraRTM.createInstance("20e5fa9e1eb24b799e01c45eaca5c901");
+        await rtmClient.login({ uid: userId, token });
+        setClient(rtmClient);
+        setIsConnected(true);
+        console.log("Agora RTM login success ✅");
+
+        const rtmChannel = await rtmClient.createChannel(channelId);
+        await rtmChannel.join();
+        setChannel(rtmChannel);
+        console.log("Joined channel:", channelId);
+
+        rtmChannel.on("ChannelMessage", (message: any, memberId: string) => {
+          console.log("Received message:", message.text, "from", memberId);
+          setReceivedMessage(message.text);
+        });
+      } catch (error) {
+        console.error("Agora RTM init error:", error);
+      }
+    };
+
+    initAgora();
+
+    return () => {
+      const cleanup = async () => {
+        if (channel) await channel.leave();
+        if (client) await client.logout();
+      };
+      cleanup();
+    };
+  }, [channelId]);
+
+  // ✅ Send message
+  const sendMessage = async (message: string) => {
+    try {
+      if (!channel) return false;
+      await channel.sendMessage({ text: message });
+      setMessages((prev) => [...prev, message]);
+      console.log("Message sent:", message);
+      return true;
+    } catch (error) {
+      console.error("Send message error:", error);
+      return false;
+    }
+  };
+
+  return {
+    client,
+    channel,
+    messages,
+    receivedMessage,
+    sendMessage,
+    isConnected,
+  };
+};
