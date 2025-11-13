@@ -32,6 +32,11 @@ import MessageOptionsModal from "./MessageOptionsModal"
 import QuizPollModal from "./QuizPollModal"
 import AddMemberModal from "./add-member"
 
+// --- Newly added imports for API integration ---
+import AsyncStorage from "@react-native-async-storage/async-storage"
+import axios from "axios"
+// --------------------------------------------------
+
 declare global {
   interface MediaStreamConstraints {
     video?: boolean | MediaTrackConstraints
@@ -82,7 +87,7 @@ export default function ChatThread({
   userId = "user123",
   userName = "You",
 }: {
-  channel: { id: string; name: string }
+  channel: { id: string; name: string; userType?: string } // note: userType optional, if you pass it backend will use it
   onOpenProfile: () => void
   onGroupCreated?: (group: any) => void
   userId?: string
@@ -102,6 +107,7 @@ export default function ChatThread({
     userName,
   })
 
+  // initial sample messages (kept as you had them)
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
@@ -128,6 +134,76 @@ export default function ChatThread({
   const [showAddMemberModal, setShowAddMemberModal] = useState(false)
   const [chatMembers, setChatMembers] = useState<string[]>([])
 
+  // ----------------- API CONFIG -----------------
+  const API_BASE = (process.env.BACKEND_URL as string) || "http://localhost:5200" // change to your backend url if needed
+
+  // helper to find a saved auth token (tries common keys)
+  const getAuthToken = async (): Promise<string | null> => {
+    try {
+      const possibleKeys = ["token", "authToken", "studentToken", "facultyToken", "AdminToken"]
+      for (const key of possibleKeys) {
+        const t = await AsyncStorage.getItem(key)
+        if (t) return t
+      }
+      return null
+    } catch (err) {
+      console.warn("getAuthToken error", err)
+      return null
+    }
+  }
+  // ------------------------------------------------
+
+  // Fetch chat history from backend when component mounts or channel changes
+  useEffect(() => {
+    let mounted = true
+
+    const fetchHistory = async () => {
+      try {
+        const token = await getAuthToken()
+        // assume route: GET /api/messages/:userType/:userId
+        const otherUserId = channel?.id
+        const otherUserType = (channel?.userType || "student").toLowerCase() // default to 'student' if not provided
+        if (!otherUserId) return
+
+        const url = `${API_BASE}/api/messages/${otherUserType}/${otherUserId}`
+        const headers = token ? { Authorization: `Bearer ${token}` } : undefined
+
+        const res = await axios.get(url, { headers })
+        // If backend wraps in { status, msg, data } then adjust accordingly. Here we expect array of messages in res.data or res.data.data
+        const msgs = Array.isArray(res.data) ? res.data : res.data?.data ?? []
+        if (!mounted) return
+
+        // map backend message shape -> Message (keep your isSent logic)
+        const converted = msgs.map((m: any) => ({
+          id: String(m._id ?? m.id ?? Date.now()), // fallback id
+          text: m.text ?? "",
+          isSent: String(m.senderId) === String(userId), // determine sent vs received
+          timestamp:
+            m.timestamp && typeof m.timestamp === "string"
+              ? m.timestamp
+              : m.timestamp
+              ? new Date(m.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+              : new Date(m.createdAt ?? Date.now()).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          status: "read" as const,
+          userName: m.senderName ?? (String(m.senderId) === String(userId) ? userName : channel?.name ?? "User"),
+        }))
+
+        // Replace initial sample messages with fetched history
+        setMessages(converted)
+      } catch (err) {
+        console.error("Failed to fetch chat history:", err)
+        // keep existing messages if fetch fails
+      }
+    }
+
+    fetchHistory()
+
+    return () => {
+      mounted = false
+    }
+  }, [channel?.id]) // re-run if channel changes
+
+  // Merge in realtime agora messages — append (not overwrite)
   useEffect(() => {
     if (agoraMessages.length > 0) {
       const convertedMessages = agoraMessages.map((msg) => ({
@@ -138,7 +214,13 @@ export default function ChatThread({
         status: "read" as const,
         userName: msg.userName,
       }))
-      setMessages(convertedMessages)
+      // append new messages to existing list (avoid erasing history)
+      setMessages((prev) => {
+        // naive dedupe: ignore incoming messages whose id already exists
+        const existingIds = new Set(prev.map((p) => p.id))
+        const toAdd = convertedMessages.filter((c) => !existingIds.has(c.id))
+        return [...prev, ...toAdd]
+      })
     }
   }, [agoraMessages])
 
@@ -148,24 +230,54 @@ export default function ChatThread({
 
   const handleSendMessage = async () => {
     if (newMessage.trim()) {
+      // keep local message object for immediate UI response
+      const localMsg: Message = {
+        id: Date.now().toString(),
+        text: newMessage,
+        isSent: true,
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        status: "sent",
+        userName: userName,
+      }
+
       if (isConnected) {
         const success = await agoraSendMessage(newMessage)
         if (!success) {
           Alert.alert("Error", "Failed to send message via Agora RTM")
+          // still try to save to DB so it's not lost
+        } else {
+          // optionally mark as delivered locally (you can update later via read receipts)
+          localMsg.status = "delivered"
         }
       } else {
-        setMessages([
-          ...messages,
-          {
-            id: Date.now().toString(),
-            text: newMessage,
-            isSent: true,
-            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-            status: "sent",
-            userName: userName,
-          },
-        ])
+        // offline branch — still push local msg
       }
+
+      // add local message to UI immediately
+      setMessages((prev) => [...prev, localMsg])
+
+      // Attempt to save message to backend DB
+      try {
+        const token = await getAuthToken()
+        const otherUserId = channel?.id
+        const otherUserType = (channel?.userType || "student").toLowerCase()
+
+        if (otherUserId) {
+          const url = `${API_BASE}/api/messages/send`
+          const headers = token ? { Authorization: `Bearer ${token}` } : { "Content-Type": "application/json" }
+          // body according to your backend sendMsgController
+          const body = {
+            receiverId: otherUserId,
+            receiverType: otherUserType,
+            text: newMessage,
+          }
+          await axios.post(url, body, { headers })
+          // backend returns saved message — you can merge it if you want
+        }
+      } catch (err) {
+        console.error("Failed to save message to DB:", err)
+      }
+
       setNewMessage("")
     }
   }

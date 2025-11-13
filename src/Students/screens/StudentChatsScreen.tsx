@@ -6,7 +6,7 @@ import {
 } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import axios from "axios";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
     ActivityIndicator,
     FlatList,
@@ -54,14 +54,18 @@ type Channel = {
     isPinned?: boolean;
 };
 
-type FacultyChatsNavigationProp = CompositeNavigationProp<
+type StudentChatsNavigationProp = CompositeNavigationProp<
     BottomTabNavigationProp<MainTabsParamList, "StudentChats">,
     NativeStackNavigationProp<RootStackParamList>
 >;
 
 const StudentChatsScreen = () => {
-    const token = useSelector((state: RootState) => state.facultyStore.token);
-    const navigation = useNavigation<FacultyChatsNavigationProp>();
+const token = useSelector((state: RootState) => state.StudentStore.token);
+
+    // 🧩 FIX: Changed from studentData to studentId
+const userId = useSelector((state: RootState) => state.StudentStore.user?.id) || "";
+
+const navigation = useNavigation<StudentChatsNavigationProp>();
 
     const [rawContacts, setRawContacts] = useState<StudentContact[]>([]);
     const [rawGroups, setRawGroups] = useState<GroupContact[]>([]);
@@ -71,9 +75,8 @@ const StudentChatsScreen = () => {
     const [activeTab, setActiveTab] = useState("All");
     const [showUserProfile, setShowUserProfile] = useState(false);
     const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
-    const [showAddMemberModal, setShowAddMemberModal] = useState(false);
 
-    // Combine both contacts & groups
+    // ✅ Combine both contacts & groups
     const channels = useMemo<Channel[]>(() => {
         const studentChannels = rawContacts.map((contact) => ({
             id: contact.studentId,
@@ -102,7 +105,7 @@ const StudentChatsScreen = () => {
         return [...studentChannels, ...groupChannels];
     }, [rawContacts, rawGroups]);
 
-    // Filter logic
+    // ✅ Filter logic
     const filteredChannels = useMemo(() => {
         let filtered = channels;
         if (activeTab === "Unread")
@@ -139,67 +142,48 @@ const StudentChatsScreen = () => {
         });
     };
 
-    // ✅ Handle delete channel (local remove)
     const handleDeleteChannel = (id: string) => {
         setRawContacts((prev) => prev.filter((c) => c.studentId !== id));
         setRawGroups((prev) => prev.filter((g) => g.groupId !== id));
         console.log("Channel deleted:", id);
     };
 
-    // ✅ Fetch student contacts
+    // ✅ Fixed: Fetch student contacts API
     const fetchAllContacts = async () => {
         if (!token) return setError("Authentication token not found. Please log in.");
+        setIsLoading(true);
+        setError(null);
 
         try {
             const response = await axios.post(
                 `${API_BASE_URL}/student/fetch-groups-as-member`,
-                {},
+                { studentId: userId },
                 {
                     headers: {
-                        "Content-Type": "application/json",
                         Authorization: `Bearer ${token}`,
                     },
                 }
             );
 
             const data = response.data;
-            if (data?.status === 1 && data.facultyContactsList?.[0]?.facultyContacts) {
-                const contacts: StudentContact[] = data.facultyContactsList[0].facultyContacts;
-                setRawContacts(contacts);
-            } else setError(data?.msg || "Failed to load contacts data.");
-        } catch (err: any) {
-            console.error("Error fetching contacts:", err.response?.data || err.message);
-            setError("Failed to fetch contacts.");
-        }
-    };
-
-    // ✅ Fetch faculty groups
-    const fetchAllGroups = async () => {
-        if (!token) return setError("Authentication token not found. Please log in.");
-
-        try {
-            const response = await axios.post(
-                `${API_BASE_URL}/faculty/view-group`,
-                {},
-                {
-                    headers: {
-                        "Content-Type": "application/json",
-                        Authorization: `Bearer ${token}`,
-                    },
-                }
-            );
-
-            const data = response.data;
-            if (data?.status === 1 && Array.isArray(data.data)) {
-                const groups: GroupContact[] = data.data.map((g: any) => ({
-                    groupId: g._id || g.groupId || g.facultyGroupId,
-                    groupName: g.facultyGroupName || g.groupName || "Unnamed Group",
-                    membersCount: g.groupMembers?.length || 0,
+            if (data?.status === 1) {
+                const list = data?.data || [];
+                const contacts: StudentContact[] = list.map((c: any) => ({
+                    studentId: c.groupId || c._id || c.id,
+                    studentName: c.groupName || "Unknown",
+                    studentEmail: c.groupDescription || "N/A",
                 }));
-                setRawGroups(groups);
-            } else setRawGroups([]);
-        } catch (err: any) {
-            console.error("Error fetching groups:", err.response?.data || err.message);
+                setRawContacts(contacts);
+            } else {
+                setError(data?.msg || "No contacts found.");
+            }
+        } catch (err: unknown) {
+            const errorMessage =
+                err instanceof Error ? err.message : "Unknown error occurred";
+            console.error("Error fetching contacts:", errorMessage);
+            setError("Failed to fetch contacts. Check API connection.");
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -207,19 +191,9 @@ const StudentChatsScreen = () => {
         useCallback(() => {
             if (token) {
                 fetchAllContacts();
-                fetchAllGroups();
             }
         }, [token])
     );
-
-    useEffect(() => {
-        if (token) {
-            setIsLoading(true);
-            Promise.all([fetchAllContacts(), fetchAllGroups()])
-                .catch((e) => console.error(e))
-                .finally(() => setIsLoading(false));
-        }
-    }, [token]);
 
     const ListLoadingOrError = () => {
         if (isLoading)
@@ -242,10 +216,7 @@ const StudentChatsScreen = () => {
                     />
                     <Text style={styles.messageTextContent}>Error: {error}</Text>
                     <TouchableOpacity
-                        onPress={() => {
-                            fetchAllContacts();
-                            fetchAllGroups();
-                        }}
+                        onPress={() => fetchAllContacts()}
                         style={styles.retryButton}
                     >
                         <Text style={styles.retryButtonText}>Retry</Text>
@@ -298,10 +269,7 @@ const StudentChatsScreen = () => {
                                 style={styles.searchInput}
                             />
 
-                            <TouchableOpacity
-                                style={styles.attachButton}
-                                onPress={() => setShowAddMemberModal(true)}
-                            >
+                            <TouchableOpacity style={styles.attachButton}>
                                 <Ionicons name="add" size={30} color="#000" />
                             </TouchableOpacity>
 
@@ -363,8 +331,6 @@ const StudentChatsScreen = () => {
                     </View>
                 </View>
             </View>
-
-
         </MainLayout>
     );
 };
