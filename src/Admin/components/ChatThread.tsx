@@ -1,10 +1,8 @@
-"use client";
-
 import Clipboard from "@react-native-clipboard/clipboard";
-import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
+import { useNavigation, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import axios from "axios";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
     Alert,
     Dimensions,
@@ -33,7 +31,6 @@ import MessageOptionsModal from "./MessageOptionsModal";
 import QuizPollModal from "./QuizPollModal";
 import AddMemberModal from "./add-member";
 
-// Agora
 import RtmEngineClass, { MessageEvent } from "agora-react-native-rtm";
 
 const { width } = Dimensions.get("window");
@@ -49,65 +46,126 @@ interface Message {
     status: "sent" | "delivered" | "read";
 }
 
+const CURRENT_USER_ID = "6614140024479903b22b1111";
+const CURRENT_USER_TYPE = "Faculty";
+
+const RTM_TOKEN_API_URL = "http://localhost:5200/web/agora/generate-rtm-token";
+const SEND_MSG_API_URL = "http://localhost:5200/web/messages/send-msg";
+const SHOW_MSG_API_URL = "http://localhost:5200/web/messages/show-msg";
+const APP_ID = "20e5fa9e1eb24b799e01c45eaca5c901";
+
 export default function ChatThread({
     channel,
     onOpenProfile,
     onGroupCreated,
+    backendToken, // ✅ JWT token passed from login
 }: {
     channel: { id: string; name: string };
     onOpenProfile: () => void;
     onGroupCreated?: (group: any) => void;
+    backendToken: string;
 }) {
-    const route = useRoute<ChatScreenRouteProp>();
-    const navigation = useNavigation<ChatScreenNavigationProp>();
+    const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
-    // Messages per channel
-    const [messages, setMessages] = useState<{ [channelId: string]: Message[] }>({});
+    const [messages, setMessages] = useState<Message[]>([]);
     const [newMessage, setNewMessage] = useState("");
     const [showAttachments, setShowAttachments] = useState(false);
     const [modalVisible, setModalVisible] = useState(false);
     const [optionsModalVisible, setOptionsModalVisible] = useState(false);
     const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
-    const { addStarredMessage } = useStarredMessages();
     const [locationVisible, setLocationVisible] = useState<boolean>(false);
     const [showAddMemberModal, setShowAddMemberModal] = useState(false);
-    const [chatMembers, setChatMembers] = useState<string[]>([]);
 
-    // Agora
     const [rtmEngine, setRtmEngine] = useState<any>(null);
-    const APP_ID = "20e5fa9e1eb24b799e01c45eaca5c901";
-    const API_URL = "http://localhost:5200/web/agora/generate-rtm-token"; // Replace with your backend
+    const [agoraToken, setAgoraToken] = useState<string | null>(null);
+    const channelRef = useRef(channel);
+
+    const { addStarredMessage } = useStarredMessages();
 
     useEffect(() => {
+        channelRef.current = channel;
+    }, [channel]);
+
+    // --- Fetch messages from backend ---
+    const fetchMessages = useCallback(async () => {
+        if (!backendToken) {
+            Alert.alert("Authentication Error", "JWT token not available yet.");
+            return;
+        }
+
+        try {
+            const url = `${SHOW_MSG_API_URL}/${channel.id}/Student`;
+            const response = await axios.get(url, {
+                headers: { Authorization: `Bearer ${backendToken}` },
+            });
+
+            const fetchedMsgs: Message[] = response.data.map((msg: any) => ({
+                id: msg._id,
+                text: msg.text,
+                isSent: msg.senderId === CURRENT_USER_ID,
+                timestamp: new Date(msg.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                status: "read" as const,
+            }));
+
+            setMessages(fetchedMsgs);
+        } catch (error: any) {
+            if (axios.isAxiosError(error) && error.response) {
+                if (error.response.status === 401) {
+                    Alert.alert("Access Denied", "Unauthorized. Token is invalid for fetching history.");
+                } else if (error.response.status === 404) {
+                    Alert.alert("Route Error", `Cannot GET ${error.config?.url}. Check your Express server route.`);
+                }
+            }
+            console.error("Error fetching chat history:", error);
+        }
+    }, [channel.id, backendToken]);
+
+    // --- Setup Agora RTM ---
+    useEffect(() => {
         const setupAgora = async () => {
+            if (rtmEngine) {
+                try {
+                    await rtmEngine.logout();
+                    await rtmEngine.destroyClient();
+                } catch (e) {
+                    console.warn("Error cleaning up previous RTM client:", e);
+                }
+            }
+
+            fetchMessages();
+
             try {
-                const uid = `user_${Date.now()}`;
-                const { data } = await axios.post(API_URL, { uid });
+                const uid = CURRENT_USER_ID;
+                const { data } = await axios.post(RTM_TOKEN_API_URL, { uid });
                 const token = data.agoraToken;
+                setAgoraToken(token);
 
                 const engine = new (RtmEngineClass as any)();
                 await engine.createInstance(APP_ID);
-                await engine.loginV2(token, uid);
-                await engine.joinChannel(channel.id);
 
-                engine.addListener("MessageReceived", (msg: MessageEvent) => {
+                engine.addListener("MessageReceived", (event: MessageEvent) => {
+                    const msg = event as any;
+                    const receivedChannelId = msg.channelId || msg.channelName;
+                    if (receivedChannelId !== channelRef.current.id) return;
+
                     const incomingMsg: Message = {
                         id: Date.now().toString(),
-                        text: (msg as any).text || (msg as any).message || "New message",
+                        text: msg.text || msg.message || "New message",
                         isSent: false,
                         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
                         status: "delivered",
                     };
 
-                    setMessages(prev => ({
-                        ...prev,
-                        [channel.id]: [...(prev[channel.id] || []), incomingMsg],
-                    }));
+                    setMessages(prev => [...prev, incomingMsg]);
                 });
+
+                await engine.loginV2(token, uid);
+                await engine.joinChannel(channel.id);
 
                 setRtmEngine(engine);
             } catch (err) {
-                console.log("Agora setup error:", err);
+                console.error("Agora RTM setup error:", err);
+                Alert.alert("RTM Init Error", "Failed to initialize RTM engine.");
             }
         };
 
@@ -119,31 +177,59 @@ export default function ChatThread({
                 rtmEngine.destroyClient();
             }
         };
-    }, [channel.id]);
+    }, [channel.id, fetchMessages]);
 
+    // --- Send message ---
     const handleSendMessage = async () => {
         if (!newMessage.trim()) return;
 
+        const messageText = newMessage.trim();
+        const tempId = Date.now().toString();
+
         const newMsg: Message = {
-            id: Date.now().toString(),
-            text: newMessage,
+            id: tempId,
+            text: messageText,
             isSent: true,
             timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
             status: "sent",
         };
 
-        setMessages(prev => ({
-            ...prev,
-            [channel.id]: [...(prev[channel.id] || []), newMsg],
-        }));
+        setMessages(prev => [...prev, newMsg]);
+        setNewMessage("");
 
-        if (rtmEngine) {
-            await rtmEngine.sendMessageToChannel({ text: newMessage }, channel.id);
+        // Send via RTM
+        if (rtmEngine && agoraToken) {
+            try {
+                await rtmEngine.sendMessageToChannel({ text: messageText }, channel.id);
+            } catch (e) {
+                console.error("RTM Send Error:", e);
+            }
+        } else {
+            Alert.alert("Error", "RTM Engine not initialized. Message sent only to DB.");
         }
 
-        setNewMessage("");
+        // Send to backend
+        try {
+            if (!backendToken) throw new Error("Backend JWT missing");
+
+            const response = await axios.post(SEND_MSG_API_URL, {
+                receiverId: channel.id,
+                receiverType: "Student",
+                text: messageText,
+            }, {
+                headers: { Authorization: `Bearer ${backendToken}` },
+            });
+
+            setMessages(prev => prev.map(msg =>
+                msg.id === tempId ? { ...msg, id: response.data._id, status: 'delivered' } : msg
+            ));
+        } catch (e) {
+            console.error("DB Send Error:", e);
+            Alert.alert("Persistence Failed", "Message sent real-time but failed to save in the database.");
+        }
     };
 
+    // --- Other handlers remain intact ---
     const handleOpenCamera = () => navigation.navigate("Camera");
 
     const handleDocument = () => {
@@ -155,16 +241,8 @@ export default function ChatThread({
                 timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
                 status: "sent",
             };
-            setMessages(prev => ({
-                ...prev,
-                [channel.id]: [...(prev[channel.id] || []), docMsg],
-            }));
+            setMessages(prev => [...prev, docMsg]);
         });
-    };
-
-    const handleAddMember = (contact: { id: string; name: string; phone: string }) => {
-        setChatMembers(prev => [...prev, contact.id]);
-        Alert.alert("Success", `${contact.name} added to the chat`);
     };
 
     const handleSendLocation = (coords: { latitude: number; longitude: number }) => {
@@ -175,10 +253,7 @@ export default function ChatThread({
             timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
             status: "sent",
         };
-        setMessages(prev => ({
-            ...prev,
-            [channel.id]: [...(prev[channel.id] || []), locationMessage],
-        }));
+        setMessages(prev => [...prev, locationMessage]);
         setLocationVisible(false);
     };
 
@@ -193,11 +268,26 @@ export default function ChatThread({
                 timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
                 status: "sent",
             };
-            setMessages(prev => ({
-                ...prev,
-                [channel.id]: [...(prev[channel.id] || []), message],
-            }));
+            setMessages(prev => [...prev, message]);
         });
+    };
+
+    const handleGroupCreation = (members: any) => {
+        if (!Array.isArray(members) || members.length === 0) {
+            Alert.alert("Error", "No members selected for group creation.");
+            setShowAddMemberModal(false);
+            return;
+        }
+
+        const newGroup = {
+            id: `group_${Date.now()}`,
+            name: `Group with ${members.length} members`,
+            members: members.map((m: any) => m.id),
+        };
+        Alert.alert("Group Created", `Group ${newGroup.name} created with ${members.length} members.`);
+
+        onGroupCreated?.(newGroup);
+        setShowAddMemberModal(false);
     };
 
     const renderMessage = ({ item }: { item: Message }) => (
@@ -226,9 +316,9 @@ export default function ChatThread({
         </TouchableOpacity>
     );
 
+
     return (
         <SafeAreaView style={styles.container}>
-            {/* Header */}
             <View style={styles.header}>
                 <BackButton />
                 <TouchableOpacity style={styles.contactInfo} onPress={onOpenProfile}>
@@ -259,7 +349,7 @@ export default function ChatThread({
 
             <KeyboardAvoidingView style={styles.messagesContainer} behavior={Platform.OS === "ios" ? "padding" : "height"}>
                 <FlatList
-                    data={messages[channel.id] || []}
+                    data={messages}
                     keyExtractor={(item) => item.id}
                     renderItem={renderMessage}
                     style={styles.messagesList}
@@ -270,7 +360,6 @@ export default function ChatThread({
                     <Ionicons name="add" size={36} color="#000" />
                 </TouchableOpacity>
 
-                {/* Input Field */}
                 <View style={styles.inputContainer}>
                     <TouchableOpacity style={styles.attachButton} onPress={() => setShowAttachments(!showAttachments)}>
                         <Ionicons name="add" size={26} color="#000" />
@@ -298,7 +387,6 @@ export default function ChatThread({
                 </View>
             </KeyboardAvoidingView>
 
-            {/* Modals */}
             <MessageOptionsModal
                 visible={optionsModalVisible}
                 onClose={() => setOptionsModalVisible(false)}
@@ -333,10 +421,7 @@ export default function ChatThread({
                     }
                 }}
                 onDelete={() => {
-                    setMessages(prev => ({
-                        ...prev,
-                        [channel.id]: prev[channel.id]?.filter((msg) => msg.id !== selectedMessage?.id) || [],
-                    }));
+                    setMessages(prev => prev.filter((msg) => msg.id !== selectedMessage?.id));
                     setOptionsModalVisible(false);
                 }}
                 isPinned={false}
@@ -400,10 +485,7 @@ export default function ChatThread({
             <AddMemberModal
                 visible={showAddMemberModal}
                 onClose={() => setShowAddMemberModal(false)}
-                onGroupCreated={(group) => {
-                    onGroupCreated?.(group);
-                    setShowAddMemberModal(false);
-                }}
+                onGroupCreated={handleGroupCreation}
             />
         </SafeAreaView>
     );

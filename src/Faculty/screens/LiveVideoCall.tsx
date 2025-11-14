@@ -1,7 +1,6 @@
 // import { useRoute } from "@react-navigation/native";
-// import { useCallback, useEffect, useState } from "react";
+// import { useEffect, useState } from "react";
 // import {
-//   Alert,
 //   PermissionsAndroid,
 //   Platform,
 //   StyleSheet,
@@ -10,15 +9,29 @@
 //   View,
 // } from "react-native";
 
-// // Define placeholders for Agora variables
-// let RtcSurfaceView: any = View; // Use View as a safe fallback for JSX
-// let createAgoraRtcEngine: any = () => null;
-// let ChannelProfileType: any = {};
-// let ClientRoleType: any = {};
-// let IRtcEngine: any = null;
+// // Define Native Agora Imports (only for native platforms)
+// let RtcSurfaceView: any;
+// let createAgoraRtcEngine: any;
+// let ChannelProfileType: any;
+// let ClientRoleType: any;
+// let IRtcEngine: any;
 
 // const isNative = Platform.OS === 'android' || Platform.OS === 'ios';
 
+// if (isNative) {
+//   try {
+//     const agora = require("react-native-agora");
+//     RtcSurfaceView = agora.RtcSurfaceView;
+//     createAgoraRtcEngine = agora.createAgoraRtcEngine;
+//     ChannelProfileType = agora.ChannelProfileType;
+//     ClientRoleType = agora.ClientRoleType;
+//     IRtcEngine = agora.IRtcEngine;
+//   } catch (e) {
+//     console.error("Failed to load react-native-agora on native device:", e);
+//   }
+// }
+
+// // 👉 Replace with your actual Agora credentials
 // const APP_ID = "20e5fa9e1eb24b799e01c45eaca5c901";
 // const TOKEN: string = "";
 
@@ -26,7 +39,7 @@
 // const WebFallback = () => (
 //   <View style={styles.container}>
 //     <Text style={styles.webFallbackText}>
-//       ⚠️ Video calling is currently only supported on **iOS and Android** devices.
+//       ⚠️ Video calling is currently only supported on iOS and Android devices.
 //     </Text>
 //   </View>
 // );
@@ -35,43 +48,29 @@
 //   const route = useRoute();
 //   const { channelName } = route.params as { channelName: string };
 
-//   const [engine, setEngine] = useState<any>(null); // Use any for dynamic engine type
+//   const [engine, setEngine] = useState<typeof IRtcEngine | null>(null);
 //   const [isJoined, setIsJoined] = useState(false);
 //   const [remoteUid, setRemoteUid] = useState<number | null>(null);
-//   const [isLoading, setIsLoading] = useState(true);
 
-//   // Return fallback immediately if not native
 //   if (!isNative) {
 //     return <WebFallback />;
 //   }
   
+//   // ✅ Request Camera & Audio Permission (Android)
 //   const requestPermissions = async () => {
 //     if (Platform.OS === "android") {
-//       try {
-//         await PermissionsAndroid.requestMultiple([
-//           PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
-//           PermissionsAndroid.PERMISSIONS.CAMERA,
-//         ]);
-//       } catch (e) {
-//         Alert.alert("Permission Error", "Camera and microphone permissions are required for the call.");
-//       }
+//       await PermissionsAndroid.requestMultiple([
+//         PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+//         PermissionsAndroid.PERMISSIONS.CAMERA,
+//       ]);
 //     }
 //   };
 
-//   const initAgora = useCallback(async (channelName: string) => {
-//     if (!isNative) return;
-    
-//     setIsLoading(true);
+//   // ✅ Initialize Agora Engine
+//   useEffect(() => {
+//     if (!isNative || !createAgoraRtcEngine) return;
 
-//     try {
-//       // 1. Dynamic Import: This line is crucial for bypassing static web bundler analysis.
-//       const agora = await import("react-native-agora");
-//       RtcSurfaceView = agora.RtcSurfaceView;
-//       createAgoraRtcEngine = agora.createAgoraRtcEngine;
-//       ChannelProfileType = agora.ChannelProfileType;
-//       ClientRoleType = agora.ClientRoleType;
-//       IRtcEngine = agora.IRtcEngine;
-      
+//     const initAgora = async () => {
 //       await requestPermissions();
 
 //       const agoraEngine = createAgoraRtcEngine();
@@ -82,9 +81,11 @@
 //         channelProfile: ChannelProfileType.ChannelProfileLiveBroadcasting,
 //       });
 
+//       // ✅ Enable video and set client role
 //       agoraEngine.enableVideo();
 //       agoraEngine.setClientRole(ClientRoleType.ClientRoleBroadcaster);
 
+//       // ✅ Event Listeners
 //       agoraEngine.registerEventHandler({
 //         onJoinChannelSuccess: () => {
 //           console.log("✅ Joined Agora Channel Successfully");
@@ -100,30 +101,24 @@
 //         },
 //       });
 
+//       // ✅ Join the channel safely
 //       agoraEngine.joinChannel(TOKEN, channelName, 0, {
 //         clientRoleType: ClientRoleType.ClientRoleBroadcaster,
 //       });
+//     };
 
-//     } catch (e) {
-//       console.error("Agora Initialization Failed:", e);
-//       Alert.alert("Initialization Error", "Failed to start the video engine. Check native installation.");
-//     } finally {
-//       setIsLoading(false);
-//     }
-//   }, []);
+//     initAgora();
 
-//   useEffect(() => {
-//     initAgora(channelName);
-
+//     // ✅ Cleanup on unmount
 //     return () => {
 //       if (engine) {
 //         engine.leaveChannel();
 //         engine.release();
-//         setEngine(null);
 //       }
 //     };
-//   }, [channelName, initAgora]);
+//   }, [engine, channelName]);
 
+//   // ✅ Leave Channel
 //   const leaveChannel = () => {
 //     if (engine) {
 //       engine.leaveChannel();
@@ -132,14 +127,6 @@
 //     }
 //   };
 
-//   if (isLoading) {
-//     return (
-//       <View style={styles.container}>
-//         <Text style={styles.info}>Loading video engine...</Text>
-//       </View>
-//     );
-//   }
-
 //   return (
 //     <View style={styles.container}>
 //       <Text style={styles.heading}>🎥 Agora Live Video Call: {channelName}</Text>
@@ -147,7 +134,6 @@
 //       {isJoined ? (
 //         <>
 //           <View style={styles.videoContainer}>
-//             {/* RtcSurfaceView is now loaded via dynamic import */}
 //             <RtcSurfaceView canvas={{ uid: 0 }} style={styles.localVideo} />
 //             {remoteUid !== null && (
 //               <RtcSurfaceView canvas={{ uid: remoteUid }} style={styles.remoteVideo} />
@@ -217,7 +203,6 @@
 //     padding: 20,
 //   }
 // });
-
 import { StyleSheet, Text, View } from 'react-native'
 
 const LiveVideoCall = () => {

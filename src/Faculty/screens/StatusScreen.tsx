@@ -1,255 +1,477 @@
-import React, { useState } from 'react';
-import { 
-  View, Text, StyleSheet, ScrollView, Switch, TouchableOpacity, Modal, Dimensions 
-} from 'react-native';
-import Ionicons from 'react-native-vector-icons/Ionicons';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import { useNavigation } from '@react-navigation/native';
+import { useState } from 'react';
+import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-const { width } = Dimensions.get('window');
-const THEME_BOX_WIDTH = (width - 60) / 3;
+const BackIcon = () => <Text style={styles.iconText}>{'<'}</Text>;
+const ChevronRightIcon = () => <Text style={styles.iconText}>{'>'}</Text>;
+const CheckIcon = () => <Text style={styles.checkText}>{'✓'}</Text>;
+const RadioFilledIcon = () => <Text style={styles.radioText}>●</Text>;
+const RadioEmptyIcon = () => <Text style={styles.radioEmptyText}>○</Text>;
 
-type ThemeOption = 'System default' | 'Light' | 'Dark';
-type AppScreen = 'Chats' | 'ChatThemeSelection';
+// Type Definitions
+type ColorTheme = string;
+type NightMode = 'always' | 'scheduled' | 'device' | 'disable';
+type BackgroundType = 'color' | 'wallpaper' | 'gallery';
 
-interface ThemeDialogProps {
-  isVisible: boolean;
-  onClose: () => void;
-  currentTheme: ThemeOption;
-  onThemeSelect: (theme: ThemeOption) => void;
+interface ChatBackground {
+  type: BackgroundType;
+  value: string;
 }
 
-const ThemeDialog: React.FC<ThemeDialogProps> = ({ isVisible, onClose, currentTheme, onThemeSelect }) => {
-  const [selected, setSelected] = useState<ThemeOption>(currentTheme);
-  const handleOK = () => { onThemeSelect(selected); onClose(); };
-
-  return (
-    <Modal transparent visible={isVisible} onRequestClose={onClose} animationType="fade">
-      <View style={dialogStyles.overlay}>
-        <View style={dialogStyles.dialogContainer}>
-          <Text style={dialogStyles.title}>Choose theme</Text>
-          {['System default', 'Light', 'Dark'].map((themeName) => (
-            <TouchableOpacity
-              key={themeName}
-              style={dialogStyles.optionRow}
-              onPress={() => setSelected(themeName as ThemeOption)}
-              activeOpacity={0.7}
-            >
-              <MaterialCommunityIcons
-                name={selected === themeName ? 'radiobox-marked' : 'radiobox-blank'}
-                size={24}
-                color={selected === themeName ? '#075E54' : '#888'}
-              />
-              <Text style={dialogStyles.optionText}>{themeName}</Text>
-            </TouchableOpacity>
-          ))}
-          <View style={dialogStyles.buttonContainer}>
-            <TouchableOpacity onPress={onClose}><Text style={dialogStyles.buttonText}>CANCEL</Text></TouchableOpacity>
-            <TouchableOpacity onPress={handleOK}><Text style={dialogStyles.buttonText}>OK</Text></TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    </Modal>
-  );
-};
-
-interface SettingsItemProps {
-  iconName: string;
-  title: string;
-  subtitle?: string;
-  onPress?: () => void;
-  isToggle?: boolean;
-  toggleValue?: boolean;
-  onToggleChange?: (value: boolean) => void;
+interface AppSettings {
+  colorTheme: ColorTheme;
+  nightMode: NightMode;
+  chatBackground: ChatBackground;
 }
 
-const SettingsItem: React.FC<SettingsItemProps> = ({
-  iconName, title, subtitle, onPress, isToggle = false, toggleValue, onToggleChange,
-}) => (
-  <TouchableOpacity
-    style={styles.itemContainer}
-    onPress={onPress}
-    disabled={isToggle && !onPress}
-    activeOpacity={onPress ? 0.7 : 1}
-  >
-    <MaterialCommunityIcons name={iconName as any} size={24} color="#555" style={styles.icon} /> 
-    <View style={styles.textContainer}>
-      <Text style={styles.titleText}>{title}</Text>
-      {subtitle && <Text style={styles.subtitleText}>{subtitle}</Text>}
-    </View>
-    {isToggle && onToggleChange && (
-      <Switch
-        trackColor={{ false: '#767577', true: '#81b0ff' }}
-        thumbColor={toggleValue ? '#075E54' : '#f4f3f4'}
-        onValueChange={onToggleChange}
-        value={toggleValue}
-      />
-    )}
-  </TouchableOpacity>
-);
-
-const DUMMY_THEMES = [
-  { id: '1', label: 'Default', isSelected: true, backgroundColor: '#f0fff0', borderColor: '#075E54' },
-  { id: '2', label: 'Create with AI', isSelected: false, backgroundColor: '#f4f7fc', borderColor: '#eee' },
-  { id: '3', label: 'Green', isSelected: false, backgroundColor: '#e8f5e9', borderColor: '#eee' },
-  { id: '4', label: 'Pink/Purple', isSelected: false, backgroundColor: '#f0e0ff', borderColor: '#eee' },
-  { id: '5', label: 'Coral/Pink', isSelected: false, backgroundColor: '#ffefe0', borderColor: '#eee' },
-  { id: '6', label: 'Orange/Yellow', isSelected: false, backgroundColor: '#fff5e0', borderColor: '#eee' },
-  { id: '7', label: 'Ocean', isSelected: false, backgroundColor: '#e0f0ff', borderColor: '#eee' },
+// Data Constants
+const THEME_COLORS = [
+  { id: 'blue', color: '#4A5AC7', label: 'Blue' },
+  { id: 'pink', color: '#E91E8C', label: 'Pink' },
+  { id: 'green', color: '#1B9B6F', label: 'Green' },
+  { id: 'cyan', color: '#0099D8', label: 'Cyan' },
+  { id: 'orange', color: '#FF8C00', label: 'Orange' },
+  { id: 'teal', color: '#0B7285', label: 'Teal' },
 ];
 
-interface ChatThemeSelectionProps {
-  onBack: () => void;
-}
+const NIGHT_MODE_OPTIONS = [
+  { id: 'always', label: 'Enable always' },
+  { id: 'scheduled', label: 'Scheduled' },
+  { id: 'device', label: 'Sync with device setting' },
+  { id: 'disable', label: 'Disable' },
+];
 
-const ChatThemeSelectionScreen: React.FC<ChatThemeSelectionProps> = ({ onBack }) => {
-  const [themes, setThemes] = useState(DUMMY_THEMES);
+const BACKGROUND_COLORS = [
+  { id: 'cream', color: '#FEF5E7', label: 'Cream' },
+  { id: 'light-gray', color: '#ECEDEE', label: 'Light Gray' },
+  { id: 'light-blue', color: '#B3E5FC', label: 'Light Blue' },
+  { id: 'light-pink', color: '#F8BBD0', label: 'Light Pink' },
+  { id: 'light-coral', color: '#FFCCBC', label: 'Light Coral' },
+  { id: 'periwinkle', color: '#C5CAE9', label: 'Periwinkle' },
+];
 
-  const handleThemeSelect = (id: string) => {
-    setThemes(themes.map(theme => ({
-      ...theme,
-      isSelected: theme.id === id,
-    })));
+const WALLPAPER_IMAGES = [
+  { id: 'green-leaf', color: '#2d5016', label: 'Green Leaf' },
+  { id: 'bokeh', color: '#8B6914', label: 'Golden Bokeh' },
+  { id: 'ocean', color: '#4A90A4', label: 'Ocean' },
+  { id: 'sand', color: '#C9B89F', label: 'Sandy Beach' },
+  { id: 'fire', color: '#CC3300', label: 'Fire' },
+];
+
+const GALLERY_ITEMS = [
+  { id: 'color-themes', colors: ['#4A5AC7', '#E91E8C', '#1B9B6F'], label: 'Color Themes' },
+  { id: 'web-world', color: '#0066CC', label: 'Web World' },
+  { id: 'hindi-post', color: '#FDD835', label: 'Hindi Post' },
+];
+
+// Main Component
+const StatusScreen = () => {
+  const [currentScreen, setCurrentScreen] = useState<'appearance' | 'chatBackground'>('appearance');
+  const [appSettings, setAppSettings] = useState<AppSettings>({
+    colorTheme: THEME_COLORS[0].color,
+    nightMode: 'device',
+    chatBackground: { type: 'color', value: BACKGROUND_COLORS[0].color },
+  });
+
+  const updateSettings = (updates: Partial<AppSettings>) => {
+    setAppSettings(prev => ({ ...prev, ...updates }));
   };
 
-  return (
-    <View style={themeStyles.screen}>
+  const isColorSelected = (color: string): boolean => {
+    return appSettings.colorTheme === color;
+  };
+
+  const isNightModeSelected = (mode: NightMode): boolean => {
+    return appSettings.nightMode === mode;
+  };
+
+  const isChatBackgroundSelected = (type: BackgroundType, value: string): boolean => {
+    return appSettings.chatBackground.type === type && appSettings.chatBackground.value === value;
+  };
+
+  // ===== APPEARANCE SCREEN =====
+  const renderAppearanceScreen = () => (
+    <SafeAreaView style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={onBack}>
-          <Ionicons name="arrow-back" size={24} color="#333" />
+        <TouchableOpacity style={styles.backButton}>
+          <BackIcon />
         </TouchableOpacity>
-        <Text style={themeStyles.headerTitle}>Chat theme</Text>
-        <MaterialCommunityIcons name="dots-vertical" size={24} color="#333" style={themeStyles.headerMenu} />
+        <Text style={styles.headerTitle}>Appearance</Text>
       </View>
 
-      <ScrollView contentContainerStyle={themeStyles.scrollContent}>
-        <Text style={themeStyles.sectionHeader}>Themes</Text>
-        <View style={themeStyles.themeGrid}>
-          {themes.map((theme) => (
-            <TouchableOpacity 
-              key={theme.id} 
-              style={[
-                themeStyles.themeBox, 
-                { backgroundColor: theme.backgroundColor, borderColor: theme.isSelected ? themeStyles.selectedThemeBox.borderColor : themeStyles.themeBox.borderColor, borderWidth: theme.isSelected ? themeStyles.selectedThemeBox.borderWidth : themeStyles.themeBox.borderWidth }
-              ]}
-              onPress={() => handleThemeSelect(theme.id)}
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        {/* Color Themes Section */}
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Color themes</Text>
+          <View style={styles.colorGrid}>
+            {THEME_COLORS.map(({ id, color }) => (
+              <TouchableOpacity
+                key={id}
+                style={[
+                  styles.colorButton,
+                  { backgroundColor: color },
+                  isColorSelected(color) && styles.colorButtonSelected,
+                ]}
+                onPress={() => updateSettings({ colorTheme: color })}
+              >
+                {isColorSelected(color) && <CheckIcon />}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* Night Mode Section */}
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Night mode</Text>
+          {NIGHT_MODE_OPTIONS.map(({ id, label }) => (
+            <TouchableOpacity
+              key={id}
+              style={styles.listItem}
+              onPress={() => updateSettings({ nightMode: id as NightMode })}
             >
-              <View style={themeStyles.chatBubbleContainer}>
-                <View style={[themeStyles.chatBubble, themeStyles.outgoingBubble]} />
-                <View style={[themeStyles.chatBubble, themeStyles.incomingBubble]} />
+              <Text style={styles.listItemText}>{label}</Text>
+              <View style={styles.radioContainer}>
+                {isNightModeSelected(id as NightMode) ? <RadioFilledIcon /> : <RadioEmptyIcon />}
               </View>
-              {theme.label === 'Create with AI' && (
-                <View style={themeStyles.aiContainer}>
-                  <MaterialCommunityIcons name="star-four-points-outline" size={16} color="#333" />
-                  <Text style={themeStyles.aiText}>Create with AI</Text>
-                </View>
-              )}
-              {theme.isSelected && (
-                <View style={themeStyles.checkmarkContainer}>
-                  <Ionicons name="checkmark-circle" size={24} color="#075E54" />
-                </View>
-              )}
             </TouchableOpacity>
           ))}
         </View>
-      </ScrollView>
-    </View>
-  );
-};
 
-export default function StatusScreen() {
-  const navigation = useNavigation(); // ✅ Move inside component
-
-  const [currentScreen, setCurrentScreen] = useState<AppScreen>('Chats');
-  const [isThemeDialogVisible, setIsThemeDialogVisible] = useState(false);
-  const [currentTheme, setCurrentTheme] = useState<ThemeOption>('System default');
-  const [isMediaVisible, setIsMediaVisible] = useState(true);
-  const [isEnterSend, setIsEnterSend] = useState(false);
-  const [keepChatsArchived, setKeepChatsArchived] = useState(true);
-
-  const handleThemeSelect = (theme: ThemeOption) => {
-    setCurrentTheme(theme);
-  };
-
-  const renderChatsScreen = () => (
-    <View style={styles.screen}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="#333" />
+        {/* Chat Background Section */}
+        <TouchableOpacity
+          style={styles.card}
+          onPress={() => setCurrentScreen('chatBackground')}
+        >
+          <View style={styles.chatBackgroundHeader}>
+            <View>
+              <Text style={styles.listItemText}>Chat background</Text>
+              <Text style={styles.subtitleText}>Change the background for your chat screen.</Text>
+            </View>
+            <ChevronRightIcon />
+          </View>
+          <View
+            style={[
+              styles.chatPreview,
+              { backgroundColor: appSettings.chatBackground.value },
+            ]}
+          />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Theme Screen</Text>
+      </ScrollView>
+    </SafeAreaView>
+  );
+
+  // ===== CHAT BACKGROUND SCREEN =====
+  const renderChatBackgroundScreen = () => (
+    <SafeAreaView style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => setCurrentScreen('appearance')}
+        >
+          <BackIcon />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Chat background</Text>
       </View>
 
-      <ScrollView style={styles.scrollContainer}>
-        <Text style={styles.sectionHeader}>Display</Text>
-        <SettingsItem
-          iconName="theme-light-dark"
-          title="Theme"
-          subtitle={currentTheme}
-          onPress={() => setIsThemeDialogVisible(true)}
-        />
-        <SettingsItem
-          iconName="wallpaper"
-          title="Default chat theme"
-          subtitle="System default"
-          onPress={() => setCurrentScreen('ChatThemeSelection')}
-        />
-      </ScrollView>
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        {/* Colors Section */}
+        <View style={styles.card}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitleLarge}>Colors</Text>
+            <ChevronRightIcon />
+          </View>
+          <View style={styles.colorGrid}>
+            {BACKGROUND_COLORS.map(({ id, color }) => (
+              <TouchableOpacity
+                key={id}
+                style={[
+                  styles.colorTile,
+                  { backgroundColor: color },
+                  isChatBackgroundSelected('color', color) && styles.tileSelected,
+                ]}
+                onPress={() => updateSettings({ chatBackground: { type: 'color', value: color } })}
+              >
+                {isChatBackgroundSelected('color', color) && <CheckIcon />}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
 
-      <ThemeDialog
-        isVisible={isThemeDialogVisible}
-        onClose={() => setIsThemeDialogVisible(false)}
-        currentTheme={currentTheme}
-        onThemeSelect={handleThemeSelect}
-      />
-    </View>
+        {/* Wallpapers Section */}
+        <View style={styles.card}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitleLarge}>Wallpapers</Text>
+            <ChevronRightIcon />
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.wallpaperScroll}>
+            {WALLPAPER_IMAGES.map(({ id, color, label }) => (
+              <TouchableOpacity
+                key={id}
+                style={[
+                  styles.wallpaperTile,
+                  { backgroundColor: color },
+                  isChatBackgroundSelected('wallpaper', id) && styles.tileSelected,
+                ]}
+                onPress={() => updateSettings({ chatBackground: { type: 'wallpaper', value: id } })}
+              >
+                <Text style={styles.wallpaperLabel}>{label}</Text>
+                {isChatBackgroundSelected('wallpaper', id) && (
+                  <View style={styles.checkBadge}>
+                    <CheckIcon />
+                  </View>
+                )}
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* Gallery Section */}
+        <View style={styles.card}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitleLarge}>Gallery</Text>
+            <ChevronRightIcon />
+          </View>
+          <View style={styles.galleryGrid}>
+            {GALLERY_ITEMS.map(({ id, color, colors, label }) => (
+              <TouchableOpacity
+                key={id}
+                style={[
+                  styles.galleryTile,
+                  colors ? { backgroundColor: colors[0] } : { backgroundColor: color },
+                  isChatBackgroundSelected('gallery', id) && styles.tileSelected,
+                ]}
+                onPress={() => updateSettings({ chatBackground: { type: 'gallery', value: id } })}
+              >
+                <Text style={styles.galleryLabel}>{label}</Text>
+                {isChatBackgroundSelected('gallery', id) && (
+                  <View style={styles.checkBadge}>
+                    <CheckIcon />
+                  </View>
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* Set Default Background */}
+        <TouchableOpacity style={styles.card}>
+          <View style={styles.chatBackgroundHeader}>
+            <Text style={styles.sectionTitleLarge}>Set default background</Text>
+            <ChevronRightIcon />
+          </View>
+        </TouchableOpacity>
+      </ScrollView>
+    </SafeAreaView>
   );
 
-  if (currentScreen === 'ChatThemeSelection') {
-    return <ChatThemeSelectionScreen onBack={() => setCurrentScreen('Chats')} />;
-  }
+  return currentScreen === 'appearance' ? renderAppearanceScreen() : renderChatBackgroundScreen();
+};
 
-  return renderChatsScreen();
-}
+export default StatusScreen;
 
+// ===== STYLESHEET =====
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  screen: { flex: 1, backgroundColor: '#fff', paddingTop: 35 },
-  header: { flexDirection: 'row', alignItems: 'center', padding: 15, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#eee' },
-  headerTitle: { fontSize: 20, fontWeight: 'bold', marginLeft: 20, color: '#333' },
-  scrollContainer: { flex: 1 },
-  sectionHeader: { fontSize: 14, fontWeight: 'bold', color: '#075E54', paddingHorizontal: 15, paddingTop: 20, paddingBottom: 5, textTransform: 'uppercase' },
-  itemContainer: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 15, paddingVertical: 12 },
-  icon: { width: 40 },
-  textContainer: { flex: 1, marginLeft: 10 },
-  titleText: { fontSize: 16, color: '#333' },
-  subtitleText: { fontSize: 14, color: '#777', marginTop: 2 },
-});
-
-const themeStyles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#fff', paddingTop: 35 },
-  headerTitle: { fontSize: 20, fontWeight: 'bold', marginLeft: 20, color: '#333', flex: 1 },
-  headerMenu: { marginRight: 10 },
-  scrollContent: { padding: 15 },
-  sectionHeader: { fontSize: 16, fontWeight: '600', color: '#333', marginBottom: 10, marginTop: 15 },
-  themeGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 20 },
-  themeBox: { width: THEME_BOX_WIDTH, height: THEME_BOX_WIDTH * 1.5, borderRadius: 15, borderWidth: 2, borderColor: '#eee', overflow: 'hidden', justifyContent: 'center', alignItems: 'center', marginBottom: 10 },
-  selectedThemeBox: { borderWidth: 3, borderColor: '#075E54' },
-  chatBubbleContainer: { position: 'absolute', top: 15, left: 5, right: 5, height: '80%', justifyContent: 'space-between', alignItems: 'flex-start' },
-  chatBubble: { height: 25, borderRadius: 12, paddingHorizontal: 10, justifyContent: 'center', position: 'absolute' },
-  outgoingBubble: { width: '60%', backgroundColor: '#00e676', alignSelf: 'flex-end', top: 10 },
-  incomingBubble: { width: '50%', backgroundColor: 'white', borderWidth: 1, borderColor: '#ccc', alignSelf: 'flex-start', bottom: 5 },
-  aiContainer: { position: 'absolute', top: 5, left: 5, flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.8)', borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2 },
-  aiText: { fontSize: 10, fontWeight: 'bold', color: '#333', marginLeft: 3 },
-  checkmarkContainer: { position: 'absolute', bottom: 5, right: 5, backgroundColor: 'white', borderRadius: 15, zIndex: 10 },
-});
-
-const dialogStyles = StyleSheet.create({
-  overlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.5)' },
-  dialogContainer: { width: '80%', backgroundColor: 'white', borderRadius: 10, padding: 20, elevation: 5 },
-  title: { fontSize: 18, fontWeight: '600', marginBottom: 20, color: '#333' },
-  optionRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12 },
-  optionText: { marginLeft: 15, fontSize: 16, color: '#333' },
-  buttonContainer: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 20, paddingTop: 10 },
-  buttonText: { fontSize: 14, fontWeight: '600', color: '#075E54', marginLeft: 25, paddingVertical: 5 },
+  container: {
+    flex: 1,
+    backgroundColor: '#F3F4F6',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  backButton: {
+    padding: 8,
+    marginRight: 8,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  scrollView: {
+    flex: 1,
+    padding: 16,
+  },
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  sectionTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#6B7280',
+    textTransform: 'uppercase',
+    marginBottom: 16,
+    letterSpacing: 0.5,
+  },
+  sectionTitleLarge: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  colorGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  colorButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 4,
+    borderColor: 'transparent',
+  },
+  colorButtonSelected: {
+    borderColor: '#1F2937',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  listItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  listItemText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#1F2937',
+  },
+  subtitleText: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    marginTop: 4,
+  },
+  radioContainer: {
+    paddingLeft: 8,
+  },
+  chatBackgroundHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  chatPreview: {
+    height: 64,
+    borderRadius: 8,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+  },
+  colorTile: {
+    width: '16%',
+    aspectRatio: 1,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: 'transparent',
+  },
+  wallpaperScroll: {
+    marginHorizontal: -16,
+    paddingHorizontal: 16,
+  },
+  wallpaperTile: {
+    width: 80,
+    height: 128,
+    borderRadius: 12,
+    marginRight: 12,
+    justifyContent: 'flex-end',
+    paddingBottom: 8,
+    paddingLeft: 8,
+    borderWidth: 3,
+    borderColor: 'transparent',
+  },
+  wallpaperLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  galleryGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  galleryTile: {
+    flex: 1,
+    aspectRatio: 1,
+    borderRadius: 12,
+    justifyContent: 'flex-end',
+    paddingBottom: 8,
+    paddingLeft: 8,
+    borderWidth: 3,
+    borderColor: 'transparent',
+    overflow: 'hidden',
+  },
+  galleryLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  tileSelected: {
+    borderColor: '#000000',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  checkBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#000000',
+  },
+  iconText: {
+    fontSize: 24,
+    color: '#4B5563',
+    fontWeight: 'bold',
+  },
+  checkText: {
+    fontSize: 20,
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+  },
+  radioText: {
+    fontSize: 24,
+    color: '#4A5AC7',
+  },
+  radioEmptyText: {
+    fontSize: 24,
+    color: '#D1D5DB',
+  },
 });

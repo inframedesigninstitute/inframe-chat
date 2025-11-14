@@ -2,6 +2,7 @@ import * as Location from 'expo-location';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Modal,
   Platform,
   StyleSheet,
@@ -36,7 +37,7 @@ const LocationModal: React.FC<LocationModalProps> = ({ visible, onClose, onSend 
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        alert('Permission to access location was denied');
+        Alert.alert('Permission to access location was denied');
         onClose();
         return;
       }
@@ -76,8 +77,8 @@ const LocationModal: React.FC<LocationModalProps> = ({ visible, onClose, onSend 
             <View style={styles.mapContainer}>
               <iframe
                 title="map"
-                width="90%"
-                height="70%"
+                width="80%"
+                height="90%"
                 style={{ borderRadius: 15, border: 'none' }}
                 src={`https://maps.google.com/maps?q=${location.latitude},${location.longitude}&z=15&output=embed`}
               />
@@ -94,10 +95,10 @@ const LocationModal: React.FC<LocationModalProps> = ({ visible, onClose, onSend 
         )}
 
         <View style={styles.buttonRow}>
-          <TouchableOpacity onPress={onClose} style={[styles.button, { backgroundColor: '#f44336' }]}>
+          <TouchableOpacity onPress={onClose} style={[styles.button, { backgroundColor: '#d6e6d6ff' }]}>
             <Text style={styles.buttonText}>Close</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={handleSendLocation} style={[styles.button, { backgroundColor: '#4CAF50' }]}>
+          <TouchableOpacity onPress={handleSendLocation} style={[styles.button, { backgroundColor: '#d6e6d6ff' }]}>
             <Text style={styles.buttonText}>Send</Text>
           </TouchableOpacity>
         </View>
@@ -111,7 +112,7 @@ export default LocationModal;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 50,
+    paddingTop: 0,
     alignItems: 'center',
   },
   title: {
@@ -121,7 +122,7 @@ const styles = StyleSheet.create({
   },
   mapContainer: {
     width: '100%',
-    height: 300,
+    height:"80%",
     marginBottom: 20,
     justifyContent: 'center',
     alignItems: 'center',
@@ -144,7 +145,7 @@ const styles = StyleSheet.create({
     borderRadius: 25,
   },
   buttonText: {
-    color: '#fff',
+    color: '#000000ff',
     fontSize: 16,
     fontWeight: 'bold',
   },

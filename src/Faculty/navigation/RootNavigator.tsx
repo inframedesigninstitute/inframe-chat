@@ -15,6 +15,7 @@ import FacultyChatsScreen from '../screens/FacultyChatsScreen';
 import GalleryScreen from '../screens/GalleryScreen';
 import GroupChatScreen from '../screens/GroupChatScreen';
 import GroupsScreen from '../screens/GroupsScreen';
+import LiveVideoCall from '../screens/LiveVideoCall';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import PrivacyScreen from '../screens/PrivacyScreen';
 import ProfileScreen from '../screens/ProfileScreen';
@@ -26,6 +27,7 @@ import TeacherSignupScreen from '../screens/TeacherSignupScreen';
 import TermsScreen from '../screens/TermsScreen';
 import VideoCallScreen from '../screens/VideoCallScreen';
 import { RootStackParamList } from './types';
+import LanguageScreen from '../screens/LanguageScreen';
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const RootNavigator = () => {
@@ -66,7 +68,13 @@ const RootNavigator = () => {
       <Stack.Screen name="Privacy" component={PrivacyScreen} />
       <Stack.Screen name="AppInfo" component={AppInfoScreen} />
       <Stack.Screen name="Status" component={StatusScreen} />
+      <Stack.Screen name="Language" component={LanguageScreen} />
 
+<Stack.Screen
+  name="LiveVideoCall"
+  component={LiveVideoCall}  
+  options={{ presentation: "fullScreenModal" }}
+/>
     </Stack.Navigator>
   );
 };

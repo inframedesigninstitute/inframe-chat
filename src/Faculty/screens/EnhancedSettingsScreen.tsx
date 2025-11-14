@@ -25,6 +25,7 @@ import type { RootStackParamList } from "../navigation/types"
 import CalendarScreen from "./CalendarScreen"
 import CoursesScreen from "./CoursesScreen"
 import HelpScreen from "./HelpScreen"
+import LanguageScreen from "./LanguageScreen"
 import NotificationsScreen from "./NotificationsScreen"
 import PrivacyScreen from "./PrivacyScreen"
 import ProfileScreen from "./ProfileScreen"
@@ -111,12 +112,9 @@ const EnhancedSettingsScreen = () => {
         return <StarredMessagesScreen />
       case "Help":
         return <HelpScreen />
-      case "Keyboard shortcuts":
-        return (
-          <View style={styles.emptyDetail}>
-            <Text style={styles.detailContent}>Keyboard shortcuts coming soon.</Text>
-          </View>
-        )
+    case "Languages":
+  return <LanguageScreen />
+
       case "Calendar":
         return <CalendarScreen />
       case "Starred":
@@ -240,7 +238,7 @@ const EnhancedSettingsScreen = () => {
               onPress={handleChatTheme}
             />
             <SettingItem icon="notifications" title="Notifications" subtitle="Message notifications" />
-            <SettingItem icon="keypad" title="Keyboard shortcuts" subtitle="Quick actions" />
+            <SettingItem icon="keypad" title="Languages" subtitle="Languages" />
             <SettingItem icon="help-circle" title="Help" subtitle="Help center, contact us, privacy policy" />
             <SettingItem icon="star" title="Starred Messages" subtitle="Important messages you've starred" />
             <SettingItem icon="calendar" title="Calendar" subtitle="View and manage your schedule" />

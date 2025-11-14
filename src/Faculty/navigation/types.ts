@@ -10,6 +10,8 @@ AdminChats:undefined;
   Groups: undefined;
   Calls: undefined;
   Settings: undefined;
+    LiveVideoCall: { channelName: string };
+
   // ChatLayout: undefined;
   Chat: { channelId: string; channelName: string; recipientRole?: 'student' | 'faculty' | 'admin' };
   GroupChat: { groupId: string; groupName: string; isTeacher: boolean };
@@ -36,7 +38,8 @@ AdminChats:undefined;
   Gallery: undefined;
   Status: undefined;
   AdminSignInScreen: undefined;
-
+Language:undefined;
+StatusScreen:undefined;
 };
 
 export type MainTabsParamList = {

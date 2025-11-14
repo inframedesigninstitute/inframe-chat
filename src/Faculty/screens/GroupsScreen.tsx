@@ -52,7 +52,7 @@ const API_BASE_URL = "http://localhost:5200/web";
 
 const GroupsScreen = () => {
   const navigation = useNavigation<GroupsNavigationProp>();
-  const [channels, setChannels] = useState<Channel[]>([]); 
+  const [channels, setChannels] = useState<Channel[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchText, setSearchText] = useState("");
@@ -60,7 +60,7 @@ const GroupsScreen = () => {
   const [showUserProfile, setShowUserProfile] = useState(false);
   const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
   const token = useSelector((state: RootState) => state.facultyStore.token);
-  const [rawGroups, setRawGroups] = useState<GroupContact[]>([]); 
+  const [rawGroups, setRawGroups] = useState<GroupContact[]>([]);
 
   // ✅ Fetch groups
   const fetchAllGroups = async () => {
@@ -81,16 +81,16 @@ const GroupsScreen = () => {
           groupName: g.facultyGroupName || g.groupName || "Unnamed Group",
           membersCount: g.groupMembers?.length || 0,
         }));
-        setRawGroups(groups); 
+        setRawGroups(groups);
       } else {
         setRawGroups([]);
-   
+
       }
     } catch (err: any) {
       console.error("Error fetching groups:", err.response?.data || err.message);
       setError("Failed to load groups. Please try again.");
     } finally {
-      setLoading(false); 
+      setLoading(false);
     }
   };
 
@@ -98,10 +98,10 @@ const GroupsScreen = () => {
     const mappedChannels: Channel[] = rawGroups.map((group) => ({
       id: group.groupId,
       name: group.groupName,
-      lastMessage: `Members: ${group.membersCount || 0}`, 
-      time: "", 
+      lastMessage: `Members: ${group.membersCount || 0}`,
+      time: "",
       unread: 0,
-      type: "group", 
+      type: "group",
       isPinned: false,
       members: group.membersCount,
     }));
@@ -119,14 +119,17 @@ const GroupsScreen = () => {
     // Initial fetch for the first load
     fetchAllGroups();
   }, []);
+const handleDelete = (id: string) => {
+  // Your delete logic
+};
 
 
   const filteredChannels = useMemo(() => {
     let filtered = channels;
-       if (activeTab === "Unread") filtered = channels.filter((c) => (c.unread || 0) > 0);
+    if (activeTab === "Unread") filtered = channels.filter((c) => (c.unread || 0) > 0);
     else if (activeTab === "Favourites") filtered = channels.filter((c) => c.isStarred);
-   
-  
+
+
     if (searchText.trim()) {
       filtered = filtered.filter(
         (c) =>
@@ -136,7 +139,7 @@ const GroupsScreen = () => {
     }
     return filtered;
   }, [channels, activeTab, searchText]);
-  
+
 
   const handleTabChange = (tab: string) => setActiveTab(tab);
 
@@ -153,23 +156,22 @@ const GroupsScreen = () => {
     });
     setSelectedChannel(newGroup);
   };
-const userProfile = selectedChannel
-  ? {
-      // FIX: Add the required 'id' property
-      id: selectedChannel.id,
-      name: selectedChannel.name,
-      email: `${selectedChannel.name
-        .toLowerCase()
-        .replace(/\s+/g, ".")}@example.com`,
-      phone: "+91 98765 43210",
-      bio: "This is a sample bio.",
-      fatherName: "Father Name",
-      operator: "John Doe",
-      department: "Sales",
-      // 'groupMembers' is already present, which is correct
-      groupMembers: [], 
-    }
-  : null;
+  const userProfile = selectedChannel
+    ? {
+      id: selectedChannel.id,                          // required
+      name: selectedChannel.name,
+      email: `${selectedChannel.name
+        .toLowerCase()
+        .replace(/\s+/g, ".")}@example.com`,
+      phone: "+91 98765 43210",
+      bio: "This is a sample bio.",
+      fatherName: "Father Name",
+      operator: "John Doe",
+      department: "Sales",
+      groupMembers: [],         // no change
+    }
+    : null;
+
 
   const ListLoadingOrError = () => {
     if (loading)
@@ -214,10 +216,6 @@ const userProfile = selectedChannel
             <View style={styles.header}>
               <WebBackButton />
               <Text style={styles.headerTitle}>Groups</Text>
-              <TouchableOpacity>
-              <Text style={styles.headerTitles}>Edit</Text>
-
-              </TouchableOpacity>
             </View>
 
             {/* SEARCH BAR */}
@@ -249,7 +247,7 @@ const userProfile = selectedChannel
 
             {!loading && !error && (
               <FlatList
-                data={filteredChannels} 
+                data={filteredChannels}
                 keyExtractor={(item) => item.id}
                 renderItem={({ item }) => (
                   <ChannelItemWithLongPress
@@ -261,9 +259,12 @@ const userProfile = selectedChannel
                       unread: item.unread,
                       isGroup: item.type === "group",
                       isPinned: item.isPinned,
+                      
                     }}
                     onPress={() => handleChannelPress(item)}
                     onUpdate={() => fetchAllGroups()}
+                    onDelete={() => handleDelete(item.id)}
+
                   />
                 )}
                 ListEmptyComponent={
@@ -302,7 +303,7 @@ const styles = StyleSheet.create({
 
   container: {
     flex: 1,
-    backgroundColor: "#e6ecf3", 
+    backgroundColor: "#e6ecf3",
   },
 
   // 🔹 Header
@@ -350,7 +351,7 @@ const styles = StyleSheet.create({
   headerTitles: {
     fontSize: 18,
     fontWeight: "600",
-    color: "#000000ff", alignContent:"flex-end" , marginStart: 190
+    color: "#000000ff", alignContent: "flex-end", marginStart: 190
   },
 
   centeredMessage: {
