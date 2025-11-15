@@ -2,7 +2,7 @@ import Clipboard from "@react-native-clipboard/clipboard";
 import { useNavigation, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import axios from "axios";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
     Alert,
     Dimensions,
@@ -19,7 +19,6 @@ import {
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
-
 import { useStarredMessages } from "../context/StarredMessagesContext";
 import type { RootStackParamList } from "../navigation/types";
 import BackButton from "./BackButton";
@@ -30,8 +29,9 @@ import MarqueeText from "./MarqueeText";
 import MessageOptionsModal from "./MessageOptionsModal";
 import QuizPollModal from "./QuizPollModal";
 import AddMemberModal from "./add-member";
-
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import RtmEngineClass, { MessageEvent } from "agora-react-native-rtm";
+import { useSelector } from "react-redux";
 
 const { width } = Dimensions.get("window");
 
@@ -86,38 +86,53 @@ export default function ChatThread({
         channelRef.current = channel;
     }, [channel]);
 
-    // const fetchMessages = useCallback(async (otherUserId: string, otherUserType: string) => {
-    //     if (!authToken) {
-    //         Alert.alert("Authentication Error", "Token not available yet. Try again shortly.");
-    //         return;
-    //     }
+    
+    const fetchMessages = useCallback(async (otherUserId: string, otherUserType: string) => {
+        const authToken = await AsyncStorage.getItem('FACULTYTOKEN');
+        
+        if (!authToken) {
+            Alert.alert("Authentication Error", "Token not available yet. Try again shortly.");
+            return;
+        }
+    
+        try {
+            const url = `${SHOW_MSG_API_URL}/${otherUserId}/${otherUserType}`;
+            const response = await axios.get(url, {
+                headers: { Authorization: `Bearer ${authToken}` },
+            });
+            
 
-    //     try {
-    //         const url = `${SHOW_MSG_API_URL}/${otherUserId}/${otherUserType}`;
-    //         const response = await axios.get(url, {
-    //             headers: { Authorization: `Bearer ${authToken}` },
-    //     //         });
-
-    //     //         const fetchedMsgs: Message[] = response.data.map((msg: any) => ({
-    //     //             id: msg._id,
-    //     //             text: msg.text,
-    //     //             isSent: msg.senderId === CURRENT_USER_ID,
-    //     //             timestamp: new Date(msg.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-    //     //             status: "read" as const,
-    //     //         }));
-
-    //     //         setMessages(fetchedMsgs);
-    //     //     } catch (error) {
-    //     //         if (axios.isAxiosError(error) && error.response) {
-    //     //             if (error.response.status === 401) {
-    //     //                 Alert.alert("Access Denied", "Unauthorized. Token is invalid for fetching history.");
-    //     //             } else if (error.response.status === 404) {
-    //     //                 Alert.alert("Route Error", `Cannot GET ${error.config?.url}. Check your Express server route.`);
-    //     //             }
-    //     //         }
-    //     //         console.error("Error fetching chat history:", error);
-    //     //     }
-    //     // }, [authToken]);
+            console.log(
+                `curl -X GET "${SHOW_MSG_API_URL}/${otherUserId}/${otherUserType}" ` +
+                `-H "Authorization: Bearer ${authToken}"`
+              );
+    
+            const fetchedMsgs: Message[] = response.data.map((msg: any) => ({
+                id: msg._id,
+                text: msg.text,
+                isSent: msg.senderId === CURRENT_USER_ID,
+                timestamp: new Date(msg.timestamp).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                }),
+                status: "read" as const,
+            }));
+    
+            setMessages(fetchedMsgs);
+    
+        } catch (error) {
+            if (axios.isAxiosError(error) && error.response) {
+                if (error.response.status === 401) {
+                    Alert.alert("Access Denied", "Unauthorized. Token is invalid for fetching history.");
+                } else if (error.response.status === 404) {
+                    Alert.alert("Route Error", `Cannot GET ${error.config?.url}. Check your Express server route.`);
+                }
+            }
+    
+            console.error("Error fetching chat history:", error);
+        }
+    }, []);
+    
 
 
     useEffect(() => {
@@ -133,7 +148,7 @@ export default function ChatThread({
 
             const otherUserId = channel.id;
             const otherUserType = "Student";
-            // fetchMessages(otherUserId, otherUserType);
+            fetchMessages(otherUserId, otherUserType);
 
             try {
                 const uid = CURRENT_USER_ID;
@@ -202,6 +217,8 @@ export default function ChatThread({
         setMessages(prev => [...prev, newMsg]);
         setNewMessage("");
 
+        const storedToken = await AsyncStorage.getItem('FACULTYTOKEN');
+
         if (rtmEngine) {
             try {
                 await rtmEngine.sendMessageToChannel({ text: messageText }, channel.id);
@@ -226,7 +243,7 @@ export default function ChatThread({
                 receiverType,
                 text: messageText,
             }, {
-                headers: { Authorization: `Bearer ${agoraToken}` },
+                headers: { Authorization: `Bearer ${storedToken}` },
             });
 
             setMessages(prev => prev.map(msg =>
