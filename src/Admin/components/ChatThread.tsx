@@ -85,115 +85,101 @@ export default function ChatThread({
     }, [channel]);
 
 
-    const fetchMessages = useCallback(async (otherUserId: string, otherUserType: string) => {
-        const authToken = await AsyncStorage.getItem('ADMINTOKEN');
+   const fetchMessages = useCallback(async (userId: string) => {
+    const authToken = await AsyncStorage.getItem('ADMINTOKEN');
 
-        if (!authToken) {
-            Alert.alert("Authentication Error", "Token not available yet. Try again shortly.");
-            return;
+    if (!authToken) {
+        Alert.alert("Authentication Error", "Token not available yet. Try again.");
+        return;
+    }
+
+    try {
+        const url = `${SHOW_MSG_API_URL}/${userId}`;
+
+        const response = await axios.get(url, {
+            headers: { Authorization: `Bearer ${authToken}` },
+        });
+
+        const fetchedMsgs: Message[] = response.data.map((msg: any) => ({
+            id: msg._id,
+            text: msg.text,
+            isSent: msg.senderId === CURRENT_USER_ID,
+            timestamp: new Date(msg.timestamp).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+            }),
+            status: "read",
+        }));
+
+        setMessages(fetchedMsgs);
+    } catch (error: any) {
+        console.error("Error fetching chat history:", error);
+    }
+}, []);
+
+
+useEffect(() => {
+    setMessages([]); // **FIX: Immediately reset messages when channel.id changes**
+
+    const setupAgora = async () => {
+        if (rtmEngine) {
+            try {
+                await rtmEngine.logout();
+                await rtmEngine.destroyClient();
+            } catch (e) {
+                console.warn("Error cleaning up previous RTM client:", e);
+            }
         }
+
+        const userId = channel.id;
+        fetchMessages(userId);
 
         try {
-            const url = `${SHOW_MSG_API_URL}/${otherUserId}/${otherUserType}`;
-            const response = await axios.get(url, {
-                headers: { Authorization: `Bearer ${authToken}` },
-            });
+            const uid = CURRENT_USER_ID;
+            const { data } = await axios.post(RTM_TOKEN_API_URL, { uid });
+            const agoraToken = data.agoraToken;
 
+            setagoraToken(agoraToken);
 
-            console.log(
-                `curl -X GET "${SHOW_MSG_API_URL}/${otherUserId}/${otherUserType}" ` +
-                `-H "Authorization: Bearer ${authToken}"`
-            );
+            const engine = new (RtmEngineClass as any)();
+            await engine.createInstance(APP_ID);
 
-            const fetchedMsgs: Message[] = response.data.map((msg: any) => ({
-                id: msg._id,
-                text: msg.text,
-                isSent: msg.senderId === CURRENT_USER_ID,
-                timestamp: new Date(msg.timestamp).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                }),
-                status: "read" as const,
-            }));
+            engine.addListener("MessageReceived", (event: MessageEvent) => {
+                const msg = event as any;
 
-            setMessages(fetchedMsgs);
+                if ((msg.channelId || msg.channelName) !== channelRef.current.id) return;
 
-        } catch (error) {
-            if (axios.isAxiosError(error) && error.response) {
-                if (error.response.status === 401) {
-                    Alert.alert("Access Denied", "Unauthorized. Token is invalid for fetching history.");
-                } else if (error.response.status === 404) {
-                    Alert.alert("Route Error", `Cannot GET ${error.config?.url}. Check your Express server route.`);
-                }
-            }
-
-            console.error("Error fetching chat history:", error);
-        }
-    }, []);
-
-    useEffect(() => {
-        const setupAgora = async () => {
-            if (rtmEngine) {
-                try {
-                    await rtmEngine.logout();
-                    await rtmEngine.destroyClient();
-                } catch (e) {
-                    console.warn("Error cleaning up previous RTM client:", e);
-                }
-            }
-
-            const otherUserId = channel.id;
-            const otherUserType = "Student";
-            fetchMessages(otherUserId, otherUserType);
-
-            try {
-                const uid = CURRENT_USER_ID;
-                const { data } = await axios.post(RTM_TOKEN_API_URL, { uid });
-                const agoraToken = data.agoraToken;
-
-                // Save token in state
-                setagoraToken(agoraToken);
-                console.log(agoraToken)
-
-                const engine = new (RtmEngineClass as any)();
-                await engine.createInstance(APP_ID);
-
-                engine.addListener("MessageReceived", (event: MessageEvent) => {
-                    const msg = event as any;
-                    const receivedChannelId = msg.channelId || msg.channelName;
-
-                    if (receivedChannelId !== channelRef.current.id) return;
-
-                    const incomingMsg: Message = {
+                setMessages(prev => [
+                    ...prev,
+                    {
                         id: Date.now().toString(),
                         text: msg.text || msg.message || "New message",
                         isSent: false,
                         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
                         status: "delivered",
-                    };
+                    },
+                ]);
+            });
 
-                    setMessages(prev => [...prev, incomingMsg]);
-                });
+            await engine.loginV2(agoraToken, uid);
+            await engine.joinChannel(channel.id);
 
-                await engine.loginV2(agoraToken, uid);
-                await engine.joinChannel(channel.id);
+            setRtmEngine(engine);
+        } catch (err) {
+            console.error("Agora RTM setup error:", err);
+            Alert.alert("RTM Init Error", "Failed to initialize RTM engine.");
+        }
+    };
 
-                setRtmEngine(engine);
-            } catch (err) {
-                console.error("Agora RTM setup error:", err);
-                Alert.alert("RTM Init Error", "Failed to initialize RTM engine.");
-            }
-        };
+    setupAgora();
 
-        setupAgora();
-
-        return () => {
-            if (rtmEngine) {
-                rtmEngine.logout();
-                rtmEngine.destroyClient();
-            }
-        };
-    }, [channel.id]);
+    return () => {
+        if (rtmEngine) {
+            rtmEngine.logout();
+            rtmEngine.destroyClient();
+        }
+    };
+}, [channel.id]);
 
 
     const handleSendMessage = async () => {
@@ -252,7 +238,6 @@ export default function ChatThread({
         }
     };
 
-    // Corrected and retained declaration of handleOpenCamera
     const handleOpenCamera = () =>
         navigation.navigate("Camera", {
             onPictureTaken: (imageUri: string) => {
@@ -265,8 +250,7 @@ export default function ChatThread({
                 };
                 setMessages(prev => [...prev, message]);
             }
-        } as never); // Used 'as never' to bypass the type issue for the sake of compiling the provided logic.
-    // NOTE: A proper fix would involve updating RootStackParamList to include the 'onPictureTaken' prop for the 'Camera' route.
+        } as never);
 
     const handleDocument = () => {
         openDocumentPicker((fileName) => {
@@ -563,4 +547,4 @@ const styles = StyleSheet.create({
     attachmentItem: { alignItems: "center" },
     attachmentIcon: { width: 60, height: 60, borderRadius: 30, justifyContent: "center", alignItems: "center", marginBottom: 6 },
     attachmentText: { fontSize: 12, textAlign: "center" },
-});
+}); 
