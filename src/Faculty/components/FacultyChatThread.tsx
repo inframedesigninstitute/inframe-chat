@@ -19,6 +19,7 @@ import {
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
+
 import { useStarredMessages } from "../context/StarredMessagesContext";
 import type { RootStackParamList } from "../navigation/types";
 import BackButton from "./BackButton";
@@ -29,9 +30,9 @@ import MarqueeText from "./MarqueeText";
 import MessageOptionsModal from "./MessageOptionsModal";
 import QuizPollModal from "./QuizPollModal";
 import AddMemberModal from "./add-member";
+
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import RtmEngineClass, { MessageEvent } from "agora-react-native-rtm";
-import { useSelector } from "react-redux";
 
 const { width } = Dimensions.get("window");
 
@@ -43,7 +44,7 @@ interface Message {
     text: string;
     isSent: boolean;
     timestamp: string;
-    status: "sent" | "delivered" | "read";
+    status: "sent" | "delivered" | "read";  
 }
 
 

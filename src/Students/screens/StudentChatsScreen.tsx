@@ -60,12 +60,12 @@ type StudentChatsNavigationProp = CompositeNavigationProp<
 >;
 
 const StudentChatsScreen = () => {
-const token = useSelector((state: RootState) => state.StudentStore.token);
+    const token = useSelector((state: RootState) => state.StudentStore.token);
 
     // 🧩 FIX: Changed from studentData to studentId
-const userId = useSelector((state: RootState) => state.StudentStore.user?.id) || "";
+    const userId = useSelector((state: RootState) => state.StudentStore.user?.id) || "";
 
-const navigation = useNavigation<StudentChatsNavigationProp>();
+    const navigation = useNavigation<StudentChatsNavigationProp>();
 
     const [rawContacts, setRawContacts] = useState<StudentContact[]>([]);
     const [rawGroups, setRawGroups] = useState<GroupContact[]>([]);
@@ -150,6 +150,7 @@ const navigation = useNavigation<StudentChatsNavigationProp>();
 
     // ✅ Fixed: Fetch student contacts API
     const fetchAllContacts = async () => {
+
         if (!token) return setError("Authentication token not found. Please log in.");
         setIsLoading(true);
         setError(null);
@@ -166,7 +167,8 @@ const navigation = useNavigation<StudentChatsNavigationProp>();
             );
 
             const data = response.data;
-            if (data?.status === 1) {
+            if (data?.status == 1) {
+
                 const list = data?.data || [];
                 const contacts: StudentContact[] = list.map((c: any) => ({
                     studentId: c.groupId || c._id || c.id,
@@ -174,6 +176,7 @@ const navigation = useNavigation<StudentChatsNavigationProp>();
                     studentEmail: c.groupDescription || "N/A",
                 }));
                 setRawContacts(contacts);
+
             } else {
                 setError(data?.msg || "No contacts found.");
             }

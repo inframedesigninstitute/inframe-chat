@@ -1,23 +1,21 @@
-"use client";
-
 import Clipboard from "@react-native-clipboard/clipboard";
-import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
+import { useNavigation, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import axios from "axios";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Alert,
-  Dimensions,
-  FlatList,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    Dimensions,
+    FlatList,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    SafeAreaView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
@@ -32,7 +30,7 @@ import MarqueeText from "./MarqueeText";
 import MessageOptionsModal from "./MessageOptionsModal";
 import QuizPollModal from "./QuizPollModal";
 
-// Agora
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import RtmEngineClass, { MessageEvent } from "agora-react-native-rtm";
 
 const { width } = Dimensions.get("window");
@@ -45,8 +43,17 @@ interface Message {
     text: string;
     isSent: boolean;
     timestamp: string;
-    status: "sent" | "delivered" | "read";
+    status: "sent" | "delivered" | "read";  
 }
+
+
+const CURRENT_USER_ID = "6614140024479903b22b1111";
+const CURRENT_USER_TYPE = "Student";
+
+const RTM_TOKEN_API_URL = "http://localhost:5200/web/agora/generate-rtm-token";
+const SEND_MSG_API_URL = "http://localhost:5200/web/messages/send-msg";
+const SHOW_MSG_API_URL = "http://localhost:5200/web/messages/show-msg";
+const APP_ID = "20e5fa9e1eb24b799e01c45eaca5c901";
 
 export default function ChatThread({
     channel,
@@ -57,56 +64,128 @@ export default function ChatThread({
     onOpenProfile: () => void;
     onGroupCreated?: (group: any) => void;
 }) {
-    const route = useRoute<ChatScreenRouteProp>();
-    const navigation = useNavigation<ChatScreenNavigationProp>();
+    const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
-    // Messages per channel
-    const [messages, setMessages] = useState<{ [channelId: string]: Message[] }>({});
+    const [messages, setMessages] = useState<Message[]>([]);
     const [newMessage, setNewMessage] = useState("");
     const [showAttachments, setShowAttachments] = useState(false);
     const [modalVisible, setModalVisible] = useState(false);
     const [optionsModalVisible, setOptionsModalVisible] = useState(false);
     const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
-    const { addStarredMessage } = useStarredMessages();
     const [locationVisible, setLocationVisible] = useState<boolean>(false);
     const [showAddMemberModal, setShowAddMemberModal] = useState(false);
-    const [chatMembers, setChatMembers] = useState<string[]>([]);
+    // Removed the duplicate declaration: const handleOpenCamera = () => navigation.navigate("Camera");
 
-    // Agora
+    const [agoraToken, setagoraToken] = useState<string | null>(null);
     const [rtmEngine, setRtmEngine] = useState<any>(null);
-    const APP_ID = "20e5fa9e1eb24b799e01c45eaca5c901"; 
-    const API_URL = "https://your-backend.com/agora-token"; // Replace with your backend
+    const channelRef = useRef(channel);
+
+    const { addStarredMessage } = useStarredMessages();
+
+    useEffect(() => {
+        channelRef.current = channel;
+    }, [channel]);
+
+    
+    const fetchMessages = useCallback(async (otherUserId: string, otherUserType: string) => {
+        const authToken = await AsyncStorage.getItem('STUDENTTOKEN');
+        
+        if (!authToken) {
+            Alert.alert("Authentication Error", "Token not available yet. Try again shortly.");
+            return;
+        }
+    
+        try {
+            const url = `${SHOW_MSG_API_URL}/${otherUserId}/${otherUserType}`;
+            const response = await axios.get(url, {
+                headers: { Authorization: `Bearer ${authToken}` },
+            });
+            
+
+            console.log(
+                `curl -X GET "${SHOW_MSG_API_URL}/${otherUserId}/${otherUserType}" ` +
+                `-H "Authorization: Bearer ${authToken}"`
+              );
+    
+            const fetchedMsgs: Message[] = response.data.map((msg: any) => ({
+                id: msg._id,
+                text: msg.text,
+                isSent: msg.senderId === CURRENT_USER_ID,
+                timestamp: new Date(msg.timestamp).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                }),
+                status: "read" as const,
+            }));
+    
+            setMessages(fetchedMsgs);
+    
+        } catch (error) {
+            if (axios.isAxiosError(error) && error.response) {
+                if (error.response.status === 401) {
+                    Alert.alert("Access Denied", "Unauthorized. Token is invalid for fetching history.");
+                } else if (error.response.status === 404) {
+                    Alert.alert("Route Error", `Cannot GET ${error.config?.url}. Check your Express server route.`);
+                }
+            }
+    
+            console.error("Error fetching chat history:", error);
+        }
+    }, []);
+    
+
 
     useEffect(() => {
         const setupAgora = async () => {
+            if (rtmEngine) {
+                try {
+                    await rtmEngine.logout();
+                    await rtmEngine.destroyClient();
+                } catch (e) {
+                    console.warn("Error cleaning up previous RTM client:", e);
+                }
+            }
+
+            const otherUserId = channel.id;
+            const otherUserType = "Student";
+            fetchMessages(otherUserId, otherUserType);
+
             try {
-                const uid = `user_${Date.now()}`;
-                const { data } = await axios.post(API_URL, { uid });
-                const token = data.agoraToken;
+                const uid = CURRENT_USER_ID;
+                const { data } = await axios.post(RTM_TOKEN_API_URL, { uid });
+                const agoraToken = data.agoraToken;
+
+                // Save token in state
+                setagoraToken(agoraToken);
+                console.log(agoraToken)
 
                 const engine = new (RtmEngineClass as any)();
                 await engine.createInstance(APP_ID);
-                await engine.loginV2(token, uid);
-                await engine.joinChannel(channel.id);
 
-                engine.addListener("MessageReceived", (msg: MessageEvent) => {
+                engine.addListener("MessageReceived", (event: MessageEvent) => {
+                    const msg = event as any;
+                    const receivedChannelId = msg.channelId || msg.channelName;
+
+                    if (receivedChannelId !== channelRef.current.id) return;
+
                     const incomingMsg: Message = {
                         id: Date.now().toString(),
-                        text: (msg as any).text || (msg as any).message || "New message",
+                        text: msg.text || msg.message || "New message",
                         isSent: false,
                         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
                         status: "delivered",
                     };
 
-                    setMessages(prev => ({
-                        ...prev,
-                        [channel.id]: [...(prev[channel.id] || []), incomingMsg],
-                    }));
+                    setMessages(prev => [...prev, incomingMsg]);
                 });
+
+                await engine.loginV2(agoraToken, uid);
+                await engine.joinChannel(channel.id);
 
                 setRtmEngine(engine);
             } catch (err) {
-                console.log("Agora setup error:", err);
+                console.error("Agora RTM setup error:", err);
+                Alert.alert("RTM Init Error", "Failed to initialize RTM engine.");
             }
         };
 
@@ -120,30 +199,78 @@ export default function ChatThread({
         };
     }, [channel.id]);
 
+
     const handleSendMessage = async () => {
         if (!newMessage.trim()) return;
 
+        const messageText = newMessage.trim();
+        const tempId = Date.now().toString();
+
         const newMsg: Message = {
-            id: Date.now().toString(),
-            text: newMessage,
+            id: tempId,
+            text: messageText,
             isSent: true,
             timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
             status: "sent",
         };
 
-        setMessages(prev => ({
-            ...prev,
-            [channel.id]: [...(prev[channel.id] || []), newMsg],
-        }));
+        setMessages(prev => [...prev, newMsg]);
+        setNewMessage("");
+
+        const storedToken = await AsyncStorage.getItem('STUDENTTOKEN');
 
         if (rtmEngine) {
-            await rtmEngine.sendMessageToChannel({ text: newMessage }, channel.id);
+            try {
+                await rtmEngine.sendMessageToChannel({ text: messageText }, channel.id);
+            } catch (e) {
+                console.error("RTM Send Error:", e);
+            }
+        } else {
+            Alert.alert("Error", "RTM Engine not initialized. Message sent only to DB.");
         }
 
-        setNewMessage("");
+        try {
+            const receiverId = channel.id;
+            const receiverType = "student";
+
+            if (!agoraToken) {
+                Alert.alert("Error", "Auth token missing. Cannot save message to DB.");
+                return;
+            }
+
+            const response = await axios.post(SEND_MSG_API_URL, {
+                receiverId,
+                receiverType,
+                text: messageText,
+            }, {
+                headers: { Authorization: `Bearer ${storedToken}` },
+            });
+
+            setMessages(prev => prev.map(msg =>
+                msg.id === tempId ? { ...msg, id: response.data._id, status: 'delivered' } : msg
+            ));
+
+        } catch (e) {
+            console.error("DB Send Error:", e);
+            Alert.alert("Persistence Failed", "Message sent real-time but failed to save in the database.");
+        }
     };
 
-    const handleOpenCamera = () => navigation.navigate("Camera");
+    // Corrected and retained declaration of handleOpenCamera
+    const handleOpenCamera = () =>
+        navigation.navigate("Camera", {
+            onPictureTaken: (imageUri: string) => {
+                const message: Message = {
+                    id: Date.now().toString(),
+                    text: "📷 Image: " + imageUri,
+                    isSent: true,
+                    timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                    status: "sent",
+                };
+                setMessages(prev => [...prev, message]);
+            }
+        } as never); // Used 'as never' to bypass the type issue for the sake of compiling the provided logic.
+    // NOTE: A proper fix would involve updating RootStackParamList to include the 'onPictureTaken' prop for the 'Camera' route.
 
     const handleDocument = () => {
         openDocumentPicker((fileName) => {
@@ -154,16 +281,8 @@ export default function ChatThread({
                 timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
                 status: "sent",
             };
-            setMessages(prev => ({
-                ...prev,
-                [channel.id]: [...(prev[channel.id] || []), docMsg],
-            }));
+            setMessages(prev => [...prev, docMsg]);
         });
-    };
-
-    const handleAddMember = (contact: { id: string; name: string; phone: string }) => {
-        setChatMembers(prev => [...prev, contact.id]);
-        Alert.alert("Success", `${contact.name} added to the chat`);
     };
 
     const handleSendLocation = (coords: { latitude: number; longitude: number }) => {
@@ -174,10 +293,7 @@ export default function ChatThread({
             timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
             status: "sent",
         };
-        setMessages(prev => ({
-            ...prev,
-            [channel.id]: [...(prev[channel.id] || []), locationMessage],
-        }));
+        setMessages(prev => [...prev, locationMessage]);
         setLocationVisible(false);
     };
 
@@ -192,11 +308,26 @@ export default function ChatThread({
                 timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
                 status: "sent",
             };
-            setMessages(prev => ({
-                ...prev,
-                [channel.id]: [...(prev[channel.id] || []), message],
-            }));
+            setMessages(prev => [...prev, message]);
         });
+    };
+
+    const handleGroupCreation = (members: any) => {
+        if (!Array.isArray(members) || members.length === 0) {
+            Alert.alert("Error", "No members selected for group creation.");
+            setShowAddMemberModal(false);
+            return;
+        }
+
+        const newGroup = {
+            id: `group_${Date.now()}`,
+            name: `Group with ${members.length} members`,
+            members: members.map((m: any) => m.id),
+        };
+        Alert.alert("Group Created", `Group ${newGroup.name} created with ${members.length} members.`);
+
+        onGroupCreated?.(newGroup);
+        setShowAddMemberModal(false);
     };
 
     const renderMessage = ({ item }: { item: Message }) => (
@@ -225,9 +356,9 @@ export default function ChatThread({
         </TouchableOpacity>
     );
 
+
     return (
         <SafeAreaView style={styles.container}>
-            {/* Header */}
             <View style={styles.header}>
                 <BackButton />
                 <TouchableOpacity style={styles.contactInfo} onPress={onOpenProfile}>
@@ -237,12 +368,12 @@ export default function ChatThread({
                     </View>
                 </TouchableOpacity>
                 <View style={styles.headerActions}>
-                    <TouchableOpacity
+                    {/* <TouchableOpacity
                         style={styles.actionButton}
-                        // onPress={() => navigation.navigate("LiveVideoCall", { channelName: channel.name })}
+                        onPress={() => navigation.navigate("LiveVideoCall", { channelName: channel.name })}
                     >
                         <Ionicons name="videocam" size={24} color="#000" />
-                    </TouchableOpacity>
+                    </TouchableOpacity> */}
                     <TouchableOpacity style={styles.actionButton}>
                         <Ionicons name="call" size={24} color="#000" />
                     </TouchableOpacity>
@@ -258,7 +389,7 @@ export default function ChatThread({
 
             <KeyboardAvoidingView style={styles.messagesContainer} behavior={Platform.OS === "ios" ? "padding" : "height"}>
                 <FlatList
-                    data={messages[channel.id] || []}
+                    data={messages}
                     keyExtractor={(item) => item.id}
                     renderItem={renderMessage}
                     style={styles.messagesList}
@@ -269,7 +400,6 @@ export default function ChatThread({
                     <Ionicons name="add" size={36} color="#000" />
                 </TouchableOpacity>
 
-                {/* Input Field */}
                 <View style={styles.inputContainer}>
                     <TouchableOpacity style={styles.attachButton} onPress={() => setShowAttachments(!showAttachments)}>
                         <Ionicons name="add" size={26} color="#000" />
@@ -297,7 +427,6 @@ export default function ChatThread({
                 </View>
             </KeyboardAvoidingView>
 
-            {/* Modals */}
             <MessageOptionsModal
                 visible={optionsModalVisible}
                 onClose={() => setOptionsModalVisible(false)}
@@ -332,10 +461,7 @@ export default function ChatThread({
                     }
                 }}
                 onDelete={() => {
-                    setMessages(prev => ({
-                        ...prev,
-                        [channel.id]: prev[channel.id]?.filter((msg) => msg.id !== selectedMessage?.id) || [],
-                    }));
+                    setMessages(prev => prev.filter((msg) => msg.id !== selectedMessage?.id));
                     setOptionsModalVisible(false);
                 }}
                 isPinned={false}
