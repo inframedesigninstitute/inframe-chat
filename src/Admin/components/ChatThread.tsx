@@ -80,106 +80,115 @@ export default function ChatThread({
 
     const { addStarredMessage } = useStarredMessages();
 
+ 
     useEffect(() => {
         channelRef.current = channel;
     }, [channel]);
 
-
-   const fetchMessages = useCallback(async (userId: string) => {
-    const authToken = await AsyncStorage.getItem('ADMINTOKEN');
-
-    if (!authToken) {
-        Alert.alert("Authentication Error", "Token not available yet. Try again.");
-        return;
-    }
-
-    try {
-        const url = `${SHOW_MSG_API_URL}/${userId}`;
-
-        const response = await axios.get(url, {
-            headers: { Authorization: `Bearer ${authToken}` },
-        });
-
-        const fetchedMsgs: Message[] = response.data.map((msg: any) => ({
-            id: msg._id,
-            text: msg.text,
-            isSent: msg.senderId === CURRENT_USER_ID,
-            timestamp: new Date(msg.timestamp).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-            }),
-            status: "read",
-        }));
-
-        setMessages(fetchedMsgs);
-    } catch (error: any) {
-        console.error("Error fetching chat history:", error);
-    }
-}, []);
-
-
-useEffect(() => {
-    setMessages([]); // **FIX: Immediately reset messages when channel.id changes**
-
-    const setupAgora = async () => {
-        if (rtmEngine) {
-            try {
-                await rtmEngine.logout();
-                await rtmEngine.destroyClient();
-            } catch (e) {
-                console.warn("Error cleaning up previous RTM client:", e);
-            }
-        }
-
-        const userId = channel.id;
-        fetchMessages(userId);
+    const fetchMessages = useCallback(async (userId: string) => {
 
         try {
-            const uid = CURRENT_USER_ID;
-            const { data } = await axios.post(RTM_TOKEN_API_URL, { uid });
-            const agoraToken = data.agoraToken;
+            const authToken = await AsyncStorage.getItem('FACULTYTOKEN');
+            console.log("RAW TOKEN =>", authToken);
+            console.log("TYPE =>", typeof authToken);
 
-            setagoraToken(agoraToken);
+            if (!authToken) {
+                Alert.alert("Authentication Error", "Token not available yet.");
+                return;
+            }
 
-            const engine = new (RtmEngineClass as any)();
-            await engine.createInstance(APP_ID);
+            const url = `${SHOW_MSG_API_URL}/${userId}`;
+            console.log("Fetching:", url);
 
-            engine.addListener("MessageReceived", (event: MessageEvent) => {
-                const msg = event as any;
+            const response = await axios.post(url,
+                {},
+                {
+                    headers: {
+                        Authorization: `Bearer ${authToken}`,
+                    },
+                });
 
-                if ((msg.channelId || msg.channelName) !== channelRef.current.id) return;
+            console.log("Fetched Messages:", response.data);
 
-                setMessages(prev => [
-                    ...prev,
-                    {
+            setMessages(response.data);
+
+        } catch (error) {
+            console.error("Error fetching messages:", error);
+            Alert.alert("Error", "Failed to load messages.");
+        }
+    }, [agoraToken]);
+    
+
+    useEffect(() => {
+        const setupAgora = async () => {
+
+            if (rtmEngine) {
+                try {
+                    await rtmEngine.logout();
+                    await rtmEngine.destroyClient();
+                } catch (e) {
+                    console.warn("Error cleaning previous RTM client:", e);
+                }
+            }
+
+            try {
+                const uid = CURRENT_USER_ID;
+
+                // 👉 Step 1: Fetch RTM Token FIRST
+                const { data } = await axios.post(RTM_TOKEN_API_URL, { uid });
+                const agoraToken = data.agoraToken;
+
+                // Save agora token
+                setagoraToken(agoraToken);
+                console.log("Agora Token:", agoraToken);
+
+                // 👉 Step 2: Now safely call fetchMessages after token is set
+                const userId = channel.id;
+
+                fetchMessages(userId);
+
+                // 👉 Step 3: Setup RTM
+                const engine = new (RtmEngineClass as any)();
+                await engine.createInstance(APP_ID);
+
+                engine.addListener("MessageReceived", (event: MessageEvent) => {
+                    const msg = event as any;
+
+                    const incomingMsg: Message = {
                         id: Date.now().toString(),
                         text: msg.text || msg.message || "New message",
                         isSent: false,
-                        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                        timestamp: new Date().toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                        }),
                         status: "delivered",
-                    },
-                ]);
-            });
+                    };
 
-            await engine.loginV2(agoraToken, uid);
-            await engine.joinChannel(channel.id);
+                    setMessages(prev => [...prev, incomingMsg]);
+                });
 
-            setRtmEngine(engine);
-        } catch (err) {
-            console.error("Agora RTM setup error:", err);
-            Alert.alert("RTM Init Error", "Failed to initialize RTM engine.");
-        }
-    };
+                await engine.loginV2(agoraToken, uid);
+                await engine.joinChannel(channel.id);
 
-    setupAgora();
+                setRtmEngine(engine);
 
-    return () => {
-        if (rtmEngine) {
-            rtmEngine.logout();
-            rtmEngine.destroyClient();
-        }
-    };
-}, [channel.id]);
+            } catch (err) {
+                console.error("Agora RTM setup error:", err);
+                Alert.alert("RTM Init Error", "Failed to initialize RTM engine.");
+            }
+        };
+
+        setupAgora();
+
+        return () => {
+            if (rtmEngine) {
+                rtmEngine.logout();
+                rtmEngine.destroyClient();
+            }
+        };
+    }, [channel.id]);
+
 
 
     const handleSendMessage = async () => {

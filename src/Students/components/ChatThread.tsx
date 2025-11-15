@@ -82,97 +82,89 @@ export default function ChatThread({
 
     const { addStarredMessage } = useStarredMessages();
 
+
+ 
     useEffect(() => {
         channelRef.current = channel;
     }, [channel]);
 
-    
-    const fetchMessages = useCallback(async (otherUserId: string, otherUserType: string) => {
-        const authToken = await AsyncStorage.getItem('STUDENTTOKEN');
-        
-        if (!authToken) {
-            Alert.alert("Authentication Error", "Token not available yet. Try again shortly.");
-            return;
-        }
-    
+    const fetchMessages = useCallback(async (userId: string) => {
+
         try {
-            const url = `${SHOW_MSG_API_URL}/${otherUserId}/${otherUserType}`;
-            const response = await axios.get(url, {
-                headers: { Authorization: `Bearer ${authToken}` },
-            });
-            
+            const authToken = await AsyncStorage.getItem('FACULTYTOKEN');
+            console.log("RAW TOKEN =>", authToken);
+            console.log("TYPE =>", typeof authToken);
 
-            console.log(
-                `curl -X GET "${SHOW_MSG_API_URL}/${otherUserId}/${otherUserType}" ` +
-                `-H "Authorization: Bearer ${authToken}"`
-              );
-    
-            const fetchedMsgs: Message[] = response.data.map((msg: any) => ({
-                id: msg._id,
-                text: msg.text,
-                isSent: msg.senderId === CURRENT_USER_ID,
-                timestamp: new Date(msg.timestamp).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                }),
-                status: "read" as const,
-            }));
-    
-            setMessages(fetchedMsgs);
-    
-        } catch (error) {
-            if (axios.isAxiosError(error) && error.response) {
-                if (error.response.status === 401) {
-                    Alert.alert("Access Denied", "Unauthorized. Token is invalid for fetching history.");
-                } else if (error.response.status === 404) {
-                    Alert.alert("Route Error", `Cannot GET ${error.config?.url}. Check your Express server route.`);
-                }
+            if (!authToken) {
+                Alert.alert("Authentication Error", "Token not available yet.");
+                return;
             }
-    
-            console.error("Error fetching chat history:", error);
-        }
-    }, []);
-    
 
+            const url = `${SHOW_MSG_API_URL}/${userId}`;
+            console.log("Fetching:", url);
+
+            const response = await axios.post(url,
+                {},
+                {
+                    headers: {
+                        Authorization: `Bearer ${authToken}`,
+                    },
+                });
+
+            console.log("Fetched Messages:", response.data);
+
+            setMessages(response.data);
+
+        } catch (error) {
+            console.error("Error fetching messages:", error);
+            Alert.alert("Error", "Failed to load messages.");
+        }
+    }, [agoraToken]);
+    
 
     useEffect(() => {
         const setupAgora = async () => {
+
             if (rtmEngine) {
                 try {
                     await rtmEngine.logout();
                     await rtmEngine.destroyClient();
                 } catch (e) {
-                    console.warn("Error cleaning up previous RTM client:", e);
+                    console.warn("Error cleaning previous RTM client:", e);
                 }
             }
 
-            const otherUserId = channel.id;
-            const otherUserType = "Student";
-            fetchMessages(otherUserId, otherUserType);
-
             try {
                 const uid = CURRENT_USER_ID;
+
+                // 👉 Step 1: Fetch RTM Token FIRST
                 const { data } = await axios.post(RTM_TOKEN_API_URL, { uid });
                 const agoraToken = data.agoraToken;
 
-                // Save token in state
+                // Save agora token
                 setagoraToken(agoraToken);
-                console.log(agoraToken)
+                console.log("Agora Token:", agoraToken);
 
+                // 👉 Step 2: Now safely call fetchMessages after token is set
+                const userId = channel.id;
+
+                fetchMessages(userId);
+
+                // 👉 Step 3: Setup RTM
                 const engine = new (RtmEngineClass as any)();
                 await engine.createInstance(APP_ID);
 
                 engine.addListener("MessageReceived", (event: MessageEvent) => {
                     const msg = event as any;
-                    const receivedChannelId = msg.channelId || msg.channelName;
-
-                    if (receivedChannelId !== channelRef.current.id) return;
 
                     const incomingMsg: Message = {
                         id: Date.now().toString(),
                         text: msg.text || msg.message || "New message",
                         isSent: false,
-                        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                        timestamp: new Date().toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                        }),
                         status: "delivered",
                     };
 
@@ -183,6 +175,7 @@ export default function ChatThread({
                 await engine.joinChannel(channel.id);
 
                 setRtmEngine(engine);
+
             } catch (err) {
                 console.error("Agora RTM setup error:", err);
                 Alert.alert("RTM Init Error", "Failed to initialize RTM engine.");
@@ -198,6 +191,7 @@ export default function ChatThread({
             }
         };
     }, [channel.id]);
+
 
 
     const handleSendMessage = async () => {

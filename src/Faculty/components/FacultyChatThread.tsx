@@ -47,7 +47,6 @@ interface Message {
     status: "sent" | "delivered" | "read";
 }
 
-
 const CURRENT_USER_ID = "6614140024479903b22b1111";
 const CURRENT_USER_TYPE = "Faculty";
 
