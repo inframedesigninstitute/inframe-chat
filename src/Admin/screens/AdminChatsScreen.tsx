@@ -187,33 +187,41 @@ const AdminChatsScreen = () => {
   };
 
   // ✅ Fetch all faculties
-  const fetchAllFacultyContacts = async () => {
-    if (!token) return setError("Authentication token not found. Please log in.");
-    try {
-      const API_URL = `${API_BASE_URL}/main-admin/view-all-faculties`;
-      const response = await axios.get(API_URL, {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      });
+const fetchAllFacultyContacts = async () => {
+  if (!token) {
+    setError("Authentication token not found. Please log in.");
+    return [];
+  }
 
-      const data = response.data;
-      if (data?.status === 1 && Array.isArray(data.allfacultyData)) {
-        return data.allfacultyData.map((faculty: any) => ({
-          id: faculty._id || faculty.id,
-          name: faculty.facultyName || "Unnamed Faculty",
-          email: faculty.facultyEmail || "N/A",
-          type: "faculty" as const,
-        }));
-      }
-      return [];
-    } catch (err: any) {
-      console.error("Error fetching faculties:", err.message);
-      setError("Failed to fetch faculty contacts.");
-      return [];
+  try {
+    const API_URL = `${API_BASE_URL}/main-admin/view-all-faculties`;
+
+    const response = await axios.get(API_URL, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const apiData = response.data;
+
+    // ✔ Correct: API returns array in apiData.data
+    if (apiData?.status === 1 && Array.isArray(apiData.data)) {
+      return apiData.data.map((faculty: any) => ({
+        id: faculty._id,
+        name: faculty.facultyName,
+        email: faculty.facultyEmail,
+        type: "faculty",
+      }));
     }
-  };
+
+    return [];
+  } catch (err: any) {
+    console.error("Error fetching faculties:", err.message);
+    setError("Failed to fetch faculty contacts.");
+    return [];
+  }
+};
+
 
   const FacultyAllGroups = async () => {
     if (!token) return setError("Authentication token not found. Please log in.");

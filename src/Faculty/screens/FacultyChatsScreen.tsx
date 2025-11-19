@@ -140,14 +140,12 @@ const FacultyChatsScreen = () => {
     });
   };
 
-  // ✅ Handle delete channel (local remove)
   const handleDeleteChannel = (id: string) => {
     setRawContacts((prev) => prev.filter((c) => c.studentId !== id));
     setRawGroups((prev) => prev.filter((g) => g.groupId !== id));
     console.log("Channel deleted:", id);
   };
 
-  // ✅ Fetch student contacts
   const fetchAllContacts = async () => {
     if (!token) return setError("Authentication token not found. Please log in.");
 

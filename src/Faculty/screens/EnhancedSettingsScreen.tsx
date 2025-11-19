@@ -1,10 +1,10 @@
 "use client"
 
-import { useNavigation } from "@react-navigation/native"
-import type { NativeStackNavigationProp } from "@react-navigation/native-stack"
-import type React from "react"
-
-import { useState } from "react"
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type React from "react";
+import { useState } from "react";
 
 import {
   Alert,
@@ -16,22 +16,22 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from "react-native"
-import Ionicons from "react-native-vector-icons/Ionicons"
-import WebBackButton from "../components/WebBackButton"
-import { useUser } from "../context/UserContext"
-import LeftSidebarNav from "../navigation/LeftSidebar"
-import type { RootStackParamList } from "../navigation/types"
-import CalendarScreen from "./CalendarScreen"
-import CoursesScreen from "./CoursesScreen"
-import HelpScreen from "./HelpScreen"
-import LanguageScreen from "./LanguageScreen"
-import NotificationsScreen from "./NotificationsScreen"
-import PrivacyScreen from "./PrivacyScreen"
-import ProfileScreen from "./ProfileScreen"
-import StarredMessagesScreen from "./StarredMessagesScreen"
-import StatusScreen from "./StatusScreen"
-import TermsScreen from "./TermsScreen"
+} from "react-native";
+import Ionicons from "react-native-vector-icons/Ionicons";
+import WebBackButton from "../components/WebBackButton";
+import { useUser } from "../context/UserContext";
+import LeftSidebarNav from "../navigation/LeftSidebar";
+import type { RootStackParamList } from "../navigation/types";
+import CalendarScreen from "./CalendarScreen";
+import CoursesScreen from "./CoursesScreen";
+import HelpScreen from "./HelpScreen";
+import LanguageScreen from "./LanguageScreen";
+import NotificationsScreen from "./NotificationsScreen";
+import PrivacyScreen from "./PrivacyScreen";
+import ProfileScreen from "./ProfileScreen";
+import StarredMessagesScreen from "./StarredMessagesScreen";
+import StatusScreen from "./StatusScreen";
+import TermsScreen from "./TermsScreen";
 
 type SettingsNavigationProp = NativeStackNavigationProp<RootStackParamList, "Settings">
 
@@ -112,8 +112,8 @@ const EnhancedSettingsScreen = () => {
         return <StarredMessagesScreen />
       case "Help":
         return <HelpScreen />
-    case "Languages":
-  return <LanguageScreen />
+      case "Languages":
+        return <LanguageScreen />
 
       case "Calendar":
         return <CalendarScreen />
@@ -150,35 +150,18 @@ const EnhancedSettingsScreen = () => {
     }
   }
 
-  const logout = () => {
-    // async () => {
-    //   Alert.alert("Logout", "Are you sure you want to logout?", [
-    //     { text: "Cancel", style: "cancel" },
-    //     {
-    //       text: "Logout",
-    //       style: "destructive",
-    //       onPress: async () => {
-    //         try {
-    //           // 🧹 Clear token and user data
-    //           await AsyncStorage.removeItem("TOKEN");
-    //           setUser(null);
+  const logout = async () => {
+  try {
+    await AsyncStorage.removeItem("FACULTYTOKEN");
 
-    //           // 🔁 Navigate to TeacherLogin
-    //           navigation.reset({
-    //             index: 0,
-    //             routes: [{ name: "TeacherLogin" as never }],
-    //           });
-
-    //           console.log("✅ Successfully logged out and navigated to TeacherLogin");
-    //         } catch (error) {
-    //           console.error("Logout error:", error);
-    //           Alert.alert("Error", "Failed to logout, please try again.");
-    //         }
-    //       },
-    //     },
-    //   ]);
-    // }
+    navigation.reset({
+      index: 0,
+      routes: [{ name: "TeacherLogin" }],
+    });
+  } catch (error) {
+    console.log("Logout Error:", error);
   }
+};
 
   return (
     <View style={styles.container}>
@@ -248,16 +231,15 @@ const EnhancedSettingsScreen = () => {
               <SettingItem icon="settings" title="Admin Dashboard" subtitle="Manage approvals & settings" />
             )}
 
-            <View style={{ marginTop: 12 }}>
-              <TouchableOpacity
-                style={styles.logoutButton}
-                activeOpacity={0.85}
-                onPress={logout}
-              >
-                <Ionicons name="log-out" size={22} color="#E53935" />
-                <Text style={styles.logoutText}>Log out</Text>
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity
+              style={styles.logoutButton}
+              activeOpacity={0.85}
+              onPress={logout}
+            >
+              <Ionicons name="log-out" size={22} color="#E53935" />
+              <Text style={styles.logoutText}>Log out</Text>
+            </TouchableOpacity>
+
 
           </ScrollView>
         </View>

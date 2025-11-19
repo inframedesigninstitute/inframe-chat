@@ -1,5 +1,6 @@
 "use client"
 
+import AsyncStorage from "@react-native-async-storage/async-storage"
 import { useNavigation } from "@react-navigation/native"
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack"
 import type React from "react"
@@ -150,6 +151,21 @@ const EnhancedSettingsScreen = () => {
     }
   }
 
+  
+  
+  const logout = async () => {
+  try {
+    await AsyncStorage.removeItem("FACULTYTOKEN");
+
+    navigation.reset({
+      index: 0,
+      routes: [{ name: "StudentLogin" }],
+    });
+  } catch (error) {
+    console.log("Logout Error:", error);
+  }
+};
+
   return (
     <View style={styles.container}>
       {/* Left Sidebar */}
@@ -219,26 +235,14 @@ const EnhancedSettingsScreen = () => {
             )}
 
             <View style={{ marginTop: 12 }}>
-              <TouchableOpacity
-                style={styles.logoutButton}
-                onPress={() => {
-                  Alert.alert("Logout", "Are you sure you want to logout?", [
-                    { text: "Cancel", style: "cancel" },
-                    {
-                      text: "Logout",
-                      style: "destructive",
-                      onPress: () => {
-                        setUser(null)
-                        navigation.navigate("Login")
-                      },
-                    },
-                  ])
-                }}
-                activeOpacity={0.85}
-              >
-                <Ionicons name="log-out" size={22} color="#E53935" />
-                <Text style={styles.logoutText}>Log out</Text>
-              </TouchableOpacity>
+               <TouchableOpacity
+                          style={styles.logoutButton}
+                          activeOpacity={0.85}
+                          onPress={logout}
+                        >
+                          <Ionicons name="log-out" size={22} color="#E53935" />
+                          <Text style={styles.logoutText}>Log out</Text>
+                        </TouchableOpacity>
             </View>
           </ScrollView>
         </View>

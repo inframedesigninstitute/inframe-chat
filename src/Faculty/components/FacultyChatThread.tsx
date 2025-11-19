@@ -87,38 +87,48 @@ export default function ChatThread({
         channelRef.current = channel;
     }, [channel]);
 
-    const fetchMessages = useCallback(async (userId: string) => {
-
-        try {
-            const authToken = await AsyncStorage.getItem('FACULTYTOKEN');
-            console.log("RAW TOKEN =>", authToken);
-            console.log("TYPE =>", typeof authToken);
-
-            if (!authToken) {
-                Alert.alert("Authentication Error", "Token not available yet.");
-                return;
-            }
-
-            const url = `${SHOW_MSG_API_URL}/${userId}`;
-            console.log("Fetching:", url);
-
-            const response = await axios.post(url,
-                {},
-                {
-                    headers: {
-                        Authorization: `Bearer ${authToken}`,
-                    },
-                });
-
-            console.log("Fetched Messages:", response.data);
-
-            setMessages(response.data);
-
-        } catch (error) {
-            console.error("Error fetching messages:", error);
-            Alert.alert("Error", "Failed to load messages.");
+const fetchMessages = useCallback(async (userId: string) => {
+    try {
+        const authToken = await AsyncStorage.getItem('FACULTYTOKEN');
+        if (!authToken) {
+            Alert.alert("Authentication Error", "Token not available yet.");
+            return;
         }
-    }, [agoraToken]);
+
+        const url = `${SHOW_MSG_API_URL}/${userId}`;
+        console.log("Fetching:", url);
+
+        const response = await axios.post(
+            url,
+            {},
+            {
+                headers: {
+                    Authorization: `Bearer ${authToken}`,
+                },
+            }
+        );
+
+        console.log("Fetched Messages:", response.data);
+
+        // ⭐ Transform backend messages for UI
+        const transformedMessages = response.data.map((msg: any) => ({
+            id: msg._id,
+            text: msg.text,
+            isSent: msg.senderId === CURRENT_USER_ID,  
+            timestamp: new Date(msg.createdAt).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+            }),
+            status: "delivered",
+        }));
+
+        setMessages(transformedMessages);
+
+    } catch (error) {
+        console.error("Error fetching messages:", error);
+        Alert.alert("Error", "Failed to load messages.");
+    }
+}, [agoraToken]);
 
 
     useEffect(() => {
@@ -191,63 +201,63 @@ export default function ChatThread({
         };
     }, [channel.id]);
 
+ const handleSendMessage = async () => {
+    if (!newMessage.trim()) return;
 
+    const messageText = newMessage.trim();
+    const tempId = Date.now().toString();
 
-    const handleSendMessage = async () => {
-        if (!newMessage.trim()) return;
-
-        const messageText = newMessage.trim();
-        const tempId = Date.now().toString();
-
-        const newMsg: Message = {
-            id: tempId,
-            text: messageText,
-            isSent: true,
-            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-            status: "sent",
-        };
-
-        setMessages(prev => [...prev, newMsg]);
-        setNewMessage("");
-
-        const storedToken = await AsyncStorage.getItem('FACULTYTOKEN');
-
-        if (rtmEngine) {
-            try {
-                await rtmEngine.sendMessageToChannel({ text: messageText }, channel.id);
-            } catch (e) {
-                console.error("RTM Send Error:", e);
-            }
-        } else {
-            Alert.alert("Error", "RTM Engine not initialized. Message sent only to DB.");
-        }
-
-        try {
-            const receiverId = channel.id;
-            const receiverType = "student";
-
-            if (!agoraToken) {
-                Alert.alert("Error", "Auth token missing. Cannot save message to DB.");
-                return;
-            }
-
-            const response = await axios.post(SEND_MSG_API_URL, {
-                receiverId,
-                receiverType,
-                text: messageText,
-            }, {
-                headers: { Authorization: `Bearer ${storedToken}` },
-            });
-
-            setMessages(prev => prev.map(msg =>
-                msg.id === tempId ? { ...msg, id: response.data._id, status: 'delivered' } : msg
-            ));
-
-        } catch (e) {
-            console.error("DB Send Error:", e);
-            Alert.alert("Persistence Failed", "Message sent real-time but failed to save in the database.");
-        }
+    const newMsg: Message = {
+        id: tempId,
+        text: messageText,
+        isSent: true,
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        status: "sent",
     };
+
+    setMessages(prev => [...prev, newMsg]);
+    setNewMessage("");
+
+    const storedToken = await AsyncStorage.getItem('FACULTYTOKEN');
+    const userId = await AsyncStorage.getItem('USERID');
+   
+
+    if (rtmEngine) {
+        try {
+            await rtmEngine.sendMessageToChannel({ text: messageText }, channel.id);
+        } catch (e) {
+            console.error("RTM Send Error:", e);
+        }
+    }
+
+    try {
+        const receiverId = channel.id;
+
+        const response = await axios.post(
+            SEND_MSG_API_URL,
+            {
+                receiverId,
+                senderId: userId,       
+                text: messageText,
+            },
+            {
+                headers: { Authorization: `Bearer ${storedToken}` },
+            }
+        );
+
+        setMessages(prev =>
+            prev.map(msg =>
+                msg.id === tempId ? { ...msg, id: response.data._id, status: 'delivered' } : msg
+            )
+        );
+
+    } catch (e) {
+        console.error("DB Send Error:", e);
+        Alert.alert("Persistence Failed", "Message sent real-time but failed to save in the database.");
+    }
+};
+
+   
 
     // Corrected and retained declaration of handleOpenCamera
     const handleOpenCamera = () =>

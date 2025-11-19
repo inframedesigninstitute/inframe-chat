@@ -1,9 +1,11 @@
 "use client"
 
-import { useNavigation } from "@react-navigation/native"
-import type { NativeStackNavigationProp } from "@react-navigation/native-stack"
-import type React from "react"
-import { useState } from "react"
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type React from "react";
+
+import { useState } from "react";
 import {
   Alert,
   Image,
@@ -14,21 +16,21 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from "react-native"
-import Ionicons from "react-native-vector-icons/Ionicons"
-import WebBackButton from "../components/WebBackButton"
-import { useUser } from "../context/UserContext"
-import LeftSidebarNav from "../navigation/LeftSidebar"
-import type { RootStackParamList } from "../navigation/types"
-import CalendarScreen from "./CalendarScreen"
-import CoursesScreen from "./CoursesScreen"
-import HelpScreen from "./HelpScreen"
-import NotificationsScreen from "./NotificationsScreen"
-import PrivacyScreen from "./PrivacyScreen"
-import ProfileScreen from "./ProfileScreen"
-import StarredMessagesScreen from "./StarredMessagesScreen"
-import StatusScreen from "./StatusScreen"
-import TermsScreen from "./TermsScreen"
+} from "react-native";
+import Ionicons from "react-native-vector-icons/Ionicons";
+import WebBackButton from "../components/WebBackButton";
+import { useUser } from "../context/UserContext";
+import LeftSidebarNav from "../navigation/LeftSidebar";
+import type { RootStackParamList } from "../navigation/types";
+import CalendarScreen from "./CalendarScreen";
+import CoursesScreen from "./CoursesScreen";
+import HelpScreen from "./HelpScreen";
+import NotificationsScreen from "./NotificationsScreen";
+import PrivacyScreen from "./PrivacyScreen";
+import ProfileScreen from "./ProfileScreen";
+import StarredMessagesScreen from "./StarredMessagesScreen";
+import StatusScreen from "./StatusScreen";
+import TermsScreen from "./TermsScreen";
 
 type SettingsNavigationProp = NativeStackNavigationProp<RootStackParamList, "Settings">
 
@@ -118,7 +120,7 @@ const EnhancedSettingsScreen = () => {
       case "Calendar":
         return <CalendarScreen />
       case "Starred":
-        return <StarredMessagesScreen/>
+        return <StarredMessagesScreen />
       case "Alumnus App":
         return (
           <View style={styles.emptyDetail}>
@@ -149,6 +151,21 @@ const EnhancedSettingsScreen = () => {
         )
     }
   }
+
+
+
+  const logout = async () => {
+    try {
+      await AsyncStorage.removeItem("ADMINTOKEN");
+
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "AdminLogin" }],
+      });
+    } catch (error) {
+      console.log("Logout Error:", error);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -221,24 +238,13 @@ const EnhancedSettingsScreen = () => {
             <View style={{ marginTop: 12 }}>
               <TouchableOpacity
                 style={styles.logoutButton}
-                onPress={() => {
-                  Alert.alert("Logout", "Are you sure you want to logout?", [
-                    { text: "Cancel", style: "cancel" },
-                    {
-                      text: "Logout",
-                      style: "destructive",
-                      onPress: () => {
-                        setUser(null)
-                        navigation.navigate("Login")
-                      },
-                    },
-                  ])
-                }}
                 activeOpacity={0.85}
+                onPress={logout}
               >
                 <Ionicons name="log-out" size={22} color="#E53935" />
                 <Text style={styles.logoutText}>Log out</Text>
               </TouchableOpacity>
+
             </View>
           </ScrollView>
         </View>

@@ -1,8 +1,6 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import Clipboard from "@react-native-clipboard/clipboard";
 import { useNavigation, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import RtmEngineClass, { MessageEvent } from "agora-react-native-rtm";
 import axios from "axios";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -21,6 +19,7 @@ import {
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
+
 import { useStarredMessages } from "../context/StarredMessagesContext";
 import type { RootStackParamList } from "../navigation/types";
 import BackButton from "./BackButton";
@@ -31,6 +30,9 @@ import MarqueeText from "./MarqueeText";
 import MessageOptionsModal from "./MessageOptionsModal";
 import QuizPollModal from "./QuizPollModal";
 import AddMemberModal from "./add-member";
+
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import RtmEngineClass, { MessageEvent } from "agora-react-native-rtm";
 
 const { width } = Dimensions.get("window");
 
@@ -44,7 +46,6 @@ interface Message {
     timestamp: string;
     status: "sent" | "delivered" | "read";
 }
-
 
 const CURRENT_USER_ID = "6614140024479903b22b1111";
 const CURRENT_USER_TYPE = "mainAdmin";
@@ -73,25 +74,22 @@ export default function ChatThread({
     const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
     const [locationVisible, setLocationVisible] = useState<boolean>(false);
     const [showAddMemberModal, setShowAddMemberModal] = useState(false);
+    // Removed the duplicate declaration: const handleOpenCamera = () => navigation.navigate("Camera");
 
     const [agoraToken, setagoraToken] = useState<string | null>(null);
     const [rtmEngine, setRtmEngine] = useState<any>(null);
     const channelRef = useRef(channel);
 
+
     const { addStarredMessage } = useStarredMessages();
 
- 
     useEffect(() => {
         channelRef.current = channel;
     }, [channel]);
 
     const fetchMessages = useCallback(async (userId: string) => {
-
         try {
-            const authToken = await AsyncStorage.getItem('FACULTYTOKEN');
-            console.log("RAW TOKEN =>", authToken);
-            console.log("TYPE =>", typeof authToken);
-
+            const authToken = await AsyncStorage.getItem('ADMINTOKEN');
             if (!authToken) {
                 Alert.alert("Authentication Error", "Token not available yet.");
                 return;
@@ -100,24 +98,38 @@ export default function ChatThread({
             const url = `${SHOW_MSG_API_URL}/${userId}`;
             console.log("Fetching:", url);
 
-            const response = await axios.post(url,
+            const response = await axios.post(
+                url,
                 {},
                 {
                     headers: {
                         Authorization: `Bearer ${authToken}`,
                     },
-                });
+                }
+            );
 
             console.log("Fetched Messages:", response.data);
 
-            setMessages(response.data);
+            // ⭐ Transform backend messages for UI
+            const transformedMessages = response.data.map((msg: any) => ({
+                id: msg._id,
+                text: msg.text,
+                isSent: msg.senderId === userId,
+                timestamp: new Date(msg.createdAt).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                }),
+                status: "delivered",
+            }));
+
+            setMessages(transformedMessages);
 
         } catch (error) {
             console.error("Error fetching messages:", error);
             Alert.alert("Error", "Failed to load messages.");
         }
     }, [agoraToken]);
-    
+
 
     useEffect(() => {
         const setupAgora = async () => {
@@ -220,10 +232,11 @@ export default function ChatThread({
             Alert.alert("Error", "RTM Engine not initialized. Message sent only to DB.");
         }
 
+
+        //roleOfTheUser
         try {
             const receiverId = channel.id;
-            const receiverType = "student";
-
+        
             if (!agoraToken) {
                 Alert.alert("Error", "Auth token missing. Cannot save message to DB.");
                 return;
@@ -231,7 +244,7 @@ export default function ChatThread({
 
             const response = await axios.post(SEND_MSG_API_URL, {
                 receiverId,
-                receiverType,
+             
                 text: messageText,
             }, {
                 headers: { Authorization: `Bearer ${storedToken}` },
@@ -247,6 +260,7 @@ export default function ChatThread({
         }
     };
 
+    // Corrected and retained declaration of handleOpenCamera
     const handleOpenCamera = () =>
         navigation.navigate("Camera", {
             onPictureTaken: (imageUri: string) => {
@@ -259,7 +273,8 @@ export default function ChatThread({
                 };
                 setMessages(prev => [...prev, message]);
             }
-        } as never);
+        } as never); // Used 'as never' to bypass the type issue for the sake of compiling the provided logic.
+    // NOTE: A proper fix would involve updating RootStackParamList to include the 'onPictureTaken' prop for the 'Camera' route.
 
     const handleDocument = () => {
         openDocumentPicker((fileName) => {
@@ -556,4 +571,4 @@ const styles = StyleSheet.create({
     attachmentItem: { alignItems: "center" },
     attachmentIcon: { width: 60, height: 60, borderRadius: 30, justifyContent: "center", alignItems: "center", marginBottom: 6 },
     attachmentText: { fontSize: 12, textAlign: "center" },
-}); 
+});
