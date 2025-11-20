@@ -24,9 +24,9 @@ import StarredMessagesScreen from '../screens/StarredMessagesScreen';
 import StatusScreen from '../screens/StatusScreen';
 import StudentSignupScreen from '../screens/StudentSignupScreen';
 import TermsScreen from '../screens/TermsScreen';
-import VideoCallScreen from '../screens/VideoCallScreen';
 import { RootStackParamList } from './types';
 import StudentLoginScreen from '../screens/StudentLoginScreen';
+import VideoCallScreen from '@/src/Students/screens/VideoCallScreen';
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const RootNavigator = () => {

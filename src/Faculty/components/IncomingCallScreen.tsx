@@ -5,56 +5,75 @@ import {
     StyleSheet,
     TouchableOpacity,
     Animated,
-    Image,
     Dimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { useCall } from '../contexts/CallContext';
+import { useCall } from '../context/CallContext';
 
 const { width, height } = Dimensions.get('window');
 
-const OutgoingCallScreen: React.FC = () => {
+const IncomingCallScreen: React.FC = () => {
     const navigation = useNavigation();
-    const { currentCall, endCall, callStatus } = useCall();
+    const { currentCall, acceptCall, rejectCall, callStatus } = useCall();
     const [pulseAnim] = useState(new Animated.Value(1));
+    const [shakeAnim] = useState(new Animated.Value(0));
 
     useEffect(() => {
-        console.log('📞 ========== OUTGOING CALL SCREEN ==========');
-        console.log('📞 Current Call:', currentCall);
-        console.log('📞 Call Status:', callStatus);
-    }, [currentCall, callStatus]);
-
-    useEffect(() => {
-        // Pulse animation for calling state
+        // Pulse animation
         Animated.loop(
             Animated.sequence([
                 Animated.timing(pulseAnim, {
-                    toValue: 1.2,
-                    duration: 1000,
+                    toValue: 1.1,
+                    duration: 800,
                     useNativeDriver: true,
                 }),
                 Animated.timing(pulseAnim, {
                     toValue: 1,
-                    duration: 1000,
+                    duration: 800,
                     useNativeDriver: true,
                 }),
             ])
         ).start();
 
-        // Auto navigate to video call screen when connected
+        // Shake animation for buttons
+        Animated.loop(
+            Animated.sequence([
+                Animated.timing(shakeAnim, {
+                    toValue: 10,
+                    duration: 50,
+                    useNativeDriver: true,
+                }),
+                Animated.timing(shakeAnim, {
+                    toValue: -10,
+                    duration: 50,
+                    useNativeDriver: true,
+                }),
+                Animated.timing(shakeAnim, {
+                    toValue: 0,
+                    duration: 50,
+                    useNativeDriver: true,
+                }),
+            ])
+        ).start();
+
+        // Auto navigate when accepted
         if (callStatus === 'connected') {
             navigation.navigate('VideoCall' as never);
         }
 
-        // Auto close when call ends
+        // Auto close when rejected/ended
         if (callStatus === 'ended') {
             navigation.goBack();
         }
-    }, [callStatus, navigation, pulseAnim]);
+    }, [callStatus, navigation, pulseAnim, shakeAnim]);
 
-    const handleEndCall = async () => {
-        await endCall();
+    const handleAccept = async () => {
+        await acceptCall();
+    };
+
+    const handleReject = async () => {
+        await rejectCall();
         navigation.goBack();
     };
 
@@ -64,10 +83,10 @@ const OutgoingCallScreen: React.FC = () => {
 
     return (
         <View style={styles.container}>
-            {/* Background Gradient */}
+            {/* Background */}
             <View style={styles.gradientOverlay} />
 
-            {/* Receiver Info */}
+            {/* Caller Info */}
             <View style={styles.centerContent}>
                 <Animated.View
                     style={[
@@ -77,19 +96,13 @@ const OutgoingCallScreen: React.FC = () => {
                 >
                     <View style={styles.avatar}>
                         <Text style={styles.avatarText}>
-                            {currentCall.receiverName.charAt(0).toUpperCase()}
+                            {currentCall.callerName.charAt(0).toUpperCase()}
                         </Text>
                     </View>
                 </Animated.View>
 
-                <Text style={styles.receiverName}>{currentCall.receiverName}</Text>
+                <Text style={styles.callerName}>{currentCall.callerName}</Text>
                 
-                <Text style={styles.statusText}>
-                    {callStatus === 'calling' && 'Calling...'}
-                    {callStatus === 'ringing' && 'Ringing...'}
-                    {callStatus === 'connected' && 'Connected'}
-                </Text>
-
                 <View style={styles.iconRow}>
                     <Ionicons
                         name={currentCall.callType === 'video' ? 'videocam' : 'call'}
@@ -97,19 +110,33 @@ const OutgoingCallScreen: React.FC = () => {
                         color="#fff"
                     />
                     <Text style={styles.callTypeText}>
-                        {currentCall.callType === 'video' ? 'Video Call' : 'Voice Call'}
+                        Incoming {currentCall.callType === 'video' ? 'Video' : 'Voice'} Call
                     </Text>
                 </View>
+
+                <Animated.View style={{ transform: [{ translateX: shakeAnim }] }}>
+                    <Text style={styles.ringingText}>📱 Ringing...</Text>
+                </Animated.View>
             </View>
 
             {/* Call Controls */}
             <View style={styles.controls}>
-                {/* End Call Button */}
+                {/* Reject Button */}
                 <TouchableOpacity
-                    style={[styles.controlButton, styles.endCallButton]}
-                    onPress={handleEndCall}
+                    style={[styles.controlButton, styles.rejectButton]}
+                    onPress={handleReject}
                 >
-                    <Ionicons name="call" size={32} color="#fff" />
+                    <Ionicons name="close" size={36} color="#fff" />
+                    <Text style={styles.buttonLabel}>Decline</Text>
+                </TouchableOpacity>
+
+                {/* Accept Button */}
+                <TouchableOpacity
+                    style={[styles.controlButton, styles.acceptButton]}
+                    onPress={handleAccept}
+                >
+                    <Ionicons name="call" size={36} color="#fff" />
+                    <Text style={styles.buttonLabel}>Accept</Text>
                 </TouchableOpacity>
             </View>
         </View>
@@ -135,58 +162,77 @@ const styles = StyleSheet.create({
         marginBottom: 30,
     },
     avatar: {
-        width: 120,
-        height: 120,
-        borderRadius: 60,
+        width: 140,
+        height: 140,
+        borderRadius: 70,
         backgroundColor: '#4a4e69',
         justifyContent: 'center',
         alignItems: 'center',
-        borderWidth: 4,
+        borderWidth: 5,
         borderColor: '#fff',
     },
     avatarText: {
-        fontSize: 48,
+        fontSize: 56,
         fontWeight: 'bold',
         color: '#fff',
     },
-    receiverName: {
-        fontSize: 28,
+    callerName: {
+        fontSize: 32,
         fontWeight: 'bold',
         color: '#fff',
-        marginBottom: 10,
-    },
-    statusText: {
-        fontSize: 18,
-        color: '#b0b0b0',
-        marginBottom: 20,
+        marginBottom: 15,
     },
     iconRow: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 8,
+        marginBottom: 20,
     },
     callTypeText: {
-        fontSize: 16,
+        fontSize: 18,
         color: '#fff',
+    },
+    ringingText: {
+        fontSize: 20,
+        color: '#4ecca3',
+        fontWeight: '600',
+        marginTop: 10,
     },
     controls: {
         position: 'absolute',
-        bottom: 60,
+        bottom: 80,
         left: 0,
         right: 0,
-        alignItems: 'center',
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        paddingHorizontal: 60,
     },
     controlButton: {
+        alignItems: 'center',
+        gap: 8,
+    },
+    rejectButton: {
         width: 70,
         height: 70,
         borderRadius: 35,
+        backgroundColor: '#e74c3c',
         justifyContent: 'center',
         alignItems: 'center',
     },
-    endCallButton: {
-        backgroundColor: '#e74c3c',
+    acceptButton: {
+        width: 70,
+        height: 70,
+        borderRadius: 35,
+        backgroundColor: '#27ae60',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    buttonLabel: {
+        color: '#fff',
+        fontSize: 14,
+        fontWeight: '600',
     },
 });
 
-export default OutgoingCallScreen;
+export default IncomingCallScreen;
 

@@ -1,10 +1,9 @@
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import ChatsScreen from '../screens/ChatsScreen';
+import ChatsScreen from '../screens/AdminChatsScreen';
 import { ChatsTopTabsParamList, RootStackParamList } from './types';
 
 const TopTab = createMaterialTopTabNavigator<ChatsTopTabsParamList>();

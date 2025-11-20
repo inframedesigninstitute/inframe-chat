@@ -2,8 +2,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NavigationContainer } from '@react-navigation/native';
 import { useEffect } from 'react';
 import { useDispatch } from 'react-redux';
-import { CallProvider } from '../contexts/CallContext';
 import { setToken } from '../Redux/Slices/adminTokenSlice';
+import { CallProvider } from './context/CallContext';
 import UserProvider from './context/UserContext';
 import RootNavigator from './navigation/RootNavigator';
 

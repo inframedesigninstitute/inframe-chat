@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { useCall } from '../contexts/CallContext';
+import { useCall } from '../context/CallContext';
 
 const { width, height } = Dimensions.get('window');
 
