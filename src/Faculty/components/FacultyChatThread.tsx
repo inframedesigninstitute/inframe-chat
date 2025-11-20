@@ -16,9 +16,20 @@ import {
     TextInput,
     TouchableOpacity,
     View,
+    Animated,
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
+
+// ✅ Conditional import for AudioRecorderPlayer (native only)
+let AudioRecorderPlayer: any = null;
+if (Platform.OS !== 'web') {
+    try {
+        AudioRecorderPlayer = require("react-native-audio-recorder-player").default;
+    } catch (e) {
+        console.warn("⚠️ AudioRecorderPlayer not available");
+    }
+}
 
 import { useStarredMessages } from "../context/StarredMessagesContext";
 import type { RootStackParamList } from "../navigation/types";
@@ -47,9 +58,6 @@ interface Message {
     status: "sent" | "delivered" | "read";
 }
 
-const CURRENT_USER_ID = "6614140024479903b22b1111";
-const CURRENT_USER_TYPE = "Faculty";
-
 const RTM_TOKEN_API_URL = "http://localhost:5200/web/agora/generate-rtm-token";
 const SEND_MSG_API_URL = "http://localhost:5200/web/messages/send-msg";
 const SHOW_MSG_API_URL = "http://localhost:5200/web/messages/show-msg";
@@ -59,10 +67,12 @@ export default function ChatThread({
     channel,
     onOpenProfile,
     onGroupCreated,
+    onNewMessage,
 }: {
     channel: { id: string; name: string };
     onOpenProfile: () => void;
     onGroupCreated?: (group: any) => void;
+    onNewMessage?: (channelId: string, message: string) => void;
 }) {
     const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
@@ -74,18 +84,86 @@ export default function ChatThread({
     const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
     const [locationVisible, setLocationVisible] = useState<boolean>(false);
     const [showAddMemberModal, setShowAddMemberModal] = useState(false);
-    // Removed the duplicate declaration: const handleOpenCamera = () => navigation.navigate("Camera");
+    const [currentUserId, setCurrentUserId] = useState<string>("");
 
     const [agoraToken, setagoraToken] = useState<string | null>(null);
     const [rtmEngine, setRtmEngine] = useState<any>(null);
     const channelRef = useRef(channel);
 
+    // 🎤 Audio Recording States
+    const [isRecording, setIsRecording] = useState(false);
+    const [recordingDuration, setRecordingDuration] = useState(0);
+    const [recordingUri, setRecordingUri] = useState<string>("");
+    const audioRecorderPlayer = useRef<any>(null);
+    const recordingInterval = useRef<any>(null);
+    const recordingAnimation = useRef(new Animated.Value(1)).current;
 
     const { addStarredMessage } = useStarredMessages();
 
     useEffect(() => {
         channelRef.current = channel;
     }, [channel]);
+
+    // 🎤 Initialize Audio Recorder (Mobile only)
+    useEffect(() => {
+        // Only initialize on native platforms (iOS/Android)
+        if (Platform.OS === 'web') {
+            console.log("⚠️ Audio recording not supported on web");
+            return;
+        }
+
+        const initRecorder = () => {
+            try {
+                if (!AudioRecorderPlayer) {
+                    console.warn("⚠️ AudioRecorderPlayer not available");
+                    return;
+                }
+                audioRecorderPlayer.current = new AudioRecorderPlayer();
+                console.log("✅ Faculty: Audio recorder initialized");
+            } catch (e) {
+                console.warn("⚠️ Faculty: Audio recorder init failed:", e);
+            }
+        };
+        initRecorder();
+        
+        return () => {
+            // Cleanup on unmount
+            if (isRecording && audioRecorderPlayer.current) {
+                try {
+                    audioRecorderPlayer.current.stopRecorder();
+                } catch (e) {
+                    console.warn("Cleanup error:", e);
+                }
+            }
+            if (recordingInterval.current) {
+                clearInterval(recordingInterval.current);
+            }
+        };
+    }, []);
+
+    // ✅ Get current user ID from AsyncStorage
+    useEffect(() => {
+        const loadCurrentUserId = async () => {
+            try {
+                let storedUserId = await AsyncStorage.getItem('USERID');
+                
+                if (!storedUserId) {
+                    console.warn("⚠️ USERID not found in AsyncStorage. Using fallback...");
+                    // Fallback: Use a default faculty ID for testing
+                    storedUserId = "faculty_default_001";
+                    await AsyncStorage.setItem('USERID', storedUserId);
+                }
+                
+                setCurrentUserId(storedUserId);
+                console.log("✅ Faculty Current User ID loaded:", storedUserId);
+            } catch (error) {
+                console.error("Error loading user ID:", error);
+                // Emergency fallback
+                setCurrentUserId("faculty_fallback_001");
+            }
+        };
+        loadCurrentUserId();
+    }, []);
 
 const fetchMessages = useCallback(async (userId: string) => {
     try {
@@ -95,32 +173,52 @@ const fetchMessages = useCallback(async (userId: string) => {
             return;
         }
 
+        // ✅ Backend only supports personal chats
         const url = `${SHOW_MSG_API_URL}/${userId}`;
-        console.log("Fetching:", url);
+            
+        console.log(`Faculty Fetching messages from:`, url);
 
         const response = await axios.post(
             url,
-            {},
+            {},  // Empty body - authMiddleware provides user data
             {
                 headers: {
                     Authorization: `Bearer ${authToken}`,
+                    "Content-Type": "application/json",
                 },
             }
         );
 
-        console.log("Fetched Messages:", response.data);
+        console.log("Faculty Fetched Messages:", response.data);
 
-        // ⭐ Transform backend messages for UI
-        const transformedMessages = response.data.map((msg: any) => ({
-            id: msg._id,
-            text: msg.text,
-            isSent: msg.senderId === CURRENT_USER_ID,  
-            timestamp: new Date(msg.createdAt).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-            }),
-            status: "delivered",
-        }));
+        // ⭐ Transform backend messages for UI - FIXED sender check
+        const transformedMessages = response.data.map((msg: any) => {
+            // ✅ Get sender ID from multiple possible fields and convert to string
+            const msgSenderId = String(msg.senderId || msg.sender?._id || msg.sender?.id || msg.from || '');
+            
+            // ✅ Get current user ID and convert to string for comparison
+            const currentUserIdStr = String(currentUserId || '');
+            
+            // ✅ Compare both as strings (handles ObjectId vs string comparison)
+            const isSentByMe = msgSenderId === currentUserIdStr;
+            
+            console.log(`📨 Faculty Message: "${msg.text?.substring(0, 20)}..."`);
+            console.log(`   ├─ Sender ID: "${msgSenderId}" (type: ${typeof msgSenderId})`);
+            console.log(`   ├─ Current User: "${currentUserIdStr}" (type: ${typeof currentUserIdStr})`);
+            console.log(`   ├─ Match: ${msgSenderId === currentUserIdStr}`);
+            console.log(`   └─ isSent: ${isSentByMe} ${isSentByMe ? '👉 RIGHT' : '👈 LEFT'}`);
+            
+            return {
+                id: msg._id,
+                text: msg.text,
+                isSent: isSentByMe,
+                timestamp: new Date(msg.createdAt || msg.timestamp || Date.now()).toLocaleTimeString(undefined, {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                }),
+                status: "delivered",
+            };
+        });
 
         setMessages(transformedMessages);
 
@@ -128,11 +226,18 @@ const fetchMessages = useCallback(async (userId: string) => {
         console.error("Error fetching messages:", error);
         Alert.alert("Error", "Failed to load messages.");
     }
-}, [agoraToken]);
+}, [currentUserId]);
 
 
     useEffect(() => {
         const setupAgora = async () => {
+            // Wait for currentUserId to be loaded
+            if (!currentUserId) {
+                console.log("⏳ Waiting for faculty current user ID...");
+                return;
+            }
+            
+            console.log("🚀 Faculty: Starting Agora RTM setup with user ID:", currentUserId);
 
             if (rtmEngine) {
                 try {
@@ -144,7 +249,7 @@ const fetchMessages = useCallback(async (userId: string) => {
             }
 
             try {
-                const uid = CURRENT_USER_ID;
+                const uid = currentUserId;
 
                 // 👉 Step 1: Fetch RTM Token FIRST
                 const { data } = await axios.post(RTM_TOKEN_API_URL, { uid });
@@ -152,7 +257,7 @@ const fetchMessages = useCallback(async (userId: string) => {
 
                 // Save agora token
                 setagoraToken(agoraToken);
-                console.log("Agora Token:", agoraToken);
+                console.log("Faculty Agora Token:", agoraToken);
 
                 // 👉 Step 2: Now safely call fetchMessages after token is set
                 const userId = channel.id;
@@ -166,11 +271,52 @@ const fetchMessages = useCallback(async (userId: string) => {
                 engine.addListener("MessageReceived", (event: MessageEvent) => {
                     const msg = event as any;
 
+                    try {
+                        // ✅ Check if this is a call notification
+                        const messageText = msg.text || msg.message || "";
+                        const callData = JSON.parse(messageText);
+                        
+                        if (callData.type === 'video_call' || callData.type === 'audio_call') {
+                            console.log('📞 Faculty: Incoming call notification:', callData);
+                            
+                            // Show alert for incoming call
+                            Alert.alert(
+                                `Incoming ${callData.type === 'video_call' ? 'Video' : 'Audio'} Call`,
+                                `${callData.callerName} is calling you`,
+                                [
+                                    {
+                                        text: 'Decline',
+                                        style: 'cancel',
+                                    },
+                                    {
+                                        text: 'Accept',
+                                        onPress: () => {
+                                            if (callData.type === 'video_call') {
+                                                navigation.navigate('LiveVideoCall', { 
+                                                    channelName: callData.channelName 
+                                                });
+                                            } else {
+                                                navigation.navigate('AudioCall', {
+                                                    contactName: callData.callerName,
+                                                    contactNumber: callData.callerId,
+                                                });
+                                            }
+                                        },
+                                    },
+                                ],
+                            );
+                            return;
+                        }
+                    } catch (e) {
+                        // Not a call notification, treat as regular message
+                    }
+
+                    // Regular text message
                     const incomingMsg: Message = {
                         id: Date.now().toString(),
                         text: msg.text || msg.message || "New message",
                         isSent: false,
-                        timestamp: new Date().toLocaleTimeString([], {
+                        timestamp: new Date().toLocaleTimeString(undefined, {
                             hour: "2-digit",
                             minute: "2-digit",
                         }),
@@ -178,6 +324,11 @@ const fetchMessages = useCallback(async (userId: string) => {
                     };
 
                     setMessages(prev => [...prev, incomingMsg]);
+                    
+                    // ✅ Notify parent component to update chat list
+                    if (onNewMessage) {
+                        onNewMessage(channel.id, msg.text || msg.message || "New message");
+                    }
                 });
 
                 await engine.loginV2(agoraToken, uid);
@@ -185,9 +336,12 @@ const fetchMessages = useCallback(async (userId: string) => {
 
                 setRtmEngine(engine);
 
-            } catch (err) {
-                console.error("Agora RTM setup error:", err);
-                Alert.alert("RTM Init Error", "Failed to initialize RTM engine.");
+            } catch (err: any) {
+                console.error("Faculty Agora RTM setup error:", err);
+                // ✅ Don't show alert on web - RTM doesn't work on web platform
+                if (Platform.OS !== 'web') {
+                    Alert.alert("RTM Init Error", "Failed to initialize RTM engine.");
+                }
             }
         };
 
@@ -199,7 +353,82 @@ const fetchMessages = useCallback(async (userId: string) => {
                 rtmEngine.destroyClient();
             }
         };
-    }, [channel.id]);
+    }, [channel.id, currentUserId]);
+
+    // ✅ Handle Video Call
+    const handleVideoCall = async () => {
+        try {
+            console.log('📹 Faculty: Starting video call with:', channel.name);
+            
+            const callChannelName = `call_${currentUserId}_${channel.id}_${Date.now()}`;
+            
+            // Send RTM notification
+            if (rtmEngine) {
+                const callData = {
+                    type: 'video_call',
+                    callerId: currentUserId,
+                    callerName: 'Faculty',
+                    channelName: callChannelName,
+                    timestamp: Date.now(),
+                };
+                
+                try {
+                    await rtmEngine.sendMessageToPeer({
+                        text: JSON.stringify(callData),
+                    }, channel.id);
+                    console.log('✅ Call notification sent');
+                } catch (rtmError) {
+                    console.error('❌ RTM send error:', rtmError);
+                }
+            }
+            
+            // Navigate to LiveVideoCall
+            navigation.navigate('LiveVideoCall', { channelName: callChannelName });
+            
+        } catch (error: any) {
+            console.error('❌ Video call error:', error);
+            Alert.alert('Call Failed', 'Unable to start video call');
+        }
+    };
+
+    // ✅ Handle Audio Call
+    const handleAudioCall = async () => {
+        try {
+            console.log('📞 Faculty: Starting audio call with:', channel.name);
+            
+            const callChannelName = `call_${currentUserId}_${channel.id}_${Date.now()}`;
+            
+            // Send RTM notification
+            if (rtmEngine) {
+                const callData = {
+                    type: 'audio_call',
+                    callerId: currentUserId,
+                    callerName: 'Faculty',
+                    channelName: callChannelName,
+                    timestamp: Date.now(),
+                };
+                
+                try {
+                    await rtmEngine.sendMessageToPeer({
+                        text: JSON.stringify(callData),
+                    }, channel.id);
+                    console.log('✅ Call notification sent');
+                } catch (rtmError) {
+                    console.error('❌ RTM send error:', rtmError);
+                }
+            }
+            
+            // Navigate to AudioCall
+            navigation.navigate('AudioCall', { 
+                contactName: channel.name,
+                contactNumber: channel.id,
+            });
+            
+        } catch (error) {
+            console.error('❌ Audio call error:', error);
+            Alert.alert('Call Failed', 'Unable to start audio call');
+        }
+    };
 
  const handleSendMessage = async () => {
     if (!newMessage.trim()) return;
@@ -211,7 +440,7 @@ const fetchMessages = useCallback(async (userId: string) => {
         id: tempId,
         text: messageText,
         isSent: true,
-        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        timestamp: new Date().toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }),
         status: "sent",
     };
 
@@ -220,13 +449,17 @@ const fetchMessages = useCallback(async (userId: string) => {
 
     const storedToken = await AsyncStorage.getItem('FACULTYTOKEN');
     const userId = await AsyncStorage.getItem('USERID');
-   
+
+    // ✅ Notify parent component to update chat list with sent message
+    if (onNewMessage) {
+        onNewMessage(channel.id, messageText);
+    }
 
     if (rtmEngine) {
         try {
             await rtmEngine.sendMessageToChannel({ text: messageText }, channel.id);
         } catch (e) {
-            console.error("RTM Send Error:", e);
+            console.error("Faculty RTM Send Error:", e);
         }
     }
 
@@ -236,12 +469,15 @@ const fetchMessages = useCallback(async (userId: string) => {
         const response = await axios.post(
             SEND_MSG_API_URL,
             {
-                receiverId,
-                senderId: userId,       
-                text: messageText,
+                receiverId,  // ✅ Backend needs this
+                text: messageText,  // ✅ Backend needs this
+                // senderId & senderType automatically set by authMiddleware
             },
             {
-                headers: { Authorization: `Bearer ${storedToken}` },
+                headers: { 
+                    Authorization: `Bearer ${storedToken}`,
+                    "Content-Type": "application/json",
+                },
             }
         );
 
@@ -252,7 +488,7 @@ const fetchMessages = useCallback(async (userId: string) => {
         );
 
     } catch (e) {
-        console.error("DB Send Error:", e);
+        console.error("Faculty DB Send Error:", e);
         Alert.alert("Persistence Failed", "Message sent real-time but failed to save in the database.");
     }
 };
@@ -267,7 +503,7 @@ const fetchMessages = useCallback(async (userId: string) => {
                     id: Date.now().toString(),
                     text: "📷 Image: " + imageUri,
                     isSent: true,
-                    timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                    timestamp: new Date().toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }),
                     status: "sent",
                 };
                 setMessages(prev => [...prev, message]);
@@ -281,7 +517,7 @@ const fetchMessages = useCallback(async (userId: string) => {
                 id: Date.now().toString(),
                 text: `📄 Document: ${fileName}`,
                 isSent: true,
-                timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                timestamp: new Date().toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }),
                 status: "sent",
             };
             setMessages(prev => [...prev, docMsg]);
@@ -293,14 +529,186 @@ const fetchMessages = useCallback(async (userId: string) => {
             id: Date.now().toString(),
             text: `📍 Location: https://maps.google.com/?q=${coords.latitude},${coords.longitude}`,
             isSent: true,
-            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            timestamp: new Date().toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }),
             status: "sent",
         };
         setMessages(prev => [...prev, locationMessage]);
         setLocationVisible(false);
     };
 
-    const handleAudio = async () => Alert.alert("Recording", "Audio recording feature coming soon!");
+    // 🎤 Start Audio Recording
+    const handleStartRecording = async () => {
+        try {
+            // Check if running on web
+            if (Platform.OS === 'web') {
+                Alert.alert("Not Supported", "Voice recording is only available on mobile devices (iOS/Android)");
+                return;
+            }
+
+            if (!audioRecorderPlayer.current) {
+                Alert.alert("Error", "Audio recorder not initialized");
+                return;
+            }
+
+            console.log("🎤 Faculty: Starting audio recording...");
+            setIsRecording(true);
+            setRecordingDuration(0);
+
+            // Start recording
+            const path = Platform.select({
+                ios: 'recording.m4a',
+                android: `recording_${Date.now()}.mp3`,
+                web: 'recording.webm',
+            }) || 'recording.mp3';
+
+            const uri = await audioRecorderPlayer.current.startRecorder(path);
+            setRecordingUri(uri);
+            console.log("✅ Faculty: Recording started:", uri);
+
+            // Start timer
+            recordingInterval.current = setInterval(() => {
+                setRecordingDuration(prev => prev + 1);
+            }, 1000);
+
+            // Start pulse animation
+            Animated.loop(
+                Animated.sequence([
+                    Animated.timing(recordingAnimation, {
+                        toValue: 1.2,
+                        duration: 500,
+                        useNativeDriver: false,
+                    }),
+                    Animated.timing(recordingAnimation, {
+                        toValue: 1,
+                        duration: 500,
+                        useNativeDriver: false,
+                    }),
+                ])
+            ).start();
+
+        } catch (error) {
+            console.error("❌ Faculty: Recording error:", error);
+            Alert.alert("Recording Error", "Failed to start recording");
+            setIsRecording(false);
+        }
+    };
+
+    // 🛑 Stop and Send Recording
+    const handleStopAndSendRecording = async () => {
+        try {
+            if (!audioRecorderPlayer.current) return;
+
+            console.log("🛑 Faculty: Stopping recording...");
+            
+            if (recordingInterval.current) {
+                clearInterval(recordingInterval.current);
+                recordingInterval.current = null;
+            }
+
+            const result = await audioRecorderPlayer.current.stopRecorder();
+            audioRecorderPlayer.current.removeRecordBackListener();
+            console.log("✅ Faculty: Recording stopped:", result);
+
+            setIsRecording(false);
+
+            // Send the audio file
+            if (recordingUri || result) {
+                await sendAudioMessage(recordingUri || result);
+            }
+
+            setRecordingUri("");
+            setRecordingDuration(0);
+
+        } catch (error) {
+            console.error("❌ Faculty: Stop recording error:", error);
+            Alert.alert("Error", "Failed to stop recording");
+        }
+    };
+
+    // ❌ Cancel Recording
+    const handleCancelRecording = async () => {
+        try {
+            if (!audioRecorderPlayer.current) return;
+
+            console.log("❌ Faculty: Cancelling recording...");
+            
+            if (recordingInterval.current) {
+                clearInterval(recordingInterval.current);
+                recordingInterval.current = null;
+            }
+
+            await audioRecorderPlayer.current.stopRecorder();
+            audioRecorderPlayer.current.removeRecordBackListener();
+
+            setIsRecording(false);
+            setRecordingUri("");
+            setRecordingDuration(0);
+
+            console.log("✅ Faculty: Recording cancelled");
+        } catch (error) {
+            console.error("❌ Faculty: Cancel recording error:", error);
+        }
+    };
+
+    // 📤 Send Audio Message
+    const sendAudioMessage = async (audioUri: string) => {
+        try {
+            console.log("📤 Faculty: Sending audio message:", audioUri);
+
+            const storedToken = await AsyncStorage.getItem('FACULTYTOKEN');
+            if (!storedToken) {
+                Alert.alert("Error", "Auth token missing. Cannot send audio.");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('receiverId', channel.id);
+            formData.append('text', `🎤 Voice message (${recordingDuration}s)`);
+
+            // Append the audio file
+            const fileName = `audio_${Date.now()}.${Platform.OS === 'ios' ? 'm4a' : 'mp3'}`;
+            const audioFile: any = {
+                uri: audioUri,
+                type: 'audio/mp4',
+                name: fileName,
+            };
+            formData.append('files', audioFile);
+
+            const response = await axios.post(
+                `http://localhost:5200/web/messages/send-msg/${channel.id}`,
+                formData,
+                {
+                    headers: {
+                        Authorization: `Bearer ${storedToken}`,
+                        'Content-Type': 'multipart/form-data',
+                    },
+                }
+            );
+
+            console.log("✅ Faculty: Audio message sent:", response.data);
+
+            // Add to local messages
+            const newMsg: Message = {
+                id: response.data._id || Date.now().toString(),
+                text: `🎤 Voice message (${recordingDuration}s)`,
+                isSent: true,
+                timestamp: new Date().toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }),
+                status: "delivered",
+            };
+            setMessages(prev => [...prev, newMsg]);
+
+            // Notify parent to update chat list
+            if (onNewMessage) {
+                onNewMessage(channel.id, `🎤 Voice message (${recordingDuration}s)`);
+            }
+
+        } catch (error) {
+            console.error("❌ Faculty: Send audio error:", error);
+            Alert.alert("Error", "Failed to send audio message");
+        }
+    };
+
+    const handleAudio = handleStartRecording;
 
     const handleOpenGallery = () => {
         openGallery((imageUri: string) => {
@@ -308,7 +716,7 @@ const fetchMessages = useCallback(async (userId: string) => {
                 id: Date.now().toString(),
                 text: "📷 Image: " + imageUri,
                 isSent: true,
-                timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                timestamp: new Date().toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }),
                 status: "sent",
             };
             setMessages(prev => [...prev, message]);
@@ -371,13 +779,19 @@ const fetchMessages = useCallback(async (userId: string) => {
                     </View>
                 </TouchableOpacity>
                 <View style={styles.headerActions}>
+                    {/* Video Call Button */}
                     <TouchableOpacity
                         style={styles.actionButton}
-                        onPress={() => navigation.navigate("LiveVideoCall", { channelName: channel.name })}
+                        onPress={handleVideoCall}
                     >
                         <Ionicons name="videocam" size={24} color="#000" />
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.actionButton}>
+                    
+                    {/* Audio Call Button */}
+                    <TouchableOpacity 
+                        style={styles.actionButton}
+                        onPress={handleAudioCall}
+                    >
                         <Ionicons name="call" size={24} color="#000" />
                     </TouchableOpacity>
                 </View>
@@ -404,28 +818,64 @@ const fetchMessages = useCallback(async (userId: string) => {
                 </TouchableOpacity>
 
                 <View style={styles.inputContainer}>
-                    <TouchableOpacity style={styles.attachButton} onPress={() => setShowAttachments(!showAttachments)}>
-                        <Ionicons name="add" size={26} color="#000" />
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.cameraButton} onPress={handleOpenCamera}>
-                        <Ionicons name="camera" size={20} color="#000" />
-                    </TouchableOpacity>
-                    <TextInput
-                        style={styles.textInput}
-                        placeholder="Type a message..."
-                        placeholderTextColor="#999"
-                        value={newMessage}
-                        onChangeText={setNewMessage}
-                        multiline
-                    />
-                    {newMessage.trim() ? (
-                        <TouchableOpacity style={styles.sendButton} onPress={handleSendMessage}>
-                            <Ionicons name="send" size={20} color="#fff" />
-                        </TouchableOpacity>
+                    {isRecording ? (
+                        // 🎤 Recording UI (WhatsApp-like)
+                        <View style={styles.recordingContainer}>
+                            <TouchableOpacity 
+                                style={styles.cancelRecordingButton} 
+                                onPress={handleCancelRecording}
+                            >
+                                <Ionicons name="trash" size={20} color="#FF3B30" />
+                            </TouchableOpacity>
+
+                            <View style={styles.recordingInfo}>
+                                <Animated.View style={{ transform: [{ scale: recordingAnimation }] }}>
+                                    <View style={styles.recordingDot} />
+                                </Animated.View>
+                                <Text style={styles.recordingTimer}>
+                                    {Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')}
+                                </Text>
+                                <Text style={styles.recordingText}>Recording...</Text>
+                            </View>
+
+                            <TouchableOpacity 
+                                style={styles.sendRecordingButton} 
+                                onPress={handleStopAndSendRecording}
+                            >
+                                <Ionicons name="send" size={20} color="#fff" />
+                            </TouchableOpacity>
+                        </View>
                     ) : (
-                        <TouchableOpacity style={styles.sendButton} onPress={handleAudio}>
-                            <Ionicons name="mic" size={20} color="#fff" />
-                        </TouchableOpacity>
+                        // 📝 Normal Message Input
+                        <>
+                            <TouchableOpacity style={styles.attachButton} onPress={() => setShowAttachments(!showAttachments)}>
+                                <Ionicons name="add" size={26} color="#000" />
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.cameraButton} onPress={handleOpenCamera}>
+                                <Ionicons name="camera" size={20} color="#000" />
+                            </TouchableOpacity>
+                            <TextInput
+                                style={styles.textInput}
+                                placeholder="Type a message..."
+                                placeholderTextColor="#999"
+                                value={newMessage}
+                                onChangeText={setNewMessage}
+                                multiline
+                            />
+                            {newMessage.trim() ? (
+                                <TouchableOpacity style={styles.sendButton} onPress={handleSendMessage}>
+                                    <Ionicons name="send" size={20} color="#fff" />
+                                </TouchableOpacity>
+                            ) : Platform.OS === 'web' ? (
+                                <View style={[styles.sendButton, { opacity: 0.5 }]}>
+                                    <Ionicons name="mic-off" size={20} color="#fff" />
+                                </View>
+                            ) : (
+                                <TouchableOpacity style={styles.sendButton} onPress={handleAudio}>
+                                    <Ionicons name="mic" size={20} color="#fff" />
+                                </TouchableOpacity>
+                            )}
+                        </>
                     )}
                 </View>
             </KeyboardAvoidingView>
@@ -570,4 +1020,51 @@ const styles = StyleSheet.create({
     attachmentItem: { alignItems: "center" },
     attachmentIcon: { width: 60, height: 60, borderRadius: 30, justifyContent: "center", alignItems: "center", marginBottom: 6 },
     attachmentText: { fontSize: 12, textAlign: "center" },
+    
+    // 🎤 Recording Styles (WhatsApp-like)
+    recordingContainer: {
+        flex: 1,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        backgroundColor: "#fff",
+        paddingVertical: 8,
+    },
+    cancelRecordingButton: {
+        padding: 10,
+        backgroundColor: "#FFE5E5",
+        borderRadius: 20,
+        marginRight: 10,
+    },
+    recordingInfo: {
+        flex: 1,
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "#F5F5F5",
+        borderRadius: 20,
+        padding: 10,
+    },
+    recordingDot: {
+        width: 12,
+        height: 12,
+        borderRadius: 6,
+        backgroundColor: "#FF3B30",
+        marginRight: 8,
+    },
+    recordingTimer: {
+        fontSize: 16,
+        fontWeight: "600",
+        color: "#000",
+        marginRight: 8,
+    },
+    recordingText: {
+        fontSize: 14,
+        color: "#666",
+    },
+    sendRecordingButton: {
+        marginLeft: 10,
+        backgroundColor: "#25D366",
+        padding: 12,
+        borderRadius: 25,
+    },
 });

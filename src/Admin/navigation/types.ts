@@ -10,12 +10,16 @@ export type RootStackParamList = {
   Groups: undefined;
   Calls: undefined;
   Settings: undefined;
-  LiveVideoCall: { channelName: string };
+  LiveVideoCall: { channelName: string; callerId?: string; receiverId?: string; receiverName?: string };
   // ChatLayout: undefined;
   Chat: { channelId: string; channelName: string; recipientRole?: 'student' | 'faculty' | 'admin' };
   GroupChat: { groupId: string; groupName: string; isTeacher: boolean };
-  AudioCall: { contactName: string; contactNumber: string };
+  AudioCall: { contactName: string; contactNumber: string; callerId?: string; receiverId?: string; channelName?: string };
   VideoCall: { contactName: string; contactNumber: string };
+  // ✅ New Agora call screens
+  OutgoingCall: undefined;
+  IncomingCall: undefined;
+  ActiveVideoCall: undefined;
   Camera: undefined;
   QRScanner: undefined;
   CreateGroup: undefined;

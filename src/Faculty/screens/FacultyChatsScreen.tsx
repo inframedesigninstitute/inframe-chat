@@ -146,6 +146,32 @@ const FacultyChatsScreen = () => {
     console.log("Channel deleted:", id);
   };
 
+  // ✅ Handle new message and update chat list
+  const handleNewMessage = (channelId: string, messageText: string) => {
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+    // Check if channel exists in contacts
+    const contactExists = rawContacts.some((c) => c.studentId === channelId);
+    const groupExists = rawGroups.some((g) => g.groupId === channelId);
+
+    // If channel doesn't exist, add it to contacts (this handles cross-platform messaging)
+    if (!contactExists && !groupExists && selectedChannel) {
+      console.log("Faculty: Adding new contact from incoming message:", channelId);
+      setRawContacts((prev) => [
+        {
+          studentId: channelId,
+          studentName: selectedChannel.name || "New Contact",
+          studentEmail: "N/A",
+        },
+        ...prev,
+      ]);
+    }
+
+    // Update last message time for existing channels
+    console.log("Faculty: Updating last message for channel:", channelId, messageText);
+  };
+
   const fetchAllContacts = async () => {
     if (!token) return setError("Authentication token not found. Please log in.");
 
@@ -354,6 +380,7 @@ const FacultyChatsScreen = () => {
                 channel={selectedChannel}
                 onOpenProfile={() => setShowUserProfile(true)}
                 onGroupCreated={handleGroupCreated}
+                onNewMessage={handleNewMessage}
               />
             ) : (
               <View style={styles.emptyChat}>

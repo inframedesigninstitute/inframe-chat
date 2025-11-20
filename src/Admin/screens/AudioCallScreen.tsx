@@ -1,27 +1,134 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView } from 'react-native';
-import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
+import axios from 'axios';
+import { useEffect, useRef, useState } from 'react';
+import { Alert, Platform, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { RootStackParamList } from '../navigation/types';
 
+// ✅ Type guard for window
+declare const window: any;
+
+// ✅ Conditional import for Agora Web SDK
+let AgoraRTC: any = null;
+const isWeb = Platform.OS === 'web' && typeof window !== 'undefined';
+if (isWeb) {
+    try {
+        AgoraRTC = require('agora-rtc-sdk-ng').default;
+    } catch (e) {
+        console.warn('Agora SDK not available');
+    }
+}
+
 type AudioCallScreenRouteProp = RouteProp<RootStackParamList, 'AudioCall'>;
+
+const APP_ID = '20e5fa9e1eb24b799e01c45eaca5c901';
+const RTC_TOKEN_API = 'http://localhost:5200/web/agora/generate-rtc-token';
 
 const AudioCallScreen = () => {
   const route = useRoute<AudioCallScreenRouteProp>();
   const navigation = useNavigation();
-  const { contactName, contactNumber } = route.params;
+  const { contactName, contactNumber, callerId, receiverId, channelName } = route.params;
 
   const [callDuration, setCallDuration] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
-  const [isSpeakerOn, setIsSpeakerOn] = useState(false);
+  const [isSpeakerOn, setIsSpeakerOn] = useState(true);
+  const [isJoined, setIsJoined] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [callConnected, setCallConnected] = useState(false);
 
+  const rtcClientRef = useRef<any>(null);
+  const localAudioTrackRef = useRef<any>(null);
+
+  // Initialize audio call
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCallDuration(prev => prev + 1);
-    }, 1000);
+    if (!isWeb || !AgoraRTC) {
+      setIsLoading(false);
+      return;
+    }
 
-    return () => clearInterval(timer);
-  }, []);
+    const initCall = async () => {
+      try {
+        console.log('📞 Initializing audio call...');
+        
+        const currentUserId = await AsyncStorage.getItem('USERID') || 'user_' + Date.now();
+        const channelName = `audio_${currentUserId}_${contactNumber}_${Date.now()}`;
+
+        // Generate RTC token
+        const tokenResponse = await axios.post(RTC_TOKEN_API, {
+          channelName,
+          uid: currentUserId,
+        });
+
+        if (tokenResponse.data.status !== 1) {
+          throw new Error('Failed to generate RTC token');
+        }
+
+        const rtcToken = tokenResponse.data.token;
+        console.log('✅ RTC Token generated');
+
+        // Create RTC client
+        const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
+        rtcClientRef.current = client;
+
+        // Event handlers
+        client.on('user-published', async (user: any, mediaType: string) => {
+          console.log('📢 User published:', user.uid, mediaType);
+          await client.subscribe(user, mediaType);
+          
+          // Mark call as connected when remote user joins
+          setCallConnected(true);
+          
+          if (mediaType === 'audio') {
+            user.audioTrack?.play();
+          }
+        });
+
+        client.on('user-left', (user: any) => {
+          console.log('📢 User left:', user.uid);
+        });
+
+        // Join channel
+        await client.join(APP_ID, channelName, rtcToken, currentUserId);
+        console.log('✅ Joined audio channel');
+        setIsJoined(true);
+
+        // Create and publish audio track
+        const audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+        localAudioTrackRef.current = audioTrack;
+        await client.publish(audioTrack);
+        console.log('✅ Published audio track');
+
+        setIsLoading(false);
+      } catch (error: any) {
+        console.error('❌ Audio call error:', error);
+        setIsLoading(false);
+        Alert.alert('Call Failed', error.message || 'Failed to start audio call');
+      }
+    };
+
+    initCall();
+
+    // Cleanup
+    return () => {
+      if (localAudioTrackRef.current) {
+        localAudioTrackRef.current.close();
+      }
+      if (rtcClientRef.current) {
+        rtcClientRef.current.leave();
+      }
+    };
+  }, [contactNumber]);
+
+  // Call duration timer
+  useEffect(() => {
+    if (isJoined) {
+      const timer = setInterval(() => {
+        setCallDuration(prev => prev + 1);
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [isJoined]);
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -29,17 +136,91 @@ const AudioCallScreen = () => {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const handleEndCall = () => {
-    // @ts-ignore
+  // 📞 Save Call History
+  const saveCallHistory = async () => {
+    try {
+      if (!callerId || !receiverId) {
+        console.warn('⚠️ Missing callerId or receiverId, cannot save call history');
+        return;
+      }
+
+      const storedToken = await AsyncStorage.getItem('ADMINTOKEN');
+      if (!storedToken) {
+        console.warn('⚠️ No auth token found');
+        return;
+      }
+
+      // Format call duration
+      const minutes = Math.floor(callDuration / 60);
+      const seconds = callDuration % 60;
+      const durationText = minutes > 0 
+        ? `${minutes} min${minutes > 1 ? 's' : ''} ${seconds} sec${seconds !== 1 ? 's' : ''}`
+        : `${seconds} sec${seconds !== 1 ? 's' : ''}`;
+
+      // Determine call status
+      const callStatus = callConnected 
+        ? `📞 Audio Call - ${durationText}`
+        : '📞 Audio Call Missed';
+
+      console.log('📞 Saving call history:', callStatus);
+
+      // Send message to backend
+      await axios.post(
+        `http://localhost:5200/web/messages/send-msg`,
+        {
+          receiverId: receiverId,
+          text: callStatus,
+          userType: "mainAdmin", // ✅ Backend expects userType
+          senderId: callerId, // ✅ Backend expects senderId
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${storedToken}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      console.log('✅ Call history saved');
+    } catch (error) {
+      console.error('❌ Error saving call history:', error);
+      // Don't block call ending if history save fails
+    }
+  };
+
+  const handleEndCall = async () => {
+    try {
+      // Save call history before ending
+      await saveCallHistory();
+
+      if (localAudioTrackRef.current) {
+        localAudioTrackRef.current.close();
+        localAudioTrackRef.current = null;
+      }
+      if (rtcClientRef.current) {
+        await rtcClientRef.current.leave();
+        rtcClientRef.current = null;
+      }
+      console.log('✅ Audio call ended');
+    } catch (error) {
+      console.error('❌ End call error:', error);
+    }
     navigation.goBack();
   };
 
   const handleToggleMute = () => {
-    setIsMuted(!isMuted);
+    if (localAudioTrackRef.current) {
+      localAudioTrackRef.current.setEnabled(isMuted);
+      setIsMuted(!isMuted);
+      console.log(`🎤 Audio ${!isMuted ? 'muted' : 'unmuted'}`);
+    } else {
+      setIsMuted(!isMuted);
+    }
   };
 
   const handleToggleSpeaker = () => {
     setIsSpeakerOn(!isSpeakerOn);
+    console.log(`🔊 Speaker ${!isSpeakerOn ? 'on' : 'off'}`);
   };
 
   return (

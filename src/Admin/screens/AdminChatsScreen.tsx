@@ -157,6 +157,33 @@ const AdminChatsScreen = () => {
     setRawGroups((prev) => prev.filter((g) => g.groupId !== id));
   };
 
+  // ✅ Handle new message and update chat list
+  const handleNewMessage = (channelId: string, messageText: string) => {
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+    // Check if channel exists in contacts
+    const contactExists = rawContacts.some((c) => c.id === channelId);
+    const groupExists = rawGroups.some((g) => g.groupId === channelId);
+
+    // If channel doesn't exist, add it to contacts (this handles cross-platform messaging)
+    if (!contactExists && !groupExists && selectedChannel) {
+      console.log("Adding new contact from incoming message:", channelId);
+      setRawContacts((prev) => [
+        {
+          id: channelId,
+          name: selectedChannel.name || "New Contact",
+          email: "N/A",
+          type: "faculty", // Assuming faculty for now
+        },
+        ...prev,
+      ]);
+    }
+
+    // Update last message time for existing channels
+    console.log("Updating last message for channel:", channelId, messageText);
+  };
+
   // ✅ Fetch all students
   const fetchAllStudentContacts = async () => {
     if (!token) return setError("Authentication token not found. Please log in.");
@@ -431,6 +458,7 @@ const fetchAllFacultyContacts = async () => {
                 channel={selectedChannel}
                 onOpenProfile={() => setShowUserProfile(true)}
                 onGroupCreated={handleGroupCreated}
+                onNewMessage={handleNewMessage}
               />
             ) : (
               <View style={styles.emptyChat}>

@@ -53,7 +53,7 @@ class LocalDatabase {
     GALLERY: 'local_gallery',
     STARRED_MESSAGES: 'starred_messages',
     OTP_PINS: 'otp_pins',
-    TOKEN: 'auth_token',
+    TOKEN: 'FACULTYTOKEN',
   };
 
   // =======================

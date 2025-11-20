@@ -29,6 +29,11 @@ import TermsScreen from '../screens/TermsScreen';
 import VideoCallScreen from '../screens/VideoCallScreen';
 import { RootStackParamList } from './types';
 
+// ✅ Import new call screens
+import OutgoingCallScreen from '../../components/OutgoingCallScreen';
+import IncomingCallScreen from '../../components/IncomingCallScreen';
+import ActiveVideoCallScreen from '../../components/VideoCallScreen';
+
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const RootNavigator = () => {
@@ -50,8 +55,15 @@ const RootNavigator = () => {
         component={GroupChatScreen} 
         options={{ presentation: 'modal' }}
       />
+      {/* Old call screens (keeping for backward compatibility) */}
       <Stack.Screen name="AudioCall" component={AudioCallScreen} options={{ presentation: 'fullScreenModal' }} />
       <Stack.Screen name="VideoCall" component={VideoCallScreen} options={{ presentation: 'fullScreenModal' }} />
+      
+      {/* ✅ New Agora call screens */}
+      <Stack.Screen name="OutgoingCall" component={OutgoingCallScreen} options={{ presentation: 'fullScreenModal', headerShown: false }} />
+      <Stack.Screen name="IncomingCall" component={IncomingCallScreen} options={{ presentation: 'fullScreenModal', headerShown: false }} />
+      <Stack.Screen name="ActiveVideoCall" component={ActiveVideoCallScreen} options={{ presentation: 'fullScreenModal', headerShown: false }} />
+      
       <Stack.Screen name="Camera" component={CameraScreen} options={{ presentation: 'fullScreenModal' }} />
       <Stack.Screen name="QRScanner" component={QRScannerScreen} options={{ presentation: 'fullScreenModal' }} />
       <Stack.Screen name="CreateGroup" component={CreateGroupScreen} options={{ presentation: 'modal' }} />

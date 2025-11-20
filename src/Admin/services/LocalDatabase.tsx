@@ -52,9 +52,41 @@ class LocalDatabase {
     CURRENT_USER: 'current_user',
     GALLERY: 'local_gallery',
     STARRED_MESSAGES: 'starred_messages',
+    OTP_PINS: 'otp_pins',
+    TOKEN: 'ADMINTOKEN',
   };
 
-  // Messages
+  // =======================
+  // 🔐 TOKEN MANAGEMENT
+  // =======================
+  static async saveToken(token: string): Promise<void> {
+    try {
+      await AsyncStorage.setItem(this.KEYS.TOKEN, token);
+    } catch (error) {
+      console.error('Error saving token:', error);
+    }
+  }
+
+  static async getToken(): Promise<string | null> {
+    try {
+      return await AsyncStorage.getItem(this.KEYS.TOKEN);
+    } catch (error) {
+      console.error('Error getting token:', error);
+      return null;
+    }
+  }
+
+  static async clearToken(): Promise<void> {
+    try {
+      await AsyncStorage.removeItem(this.KEYS.TOKEN);
+    } catch (error) {
+      console.error('Error clearing token:', error);
+    }
+  }
+
+  // =======================
+  // 💬 MESSAGES
+  // =======================
   static async saveMessage(message: ChatMessage): Promise<void> {
     try {
       const messages = await this.getMessages();
@@ -224,10 +256,10 @@ class LocalDatabase {
 
   static async saveOtpPin(email: string, pin: string): Promise<void> {
     try {
-      const otpData = await AsyncStorage.getItem('otp_pins');
+      const otpData = await AsyncStorage.getItem(this.KEYS.OTP_PINS);
       const otps: Record<string, string> = otpData ? JSON.parse(otpData) : {};
       otps[email] = pin;
-      await AsyncStorage.setItem('otp_pins', JSON.stringify(otps));
+      await AsyncStorage.setItem(this.KEYS.OTP_PINS, JSON.stringify(otps));
     } catch (error) {
       console.error('Error saving OTP pin:', error);
     }
@@ -235,7 +267,7 @@ class LocalDatabase {
 
   static async getOtpPin(email: string): Promise<string | null> {
     try {
-      const otpData = await AsyncStorage.getItem('otp_pins');
+      const otpData = await AsyncStorage.getItem(this.KEYS.OTP_PINS);
       const otps: Record<string, string> = otpData ? JSON.parse(otpData) : {};
       return otps[email] || null;
     } catch (error) {
@@ -291,7 +323,9 @@ class LocalDatabase {
     }
   }
 
-  // Clear all data
+  // =======================
+  // 🧹 CLEAR ALL DATA
+  // =======================
   static async clearAllData(): Promise<void> {
     try {
       await AsyncStorage.multiRemove([
@@ -300,7 +334,8 @@ class LocalDatabase {
         this.KEYS.USERS,
         this.KEYS.CURRENT_USER,
         this.KEYS.GALLERY,
-        'otp_pins'
+        this.KEYS.OTP_PINS,
+        this.KEYS.TOKEN,
       ]);
     } catch (error) {
       console.error('Error clearing data:', error);
