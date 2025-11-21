@@ -1,14 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
+import { Camera } from 'expo-camera';
+import { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
   Alert,
   Platform,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { useNavigation, RouteProp, useRoute } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
 // Fix for route prop typing
@@ -21,39 +22,38 @@ type VideoCallScreenRouteProp = RouteProp<RootStackParamList, 'VideoCallScreen'>
 const VideoCallScreen = () => {
   const route = useRoute<VideoCallScreenRouteProp>();
   const navigation = useNavigation();
-  const { contactName, contactNumber } = route.params;
+  const { contactName } = route.params;
 
   const [callDuration, setCallDuration] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOn, setIsVideoOn] = useState(true);
   const [isSpeakerOn, setIsSpeakerOn] = useState(false);
-  const [hasCameraPermission, setHasCameraPermission] = useState(Platform.OS === 'web' ? true : false);
+  const [hasCameraPermission, setHasCameraPermission] = useState(
+    Platform.OS === 'web' ? true : false
+  );
 
-  // Camera permission
+  // Camera permission (Expo way)
   useEffect(() => {
     if (Platform.OS !== 'web') {
       (async () => {
-        try {
-          const { Camera } = await import('react-native-vision-camera');
-          const status = await Camera.requestCameraPermission();
-          if (status === 'granted') {
-            setHasCameraPermission(true);
-          } else {
-            Alert.alert('Permission Required', 'Camera permission is required for video call.');
-          }
-        } catch (e) {
-          // ignore on web
+        const { status } = await Camera.requestCameraPermissionsAsync();
+        if (status === 'granted') {
           setHasCameraPermission(true);
+        } else {
+          Alert.alert(
+            'Permission Required',
+            'Camera permission is required for video call.'
+          );
         }
       })();
     }
   }, []);
 
+  // Timer
   useEffect(() => {
     const timer = setInterval(() => {
       setCallDuration(prev => prev + 1);
     }, 1000);
-
     return () => clearInterval(timer);
   }, []);
 
@@ -61,22 +61,6 @@ const VideoCallScreen = () => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const handleEndCall = () => {
-    navigation.goBack();
-  };
-
-  const handleToggleMute = () => {
-    setIsMuted(!isMuted);
-  };
-
-  const handleToggleVideo = () => {
-    setIsVideoOn(!isVideoOn);
-  };
-
-  const handleToggleSpeaker = () => {
-    setIsSpeakerOn(!isSpeakerOn);
   };
 
   if (!hasCameraPermission) {
@@ -91,20 +75,20 @@ const VideoCallScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Main Video Feed */}
+      {/* Main Video Placeholder */}
       <View style={styles.mainVideoContainer}>
         <View style={styles.mainVideo}>
           <Text style={styles.mainVideoText}>Video Feed</Text>
         </View>
 
-        {/* Call Info Overlay */}
+        {/* Call Info */}
         <View style={styles.callInfoOverlay}>
           <Text style={styles.contactName}>{contactName}</Text>
           <Text style={styles.callDuration}>{formatDuration(callDuration)}</Text>
         </View>
       </View>
 
-      {/* Picture-in-Picture Video */}
+      {/* Small Video */}
       <View style={styles.pipVideoContainer}>
         <View style={styles.pipVideo}>
           <View style={styles.pipAvatar}>
@@ -115,43 +99,42 @@ const VideoCallScreen = () => {
         </View>
       </View>
 
-      {/* Call Controls */}
+      {/* Controls */}
       <View style={styles.controlsContainer}>
         <View style={styles.controlsRow}>
-          <TouchableOpacity 
-            style={[styles.controlButton, isMuted && styles.activeButton]} 
-            onPress={handleToggleMute}
+          <TouchableOpacity
+            style={[styles.controlButton, isMuted && styles.activeButton]}
+            onPress={() => setIsMuted(!isMuted)}
           >
-            <Ionicons 
-              name={isMuted ? "mic-off" : "mic"} 
-              size={24} 
-              color="#fff" 
+            <Ionicons name={isMuted ? 'mic-off' : 'mic'} size={24} color="#fff" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.controlButton, !isVideoOn && styles.activeButton]}
+            onPress={() => setIsVideoOn(!isVideoOn)}
+          >
+            <Ionicons
+              name={isVideoOn ? 'videocam' : 'videocam-off'}
+              size={24}
+              color="#fff"
             />
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={[styles.controlButton, !isVideoOn && styles.activeButton]} 
-            onPress={handleToggleVideo}
+          <TouchableOpacity
+            style={[styles.controlButton, isSpeakerOn && styles.activeButton]}
+            onPress={() => setIsSpeakerOn(!isSpeakerOn)}
           >
-            <Ionicons 
-              name={isVideoOn ? "videocam" : "videocam-off"} 
-              size={24} 
-              color="#fff" 
+            <Ionicons
+              name={isSpeakerOn ? 'volume-high' : 'volume-high-outline'}
+              size={24}
+              color="#fff"
             />
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={[styles.controlButton, isSpeakerOn && styles.activeButton]} 
-            onPress={handleToggleSpeaker}
+          <TouchableOpacity
+            style={styles.endCallButton}
+            onPress={() => navigation.goBack()}
           >
-            <Ionicons 
-              name={isSpeakerOn ? "volume-high" : "volume-high-outline"} 
-              size={24} 
-              color="#fff" 
-            />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.endCallButton} onPress={handleEndCall}>
             <Ionicons name="call" size={24} color="#fff" />
           </TouchableOpacity>
         </View>
@@ -160,63 +143,36 @@ const VideoCallScreen = () => {
   );
 };
 
+// Styles
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#000',
-  },
-  mainVideoContainer: {
-    flex: 1,
-    position: 'relative',
-  },
+  container: { flex: 1, backgroundColor: '#000' },
+  mainVideoContainer: { flex: 1, position: 'relative' },
   mainVideo: {
     flex: 1,
     backgroundColor: '#1a1a1a',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  mainVideoText: {
-    fontSize: 18,
-    color: '#666',
-    fontWeight: '500',
-  },
+  mainVideoText: { color: '#666', fontSize: 18 },
   callInfoOverlay: {
     position: 'absolute',
     top: 60,
     left: 20,
     right: 20,
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 20,
   },
-  contactName: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#fff',
-    marginBottom: 4,
-  },
-  callDuration: {
-    fontSize: 14,
-    color: '#ccc',
-    fontWeight: '500',
-  },
+  contactName: { color: '#fff', fontSize: 22, fontWeight: '600' },
+  callDuration: { color: '#ccc', marginTop: 4 },
   pipVideoContainer: {
     position: 'absolute',
     top: 120,
     right: 20,
     width: 120,
-    height: 160,
-    borderRadius: 12,
-    overflow: 'hidden',
+    height: 150,
     backgroundColor: '#2a2a2a',
+    borderRadius: 12,
   },
-  pipVideo: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  pipVideo: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   pipAvatar: {
     width: 60,
     height: 60,
@@ -225,16 +181,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  pipAvatarText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  controlsContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 30,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-  },
+  pipAvatarText: { color: '#fff', fontSize: 22, fontWeight: 'bold' },
+  controlsContainer: { padding: 20 },
   controlsRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -244,13 +192,11 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  activeButton: {
-    backgroundColor: '#FF4444',
-  },
+  activeButton: { backgroundColor: '#FF4444' },
   endCallButton: {
     width: 60,
     height: 60,

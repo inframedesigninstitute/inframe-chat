@@ -1,20 +1,20 @@
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import {
-    CompositeNavigationProp,
-    useFocusEffect,
-    useNavigation,
+  CompositeNavigationProp,
+  useFocusEffect,
+  useNavigation,
 } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import axios from "axios";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-    ActivityIndicator,
-    FlatList,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  FlatList,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
@@ -359,7 +359,7 @@ const FacultyChatsScreen = () => {
                   }}
                   onPress={() => handleChannelPress(item)}
                   onUpdate={() => fetchAllContacts()}
-                  onDelete={(id) => handleDeleteChannel(id)} // ✅ required prop fixed
+                  onDelete={(id) => handleDeleteChannel(id)} 
                 />
               )}
               ListEmptyComponent={

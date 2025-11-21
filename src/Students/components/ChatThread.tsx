@@ -846,6 +846,13 @@ export default function ChatThread({
                                 <TouchableOpacity style={styles.sendButton} onPress={handleSendMessage}>
                                     <Ionicons name="send" size={20} color="#fff" />
                                 </TouchableOpacity>
+<<<<<<< HEAD
+=======
+                            ) : Platform.OS === 'web' ? (
+                                <View style={[styles.sendButton, { opacity: 0.5 }]}>
+                                    <Ionicons name="mic-off" size={20} color="#fff" />
+                                </View>
+>>>>>>> ff9d0a84a0fa430682555dacd3d29ceee5bd1120
                             ) : (
                                 <TouchableOpacity style={styles.sendButton} onPress={handleAudio}>
                                     <Ionicons name="mic" size={20} color="#fff" />

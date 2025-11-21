@@ -8,6 +8,7 @@ import {
     Animated,
     Dimensions,
     FlatList,
+    Image,
     KeyboardAvoidingView,
     Modal,
     Platform,
@@ -56,6 +57,12 @@ interface Message {
     isSent: boolean;
     timestamp: string;
     status: "sent" | "delivered" | "read";
+    media?: Array<{
+        url: string;
+        type: 'image' | 'video' | 'audio' | 'document';
+        name?: string;
+        size?: number;
+    }>;
 }
 
 const RTM_TOKEN_API_URL = "http://localhost:5200/web/agora/generate-rtm-token";
@@ -94,9 +101,19 @@ export default function ChatThread({
     const [isRecording, setIsRecording] = useState(false);
     const [recordingDuration, setRecordingDuration] = useState(0);
     const [recordingUri, setRecordingUri] = useState<string>("");
+<<<<<<< HEAD
     const audioRecorderPlayer = useRef<any>(null);
     const recordingInterval = useRef<any>(null);
     const recordingAnimation = useRef(new Animated.Value(1)).current;
+=======
+    const [showRecordingModal, setShowRecordingModal] = useState(false);
+    const [playingMessageId, setPlayingMessageId] = useState<string | null>(null);
+    const audioRecorderPlayer = useRef<any>(null);
+    const recordingInterval = useRef<any>(null);
+    const recordingAnimation = useRef(new Animated.Value(1)).current;
+    const mediaRecorder = useRef<any>(null);
+    const audioChunks = useRef<any[]>([]);
+>>>>>>> ff9d0a84a0fa430682555dacd3d29ceee5bd1120
 
     const { addStarredMessage } = useStarredMessages();
 
@@ -225,7 +242,11 @@ export default function ChatThread({
                     id: msg._id,
                     text: msg.text,
                     isSent: isSentByMe,
+<<<<<<< HEAD
                     timestamp: new Date(msg.createdAt || msg.timestamp || Date.now()).toLocaleTimeString([], {
+=======
+                    timestamp: new Date(msg.createdAt || msg.timestamp || Date.now()).toLocaleTimeString(undefined, {
+>>>>>>> ff9d0a84a0fa430682555dacd3d29ceee5bd1120
                         hour: "2-digit",
                         minute: "2-digit",
                     }),
@@ -334,7 +355,7 @@ export default function ChatThread({
                         id: Date.now().toString(),
                         text: msg.text || msg.message || "New message",
                         isSent: false,
-                        timestamp: new Date().toLocaleTimeString([], {
+                        timestamp: new Date().toLocaleTimeString(undefined, {
                             hour: "2-digit",
                             minute: "2-digit",
                         }),
@@ -468,7 +489,7 @@ export default function ChatThread({
             id: tempId,
             text: messageText,
             isSent: true,
-            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            timestamp: new Date().toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }),
             status: "sent",
         };
 
@@ -509,7 +530,12 @@ export default function ChatThread({
             const requestBody = {
                 receiverId,  // ✅ Backend needs this
                 text: messageText,  // ✅ Backend needs this
+<<<<<<< HEAD
                 // senderId & senderType automatically set by authMiddleware in backend
+=======
+                userType: "mainAdmin", // ✅ Backend expects userType
+                senderId: currentUserId, // ✅ Explicitly send senderId
+>>>>>>> ff9d0a84a0fa430682555dacd3d29ceee5bd1120
             };
             
             console.log("Request Body:", JSON.stringify(requestBody, null, 2));
@@ -563,7 +589,11 @@ export default function ChatThread({
                     id: tempId,
                     text: `📄 ${fileName}`,
                     isSent: true,
+<<<<<<< HEAD
                     timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+=======
+                    timestamp: new Date().toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }),
+>>>>>>> ff9d0a84a0fa430682555dacd3d29ceee5bd1120
                     status: "sent",
                 };
                 setMessages(prev => [...prev, docMsg]);
@@ -633,6 +663,7 @@ export default function ChatThread({
         setLocationVisible(false);
     };
 
+<<<<<<< HEAD
     // 🎤 Start Audio Recording
     const handleStartRecording = async () => {
         try {
@@ -815,6 +846,264 @@ export default function ChatThread({
 
     const handleAudio = handleStartRecording;
 
+=======
+    // 🎤 Open Recording Modal
+    const handleOpenRecordingModal = () => {
+        // For web, use browser's MediaRecorder API
+        if (Platform.OS === 'web') {
+            setShowRecordingModal(true);
+            return;
+        }
+
+        // For mobile, check if recorder is initialized
+        if (!audioRecorderPlayer.current) {
+            Alert.alert("Error", "Audio recorder not initialized");
+            return;
+        }
+        
+        setShowRecordingModal(true);
+    };
+
+    // 🎤 Start Audio Recording
+    const handleStartRecording = async () => {
+        try {
+            console.log("🎤 Admin: Starting audio recording...");
+            setIsRecording(true);
+            setRecordingDuration(0);
+
+            // Web Platform - Use MediaRecorder API
+            if (Platform.OS === 'web') {
+                const nav = (globalThis as any).navigator;
+                if (!nav || !nav.mediaDevices) {
+                    Alert.alert("Error", "MediaRecorder not supported in this environment");
+                    setIsRecording(false);
+                    return;
+                }
+
+                const stream = await nav.mediaDevices.getUserMedia({ audio: true });
+                const MediaRecorderClass = (globalThis as any).MediaRecorder;
+                mediaRecorder.current = new MediaRecorderClass(stream);
+                audioChunks.current = [];
+
+                mediaRecorder.current.ondataavailable = (event: any) => {
+                    audioChunks.current.push(event.data);
+                };
+
+                mediaRecorder.current.onstop = () => {
+                    const audioBlob = new (globalThis as any).Blob(audioChunks.current, { type: 'audio/webm' });
+                    const audioUrl = (globalThis as any).URL.createObjectURL(audioBlob);
+                    setRecordingUri(audioUrl);
+                    console.log("✅ Web recording stopped:", audioUrl);
+                };
+
+                mediaRecorder.current.start();
+                console.log("✅ Web recording started");
+            } 
+            // Mobile Platform - Use AudioRecorderPlayer
+            else {
+                if (!audioRecorderPlayer.current) {
+                    Alert.alert("Error", "Audio recorder not initialized");
+                    setIsRecording(false);
+                    return;
+                }
+
+                const path = Platform.select({
+                    ios: 'recording.m4a',
+                    android: `recording_${Date.now()}.mp3`,
+                }) || 'recording.mp3';
+
+                const uri = await audioRecorderPlayer.current.startRecorder(path);
+                setRecordingUri(uri);
+                console.log("✅ Mobile recording started:", uri);
+            }
+
+            // Start timer
+            recordingInterval.current = setInterval(() => {
+                setRecordingDuration(prev => prev + 1);
+            }, 1000);
+
+            // Start pulse animation
+            Animated.loop(
+                Animated.sequence([
+                    Animated.timing(recordingAnimation, {
+                        toValue: 1.2,
+                        duration: 500,
+                        useNativeDriver: false,
+                    }),
+                    Animated.timing(recordingAnimation, {
+                        toValue: 1,
+                        duration: 500,
+                        useNativeDriver: false,
+                    }),
+                ])
+            ).start();
+
+        } catch (error) {
+            console.error("❌ Recording error:", error);
+            Alert.alert("Recording Error", "Failed to start recording. Please allow microphone access.");
+            setIsRecording(false);
+        }
+    };
+
+    // 🛑 Stop and Send Recording
+    const handleStopAndSendRecording = async () => {
+        try {
+            console.log("🛑 Stopping recording...");
+            
+            if (recordingInterval.current) {
+                clearInterval(recordingInterval.current);
+                recordingInterval.current = null;
+            }
+
+            let finalUri = recordingUri;
+
+            // Web Platform
+            if (Platform.OS === 'web' && mediaRecorder.current) {
+                mediaRecorder.current.stop();
+                
+                // Wait for blob to be created
+                await new Promise<void>(resolve => setTimeout(() => resolve(), 100));
+                
+                console.log("✅ Web recording stopped");
+            } 
+            // Mobile Platform
+            else if (audioRecorderPlayer.current) {
+                const result = await audioRecorderPlayer.current.stopRecorder();
+                audioRecorderPlayer.current.removeRecordBackListener();
+                finalUri = result || recordingUri;
+                console.log("✅ Mobile recording stopped:", finalUri);
+            }
+
+            setIsRecording(false);
+            setShowRecordingModal(false); // Close modal
+
+            // Send the audio file
+            if (finalUri) {
+                await sendAudioMessage(finalUri);
+            } else {
+                Alert.alert("Error", "No audio recorded");
+            }
+
+            setRecordingUri("");
+            setRecordingDuration(0);
+
+        } catch (error) {
+            console.error("❌ Stop recording error:", error);
+            Alert.alert("Error", "Failed to stop recording");
+            setIsRecording(false);
+        }
+    };
+
+    // ❌ Cancel Recording
+    const handleCancelRecording = async () => {
+        try {
+            console.log("❌ Cancelling recording...");
+            
+            if (recordingInterval.current) {
+                clearInterval(recordingInterval.current);
+                recordingInterval.current = null;
+            }
+
+            // Web Platform
+            if (Platform.OS === 'web' && mediaRecorder.current) {
+                mediaRecorder.current.stop();
+                if (mediaRecorder.current.stream) {
+                    mediaRecorder.current.stream.getTracks().forEach((track: any) => track.stop());
+                }
+            } 
+            // Mobile Platform
+            else if (audioRecorderPlayer.current) {
+                await audioRecorderPlayer.current.stopRecorder();
+                audioRecorderPlayer.current.removeRecordBackListener();
+            }
+
+            setIsRecording(false);
+            setRecordingUri("");
+            setRecordingDuration(0);
+            setShowRecordingModal(false); // Close modal
+
+            console.log("✅ Recording cancelled");
+        } catch (error) {
+            console.error("❌ Cancel recording error:", error);
+            setIsRecording(false);
+            setShowRecordingModal(false);
+        }
+    };
+
+    // 📤 Send Audio Message
+    const sendAudioMessage = async (audioUri: string) => {
+        try {
+            console.log("📤 Sending audio message:", audioUri);
+
+            const storedToken = await AsyncStorage.getItem('ADMINTOKEN');
+            if (!storedToken) {
+                Alert.alert("Error", "Auth token missing. Cannot send audio.");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('receiverId', channel.id);
+            formData.append('text', `🎤 Voice message (${recordingDuration}s)`);
+            formData.append('userType', 'mainAdmin'); // Required by backend
+            formData.append('senderId', currentUserId); // Required by backend
+
+            // Append the audio file
+            if (Platform.OS === 'web') {
+                // For web, convert blob URL to blob
+                const response = await fetch(audioUri);
+                const blob = await response.blob();
+                const fileName = `audio_${Date.now()}.webm`;
+                const file = new File([blob], fileName, { type: 'audio/webm' });
+                formData.append('files', file as any);
+            } else {
+                // For mobile
+                const fileName = `audio_${Date.now()}.${Platform.OS === 'ios' ? 'm4a' : 'mp3'}`;
+                const audioFile: any = {
+                    uri: audioUri,
+                    type: Platform.OS === 'ios' ? 'audio/m4a' : 'audio/mp3',
+                    name: fileName,
+                };
+                formData.append('files', audioFile);
+            }
+
+            const apiResponse = await axios.post(
+                'http://localhost:5200/web/messages/send-msg', // Fixed: removed receiverId from URL
+                formData,
+                {
+                    headers: {
+                        Authorization: `Bearer ${storedToken}`,
+                        'Content-Type': 'multipart/form-data',
+                    },
+                }
+            );
+
+            console.log("✅ Audio message sent:", apiResponse.data);
+
+            // Add to local messages with media
+            const newMsg: Message = {
+                id: apiResponse.data._id || Date.now().toString(),
+                text: `🎤 Voice message (${recordingDuration}s)`,
+                isSent: true,
+                timestamp: new Date().toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }),
+                status: "delivered",
+                media: apiResponse.data.media || [], // Include media from response
+            };
+            setMessages(prev => [...prev, newMsg]);
+
+            // Notify parent to update chat list
+            if (onNewMessage) {
+                onNewMessage(channel.id, `🎤 Voice message (${recordingDuration}s)`);
+            }
+
+        } catch (error) {
+            console.error("❌ Send audio error:", error);
+            Alert.alert("Error", "Failed to send audio message");
+        }
+    };
+
+    const handleAudio = handleOpenRecordingModal;
+
+>>>>>>> ff9d0a84a0fa430682555dacd3d29ceee5bd1120
     const handleOpenGallery = () => {
         openGallery(async (imageUri: string) => {
             try {
@@ -826,7 +1115,11 @@ export default function ChatThread({
                     id: tempId,
                     text: "📷 Image",
                     isSent: true,
+<<<<<<< HEAD
                     timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+=======
+                    timestamp: new Date().toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }),
+>>>>>>> ff9d0a84a0fa430682555dacd3d29ceee5bd1120
                     status: "sent",
                 };
                 setMessages(prev => [...prev, message]);
@@ -918,7 +1211,38 @@ export default function ChatThread({
         >
             <View style={[styles.messageContainer, item.isSent ? styles.sentMessage : styles.receivedMessage]}>
                 <View style={[styles.messageBubble, item.isSent ? styles.sentBubble : styles.receivedBubble]}>
-                    <Text style={[styles.messageText, item.isSent ? styles.sentText : styles.receivedText]}>{item.text}</Text>
+                    {/* Render media if available */}
+                    {item.media && item.media.length > 0 && item.media.map((mediaItem, index) => (
+                        <View key={index} style={styles.mediaContainer}>
+                            {mediaItem.type === 'image' && (
+                                <Image
+                                    source={{ uri: mediaItem.url }}
+                                    style={styles.mediaImage}
+                                    resizeMode="cover"
+                                />
+                            )}
+                            {mediaItem.type === 'video' && (
+                                <View style={styles.videoContainer}>
+                                    <Image
+                                        source={{ uri: mediaItem.url }}
+                                        style={styles.mediaImage}
+                                        resizeMode="cover"
+                                    />
+                                    <View style={styles.videoPlayButton}>
+                                        <Ionicons name="play-circle" size={48} color="#fff" />
+                                    </View>
+                                </View>
+                            )}
+                        </View>
+                    ))}
+                    
+                    {/* Render text if available */}
+                    {item.text && !item.text.startsWith('📷') && !item.text.startsWith('🎥') && (
+                        <Text style={[styles.messageText, item.isSent ? styles.sentText : styles.receivedText]}>
+                            {item.text}
+                        </Text>
+                    )}
+                    
                     <View style={styles.messageFooter}>
                         <Text style={styles.timestamp}>{item.timestamp}</Text>
                         {item.isSent && (
@@ -1143,6 +1467,104 @@ export default function ChatThread({
                 onClose={() => setShowAddMemberModal(false)}
                 onGroupCreated={handleGroupCreation}
             />
+
+            {/* 🎤 Audio Recording Modal */}
+            <Modal
+                visible={showRecordingModal}
+                transparent={true}
+                animationType="slide"
+                onRequestClose={() => {
+                    setShowRecordingModal(false);
+                    if (isRecording) {
+                        handleCancelRecording();
+                    }
+                }}
+            >
+                <View style={styles.recordingModalOverlay}>
+                    <View style={styles.recordingModalContainer}>
+                        <Text style={styles.recordingModalTitle}>Voice Message</Text>
+                        
+                        {/* Recording Animation */}
+                        <View style={styles.recordingModalCenter}>
+                            {isRecording && (
+                                <Animated.View style={[
+                                    styles.recordingModalDot,
+                                    { transform: [{ scale: recordingAnimation }] }
+                                ]} />
+                            )}
+                            <Ionicons 
+                                name="mic" 
+                                size={80} 
+                                color={isRecording ? "#FF3B30" : "#666"} 
+                            />
+                        </View>
+
+                        {/* Timer */}
+                        <Text style={styles.recordingModalTimer}>
+                            {Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')}
+                        </Text>
+
+                        {/* Status Text */}
+                        <Text style={styles.recordingModalStatus}>
+                            {isRecording ? "Recording..." : "Tap to start recording"}
+                        </Text>
+
+                        {/* Control Buttons */}
+                        <View style={styles.recordingModalButtons}>
+                            {!isRecording ? (
+                                <>
+                                    <TouchableOpacity 
+                                        style={styles.recordingModalCancelBtn}
+                                        onPress={() => setShowRecordingModal(false)}
+                                    >
+                                        <Text style={styles.recordingModalCancelText}>Cancel</Text>
+                                    </TouchableOpacity>
+                                    
+                                    <TouchableOpacity 
+                                        style={styles.recordingModalStartBtn}
+                                        onPress={handleStartRecording}
+                                    >
+                                        <Ionicons name="mic" size={24} color="#fff" />
+                                        <Text style={styles.recordingModalStartText}>Start</Text>
+                                    </TouchableOpacity>
+                                </>
+                            ) : (
+                                <>
+                                    <TouchableOpacity 
+                                        style={styles.recordingModalCancelBtn}
+                                        onPress={() => {
+                                            handleCancelRecording();
+                                            setShowRecordingModal(false);
+                                        }}
+                                    >
+                                        <Ionicons name="trash" size={20} color="#FF3B30" />
+                                        <Text style={styles.recordingModalCancelText}>Delete</Text>
+                                    </TouchableOpacity>
+                                    
+                                    <TouchableOpacity 
+                                        style={styles.recordingModalStopBtn}
+                                        onPress={handleStopAndSendRecording}
+                                    >
+                                        <Ionicons name="stop" size={24} color="#fff" />
+                                        <Text style={styles.recordingModalStopText}>Stop</Text>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity 
+                                        style={styles.recordingModalSendBtn}
+                                        onPress={() => {
+                                            handleStopAndSendRecording();
+                                            setShowRecordingModal(false);
+                                        }}
+                                    >
+                                        <Ionicons name="send" size={20} color="#fff" />
+                                        <Text style={styles.recordingModalSendText}>Send</Text>
+                                    </TouchableOpacity>
+                                </>
+                            )}
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </SafeAreaView>
     );
 }
@@ -1230,4 +1652,136 @@ const styles = StyleSheet.create({
         padding: 12,
         borderRadius: 25,
     },
+<<<<<<< HEAD
+=======
+    
+    // 🎤 Recording Modal Styles
+    recordingModalOverlay: {
+        flex: 1,
+        backgroundColor: "rgba(0,0,0,0.7)",
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    recordingModalContainer: {
+        backgroundColor: "#fff",
+        borderRadius: 20,
+        padding: 30,
+        width: "85%",
+        maxWidth: 400,
+        alignItems: "center",
+    },
+    recordingModalTitle: {
+        fontSize: 20,
+        fontWeight: "600",
+        marginBottom: 30,
+        color: "#000",
+    },
+    recordingModalCenter: {
+        alignItems: "center",
+        justifyContent: "center",
+        marginBottom: 20,
+        position: "relative",
+    },
+    recordingModalDot: {
+        position: "absolute",
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        backgroundColor: "rgba(255, 59, 48, 0.2)",
+    },
+    recordingModalTimer: {
+        fontSize: 32,
+        fontWeight: "700",
+        color: "#000",
+        marginBottom: 10,
+    },
+    recordingModalStatus: {
+        fontSize: 16,
+        color: "#666",
+        marginBottom: 30,
+    },
+    recordingModalButtons: {
+        flexDirection: "row",
+        justifyContent: "space-around",
+        width: "100%",
+        gap: 10,
+    },
+    recordingModalCancelBtn: {
+        flex: 1,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: "#F5F5F5",
+        padding: 15,
+        borderRadius: 10,
+        gap: 5,
+    },
+    recordingModalCancelText: {
+        color: "#FF3B30",
+        fontSize: 16,
+        fontWeight: "600",
+    },
+    recordingModalStartBtn: {
+        flex: 1,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: "#007AFF",
+        padding: 15,
+        borderRadius: 10,
+        gap: 5,
+    },
+    recordingModalStartText: {
+        color: "#fff",
+        fontSize: 16,
+        fontWeight: "600",
+    },
+    recordingModalStopBtn: {
+        flex: 1,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: "#FF3B30",
+        padding: 15,
+        borderRadius: 10,
+        gap: 5,
+    },
+    recordingModalStopText: {
+        color: "#fff",
+        fontSize: 16,
+        fontWeight: "600",
+    },
+    recordingModalSendBtn: {
+        flex: 1,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: "#25D366",
+        padding: 15,
+        borderRadius: 10,
+        gap: 5,
+    },
+    recordingModalSendText: {
+        color: "#fff",
+        fontSize: 16,
+        fontWeight: "600",
+    },
+    mediaContainer: {
+        marginBottom: 8,
+    },
+    mediaImage: {
+        width: 200,
+        height: 200,
+        borderRadius: 10,
+    },
+    videoContainer: {
+        position: "relative",
+    },
+    videoPlayButton: {
+        position: "absolute",
+        top: "50%",
+        left: "50%",
+        transform: [{ translateX: -24 }, { translateY: -24 }],
+    },
+>>>>>>> ff9d0a84a0fa430682555dacd3d29ceee5bd1120
 });

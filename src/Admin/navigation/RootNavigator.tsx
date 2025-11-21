@@ -30,9 +30,15 @@ import VideoCallScreen from '../screens/VideoCallScreen';
 import { RootStackParamList } from './types';
 
 // ✅ Import new call screens
+<<<<<<< HEAD
 import OutgoingCallScreen from '../../components/OutgoingCallScreen';
 import IncomingCallScreen from '../../components/IncomingCallScreen';
 import ActiveVideoCallScreen from '../../components/VideoCallScreen';
+=======
+import IncomingCallScreen from '../components/IncomingCallScreen';
+import OutgoingCallScreen from '../components/OutgoingCallScreen';
+import ActiveVideoCallScreen from '../components/VideoCallScreen';
+>>>>>>> ff9d0a84a0fa430682555dacd3d29ceee5bd1120
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 

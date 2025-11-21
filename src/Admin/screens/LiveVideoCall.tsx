@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import React, { useEffect, useRef, useState } from 'react';
 import {
     View,
@@ -14,6 +15,26 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { RootStackParamList } from '../navigation/types';
 
+=======
+declare var window: any;   // ✅ FIX for "Cannot find name 'window'"
+
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
+import axios from 'axios';
+import { useEffect, useRef, useState } from 'react';
+import {
+    Alert,
+    Platform,
+    SafeAreaView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import { RootStackParamList } from '../navigation/types';
+
+>>>>>>> ff9d0a84a0fa430682555dacd3d29ceee5bd1120
 // ✅ Conditional import for Agora Web SDK
 let AgoraRTC: any = null;
 if (typeof window !== 'undefined' && Platform.OS === 'web') {
@@ -68,11 +89,17 @@ const LiveVideoCall = () => {
                 console.log('🎥 Initializing video call...');
                 console.log('Channel:', channelName);
 
+<<<<<<< HEAD
                 // Get current user ID
                 const currentUserId = await AsyncStorage.getItem('USERID') || 'user_' + Date.now();
                 console.log('User ID:', currentUserId);
 
                 // Generate RTC token
+=======
+                const currentUserId =
+                    await AsyncStorage.getItem('USERID') || 'user_' + Date.now();
+
+>>>>>>> ff9d0a84a0fa430682555dacd3d29ceee5bd1120
                 const tokenResponse = await axios.post(RTC_TOKEN_API, {
                     channelName,
                     uid: currentUserId,
@@ -83,6 +110,7 @@ const LiveVideoCall = () => {
                 }
 
                 const rtcToken = tokenResponse.data.token;
+<<<<<<< HEAD
                 console.log('✅ RTC Token generated');
 
                 // Create RTC client
@@ -95,6 +123,15 @@ const LiveVideoCall = () => {
                     await client.subscribe(user, mediaType);
 
                     // Mark call as connected when remote user joins
+=======
+
+                const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
+                rtcClientRef.current = client;
+
+                client.on('user-published', async (user: any, mediaType: string) => {
+                    await client.subscribe(user, mediaType);
+
+>>>>>>> ff9d0a84a0fa430682555dacd3d29ceee5bd1120
                     setCallConnected(true);
 
                     if (mediaType === 'video') {
@@ -104,7 +141,10 @@ const LiveVideoCall = () => {
                             return [...prev, user];
                         });
 
+<<<<<<< HEAD
                         // Play remote video
+=======
+>>>>>>> ff9d0a84a0fa430682555dacd3d29ceee5bd1120
                         if (remoteVideoRef.current) {
                             setTimeout(() => {
                                 user.videoTrack?.play(remoteVideoRef.current!);
@@ -118,13 +158,21 @@ const LiveVideoCall = () => {
                 });
 
                 client.on('user-unpublished', (user: any, mediaType: string) => {
+<<<<<<< HEAD
                     console.log('📢 User unpublished:', user.uid, mediaType);
                     if (mediaType === 'video') {
                         setRemoteUsers(prev => prev.filter(u => u.uid !== user.uid));
+=======
+                    if (mediaType === 'video') {
+                        setRemoteUsers(prev =>
+                            prev.filter(u => u.uid !== user.uid)
+                        );
+>>>>>>> ff9d0a84a0fa430682555dacd3d29ceee5bd1120
                     }
                 });
 
                 client.on('user-left', (user: any) => {
+<<<<<<< HEAD
                     console.log('📢 User left:', user.uid);
                     setRemoteUsers(prev => prev.filter(u => u.uid !== user.uid));
                 });
@@ -140,10 +188,27 @@ const LiveVideoCall = () => {
                 localVideoTrackRef.current = videoTrack;
 
                 // Play local video
+=======
+                    setRemoteUsers(prev =>
+                        prev.filter(u => u.uid !== user.uid)
+                    );
+                });
+
+                await client.join(APP_ID, channelName, rtcToken, currentUserId);
+                setIsJoined(true);
+
+                const [audioTrack, videoTrack] =
+                    await AgoraRTC.createMicrophoneAndCameraTracks();
+
+                localAudioTrackRef.current = audioTrack;
+                localVideoTrackRef.current = videoTrack;
+
+>>>>>>> ff9d0a84a0fa430682555dacd3d29ceee5bd1120
                 if (localVideoRef.current) {
                     videoTrack.play(localVideoRef.current);
                 }
 
+<<<<<<< HEAD
                 // Publish tracks
                 await client.publish([audioTrack, videoTrack]);
                 console.log('✅ Published local tracks');
@@ -152,6 +217,13 @@ const LiveVideoCall = () => {
 
             } catch (error: any) {
                 console.error('❌ Video call error:', error);
+=======
+                await client.publish([audioTrack, videoTrack]);
+                setIsLoading(false);
+
+            } catch (error: any) {
+                console.error(error);
+>>>>>>> ff9d0a84a0fa430682555dacd3d29ceee5bd1120
                 setIsLoading(false);
                 Alert.alert('Call Failed', error.message || 'Failed to start video call');
             }
@@ -159,6 +231,7 @@ const LiveVideoCall = () => {
 
         initCall();
 
+<<<<<<< HEAD
         // Cleanup
         return () => {
             if (localAudioTrackRef.current) {
@@ -170,6 +243,12 @@ const LiveVideoCall = () => {
             if (rtcClientRef.current) {
                 rtcClientRef.current.leave();
             }
+=======
+        return () => {
+            localAudioTrackRef.current?.close();
+            localVideoTrackRef.current?.close();
+            rtcClientRef.current?.leave();
+>>>>>>> ff9d0a84a0fa430682555dacd3d29ceee5bd1120
         };
     }, [channelName]);
 
@@ -183,7 +262,10 @@ const LiveVideoCall = () => {
         if (localAudioTrackRef.current) {
             localAudioTrackRef.current.setEnabled(isMuted);
             setIsMuted(!isMuted);
+<<<<<<< HEAD
             console.log(`🎤 Audio ${!isMuted ? 'muted' : 'unmuted'}`);
+=======
+>>>>>>> ff9d0a84a0fa430682555dacd3d29ceee5bd1120
         }
     };
 
@@ -191,12 +273,16 @@ const LiveVideoCall = () => {
         if (localVideoTrackRef.current) {
             localVideoTrackRef.current.setEnabled(isVideoOff);
             setIsVideoOff(!isVideoOff);
+<<<<<<< HEAD
             console.log(`📹 Video ${!isVideoOff ? 'off' : 'on'}`);
+=======
+>>>>>>> ff9d0a84a0fa430682555dacd3d29ceee5bd1120
         }
     };
 
     const handleToggleSpeaker = () => {
         setIsSpeakerOn(!isSpeakerOn);
+<<<<<<< HEAD
         console.log(`🔊 Speaker ${!isSpeakerOn ? 'on' : 'off'}`);
     };
 
@@ -234,6 +320,35 @@ const LiveVideoCall = () => {
                 {
                     receiverId: receiverId,
                     text: callStatus,
+=======
+    };
+
+    // Save call history
+    const saveCallHistory = async () => {
+        try {
+            const storedToken = await AsyncStorage.getItem('ADMINTOKEN');
+            if (!storedToken) return;
+
+            const minutes = Math.floor(callDuration / 60);
+            const seconds = callDuration % 60;
+
+            const durationText =
+                minutes > 0
+                    ? `${minutes} mins ${seconds} sec`
+                    : `${seconds} sec`;
+
+            const callStatus = callConnected
+                ? `📹 Video Call - ${durationText}`
+                : '📹 Video Call Missed';
+
+            await axios.post(
+                `http://localhost:5200/web/messages/send-msg`,
+                {
+                    receiverId,
+                    text: callStatus,
+                    userType: 'mainAdmin',
+                    senderId: callerId,
+>>>>>>> ff9d0a84a0fa430682555dacd3d29ceee5bd1120
                 },
                 {
                     headers: {
@@ -242,16 +357,22 @@ const LiveVideoCall = () => {
                     },
                 }
             );
+<<<<<<< HEAD
 
             console.log('✅ Call history saved');
         } catch (error) {
             console.error('❌ Error saving call history:', error);
             // Don't block call ending if history save fails
+=======
+        } catch (e) {
+            console.log('History Save Error:', e);
+>>>>>>> ff9d0a84a0fa430682555dacd3d29ceee5bd1120
         }
     };
 
     const handleEndCall = async () => {
         try {
+<<<<<<< HEAD
             // Save call history before ending
             await saveCallHistory();
 
@@ -275,6 +396,16 @@ const LiveVideoCall = () => {
             navigation.goBack();
         } catch (error) {
             console.error('❌ End call error:', error);
+=======
+            await saveCallHistory();
+
+            localAudioTrackRef.current?.close();
+            localVideoTrackRef.current?.close();
+            rtcClientRef.current?.leave();
+
+            navigation.goBack();
+        } catch (e) {
+>>>>>>> ff9d0a84a0fa430682555dacd3d29ceee5bd1120
             navigation.goBack();
         }
     };
@@ -283,6 +414,7 @@ const LiveVideoCall = () => {
     if (Platform.OS !== 'web') {
         return (
             <SafeAreaView style={styles.container}>
+<<<<<<< HEAD
                 <View style={styles.centerContent}>
                     <Ionicons name="videocam-off" size={80} color="#666" />
                     <Text style={styles.fallbackText}>
@@ -292,10 +424,16 @@ const LiveVideoCall = () => {
                         <Text style={styles.backButtonText}>Go Back</Text>
                     </TouchableOpacity>
                 </View>
+=======
+                <Text style={{ color: '#fff', marginTop: 100, textAlign: 'center' }}>
+                    Video calling is supported only on Web.
+                </Text>
+>>>>>>> ff9d0a84a0fa430682555dacd3d29ceee5bd1120
             </SafeAreaView>
         );
     }
 
+<<<<<<< HEAD
     // Loading state
     if (isLoading) {
         return (
@@ -304,13 +442,22 @@ const LiveVideoCall = () => {
                     <Text style={styles.loadingText}>Connecting to call...</Text>
                     <Text style={styles.channelText}>{channelName}</Text>
                 </View>
+=======
+    if (isLoading) {
+        return (
+            <SafeAreaView style={styles.container}>
+                <Text style={styles.loadingText}>Connecting...</Text>
+>>>>>>> ff9d0a84a0fa430682555dacd3d29ceee5bd1120
             </SafeAreaView>
         );
     }
 
     return (
         <SafeAreaView style={styles.container}>
+<<<<<<< HEAD
             {/* Remote Video (Full Screen) */}
+=======
+>>>>>>> ff9d0a84a0fa430682555dacd3d29ceee5bd1120
             <View style={styles.remoteVideoContainer}>
                 {remoteUsers.length > 0 ? (
                     <div
@@ -324,11 +471,16 @@ const LiveVideoCall = () => {
                 ) : (
                     <View style={styles.waitingContainer}>
                         <Ionicons name="person" size={80} color="#fff" />
+<<<<<<< HEAD
                         <Text style={styles.waitingText}>Waiting for others to join...</Text>
+=======
+                        <Text style={styles.waitingText}>Waiting for User...</Text>
+>>>>>>> ff9d0a84a0fa430682555dacd3d29ceee5bd1120
                     </View>
                 )}
             </View>
 
+<<<<<<< HEAD
             {/* Header */}
             <View style={styles.header}>
                 <View style={styles.headerInfo}>
@@ -340,6 +492,9 @@ const LiveVideoCall = () => {
             </View>
 
             {/* Local Video (PiP) */}
+=======
+            {/* Local Video */}
+>>>>>>> ff9d0a84a0fa430682555dacd3d29ceee5bd1120
             <View style={styles.localVideoContainer}>
                 <div
                     ref={localVideoRef}
@@ -354,7 +509,10 @@ const LiveVideoCall = () => {
 
             {/* Controls */}
             <View style={styles.controls}>
+<<<<<<< HEAD
                 {/* Mute */}
+=======
+>>>>>>> ff9d0a84a0fa430682555dacd3d29ceee5bd1120
                 <TouchableOpacity
                     style={[styles.controlButton, isMuted && styles.controlButtonActive]}
                     onPress={handleToggleMute}
@@ -362,6 +520,7 @@ const LiveVideoCall = () => {
                     <Ionicons name={isMuted ? 'mic-off' : 'mic'} size={28} color="#fff" />
                 </TouchableOpacity>
 
+<<<<<<< HEAD
                 {/* Video */}
                 <TouchableOpacity
                     style={[styles.controlButton, isVideoOff && styles.controlButtonActive]}
@@ -381,6 +540,41 @@ const LiveVideoCall = () => {
                     onPress={handleToggleSpeaker}
                 >
                     <Ionicons name={isSpeakerOn ? 'volume-high' : 'volume-mute'} size={28} color="#fff" />
+=======
+                <TouchableOpacity
+                    style={[
+                        styles.controlButton,
+                        isVideoOff && styles.controlButtonActive,
+                    ]}
+                    onPress={handleToggleVideo}
+                >
+                    <Ionicons
+                        name={isVideoOff ? 'videocam-off' : 'videocam'}
+                        size={28}
+                        color="#fff"
+                    />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={[styles.controlButton, styles.endCallButton]}
+                    onPress={handleEndCall}
+                >
+                    <Ionicons name="call" size={28} color="#fff" />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={[
+                        styles.controlButton,
+                        isSpeakerOn && styles.controlButtonActive,
+                    ]}
+                    onPress={handleToggleSpeaker}
+                >
+                    <Ionicons
+                        name={isSpeakerOn ? 'volume-high' : 'volume-mute'}
+                        size={28}
+                        color="#fff"
+                    />
+>>>>>>> ff9d0a84a0fa430682555dacd3d29ceee5bd1120
                 </TouchableOpacity>
             </View>
         </SafeAreaView>
@@ -388,6 +582,7 @@ const LiveVideoCall = () => {
 };
 
 const styles = StyleSheet.create({
+<<<<<<< HEAD
     container: {
         flex: 1,
         backgroundColor: '#000',
@@ -466,19 +661,33 @@ const styles = StyleSheet.create({
     localVideoContainer: {
         position: 'absolute',
         top: 120,
+=======
+    container: { flex: 1, backgroundColor: '#000' },
+    loadingText: { color: '#fff', marginTop: 200, textAlign: 'center' },
+    remoteVideoContainer: { flex: 1, backgroundColor: '#1a1a2e' },
+    waitingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    waitingText: { color: '#fff', marginTop: 20 },
+    localVideoContainer: {
+        position: 'absolute',
+        top: 100,
+>>>>>>> ff9d0a84a0fa430682555dacd3d29ceee5bd1120
         right: 20,
         width: 120,
         height: 160,
         backgroundColor: '#2a2a3e',
         borderRadius: 12,
         overflow: 'hidden',
+<<<<<<< HEAD
         borderWidth: 2,
         borderColor: '#fff',
+=======
+>>>>>>> ff9d0a84a0fa430682555dacd3d29ceee5bd1120
         zIndex: 10,
     },
     controls: {
         position: 'absolute',
         bottom: 50,
+<<<<<<< HEAD
         left: 0,
         right: 0,
         flexDirection: 'row',
@@ -486,6 +695,12 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: 20,
         paddingHorizontal: 20,
+=======
+        width: '100%',
+        flexDirection: 'row',
+        justifyContent: 'center',
+        gap: 20,
+>>>>>>> ff9d0a84a0fa430682555dacd3d29ceee5bd1120
     },
     controlButton: {
         width: 56,

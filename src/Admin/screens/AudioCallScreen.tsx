@@ -166,10 +166,19 @@ const AudioCallScreen = () => {
 
       // Send message to backend
       await axios.post(
+<<<<<<< HEAD
         `http://localhost:5200/web/messages/send-msg/${receiverId}`,
         {
           receiverId: receiverId,
           text: callStatus,
+=======
+        `http://localhost:5200/web/messages/send-msg`,
+        {
+          receiverId: receiverId,
+          text: callStatus,
+          userType: "mainAdmin", // ✅ Backend expects userType
+          senderId: callerId, // ✅ Backend expects senderId
+>>>>>>> ff9d0a84a0fa430682555dacd3d29ceee5bd1120
         },
         {
           headers: {
