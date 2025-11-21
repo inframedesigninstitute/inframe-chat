@@ -1075,6 +1075,7 @@ const styles = StyleSheet.create({
         borderRadius: 6,
         backgroundColor: "#FF3B30",
         marginRight: 8,
+        
     },
     recordingTimer: {
         fontSize: 16,
