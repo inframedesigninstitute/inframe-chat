@@ -67,9 +67,9 @@ const LiveVideoCall = () => {
                 console.log('🎥 Initializing video call...');
                 console.log('Channel:', channelName);
 
-                // Get current user ID (Faculty)
-                const currentUserId = await AsyncStorage.getItem('USERID') || 'faculty_' + Date.now();
-                console.log('Faculty User ID:', currentUserId);
+                // Get current user ID (Student)
+                const currentUserId = await AsyncStorage.getItem('USERID') || 'student_' + Date.now();
+                console.log('Student User ID:', currentUserId);
 
                 // Generate RTC token
                 const tokenResponse = await axios.post(RTC_TOKEN_API, {

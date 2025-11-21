@@ -30,9 +30,8 @@ const MarqueeText: React.FC<MarqueeTextProps> = ({
       Animated.timing(translateX, {
         toValue: -textWidth,
         duration: ((containerWidth + textWidth) / speed) * 1000,
-        useNativeDriver: true,
+        useNativeDriver: false, // ✅ Set to false for web compatibility
       }).start(() => {
-    
         startAnimation();
       });
     };

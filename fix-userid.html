@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fix User ID - Chat App</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .section h2 {
+            color: #333;
+            font-size: 16px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .section h2::before {
+            content: '🔍';
+            margin-right: 8px;
+        }
+        
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 100%;
+            margin-top: 10px;
+        }
+        
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .result {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .result .log {
+            padding: 5px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .result .log:last-child {
+            border-bottom: none;
+        }
+        
+        .error {
+            color: #e53e3e;
+        }
+        
+        .success {
+            color: #38a169;
+        }
+        
+        .warning {
+            color: #dd6b20;
+        }
+        
+        .info {
+            color: #3182ce;
+        }
+        
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-top: 10px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .alert {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            color: #856404;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        
+        .alert strong {
+            display: block;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Fix User ID</h1>
+        <p class="subtitle">Debug and fix message alignment issue</p>
+        
+        <div class="alert">
+            <strong>⚠️ Important:</strong>
+            This tool helps debug why your sent messages appear on the LEFT side instead of RIGHT.
+        </div>
+        
+        <!-- Step 1: Check Current USERID -->
+        <div class="section">
+            <h2>Check Current USERID</h2>
+            <button onclick="checkCurrentUserId()">Check AsyncStorage USERID</button>
+            <div id="result1" class="result" style="display:none;"></div>
+        </div>
+        
+        <!-- Step 2: Fetch and Compare -->
+        <div class="section">
+            <h2>Fetch Messages & Compare</h2>
+            <input type="text" id="chatUserId" placeholder="Enter chat user ID (e.g., 691d867f70e40924ca19aa64)">
+            <input type="text" id="authToken" placeholder="Enter your auth token (ADMINTOKEN or FACULTYTOKEN)">
+            <button onclick="fetchAndCompare()">Fetch Messages & Compare IDs</button>
+            <div id="result2" class="result" style="display:none;"></div>
+        </div>
+        
+        <!-- Step 3: Update USERID -->
+        <div class="section">
+            <h2>Update USERID (If Needed)</h2>
+            <input type="text" id="newUserId" placeholder="Enter correct User ID from backend">
+            <button onclick="updateUserId()">Update USERID & Reload</button>
+            <div id="result3" class="result" style="display:none;"></div>
+        </div>
+        
+        <!-- Step 4: Complete Debug -->
+        <div class="section">
+            <h2>Complete System Check</h2>
+            <button onclick="fullDebug()">Run Full Debug</button>
+            <div id="result4" class="result" style="display:none;"></div>
+        </div>
+    </div>
+    
+    <script>
+        // Check if AsyncStorage is available
+        if (typeof AsyncStorage === 'undefined') {
+            alert('⚠️ Please open this page within your React Native app (running on web browser).\n\nAsyncStorage is not available in standalone browser.');
+        }
+        
+        function log(resultId, message, type = 'info') {
+            const resultDiv = document.getElementById(resultId);
+            resultDiv.style.display = 'block';
+            const logDiv = document.createElement('div');
+            logDiv.className = `log ${type}`;
+            logDiv.textContent = message;
+            resultDiv.appendChild(logDiv);
+        }
+        
+        function clearLog(resultId) {
+            const resultDiv = document.getElementById(resultId);
+            resultDiv.innerHTML = '';
+            resultDiv.style.display = 'none';
+        }
+        
+        async function checkCurrentUserId() {
+            clearLog('result1');
+            
+            try {
+                log('result1', '🔍 Checking AsyncStorage...', 'info');
+                
+                const userId = await AsyncStorage.getItem('USERID');
+                const adminToken = await AsyncStorage.getItem('ADMINTOKEN');
+                const facultyToken = await AsyncStorage.getItem('FACULTYTOKEN');
+                const studentToken = await AsyncStorage.getItem('STUDENTTOKEN');
+                
+                log('result1', '─────────────────────────', 'info');
+                log('result1', `📦 USERID: ${userId || 'NOT FOUND'}`, userId ? 'success' : 'error');
+                log('result1', `🔑 ADMINTOKEN: ${adminToken ? 'Present ✅' : 'Missing ❌'}`, adminToken ? 'success' : 'warning');
+                log('result1', `🔑 FACULTYTOKEN: ${facultyToken ? 'Present ✅' : 'Missing ❌'}`, facultyToken ? 'success' : 'warning');
+                log('result1', `🔑 STUDENTTOKEN: ${studentToken ? 'Present ✅' : 'Missing ❌'}`, studentToken ? 'success' : 'warning');
+                log('result1', '─────────────────────────', 'info');
+                
+                if (!userId) {
+                    log('result1', '❌ USERID is missing! This is why messages appear on LEFT.', 'error');
+                    log('result1', '💡 Solution: Login again or manually set USERID below.', 'warning');
+                } else {
+                    log('result1', '✅ USERID found! Now check if it matches backend messages.', 'success');
+                }
+                
+            } catch (error) {
+                log('result1', `❌ Error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function fetchAndCompare() {
+            clearLog('result2');
+            
+            const chatUserId = document.getElementById('chatUserId').value.trim();
+            const authToken = document.getElementById('authToken').value.trim();
+            
+            if (!chatUserId || !authToken) {
+                log('result2', '❌ Please enter both Chat User ID and Auth Token', 'error');
+                return;
+            }
+            
+            try {
+                log('result2', '🔍 Fetching messages from backend...', 'info');
+                
+                const storedUserId = await AsyncStorage.getItem('USERID');
+                log('result2', `📦 Your USERID: ${storedUserId || 'NOT FOUND'}`, 'info');
+                log('result2', '─────────────────────────', 'info');
+                
+                const response = await fetch(`http://localhost:5200/web/messages/show-msg/${chatUserId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({})
+                });
+                
+                const messages = await response.json();
+                
+                if (!response.ok) {
+                    log('result2', `❌ API Error: ${messages.error || 'Unknown error'}`, 'error');
+                    return;
+                }
+                
+                log('result2', `✅ Fetched ${messages.length} messages`, 'success');
+                log('result2', '─────────────────────────', 'info');
+                
+                messages.forEach((msg, index) => {
+                    const msgSenderId = String(msg.senderId || '');
+                    const isMatch = msgSenderId === storedUserId;
+                    
+                    log('result2', `📨 Message ${index + 1}: "${msg.text?.substring(0, 30)}..."`, 'info');
+                    log('result2', `   Sender ID: ${msgSenderId}`, 'info');
+                    log('result2', `   Match: ${isMatch ? '✅ YES → RIGHT side' : '❌ NO → LEFT side'}`, isMatch ? 'success' : 'error');
+                    log('result2', '─────────────────────────', 'info');
+                });
+                
+                // Suggest correct userId
+                const yourMessages = messages.filter(msg => String(msg.senderId) !== storedUserId);
+                if (yourMessages.length > 0 && messages.length > 0) {
+                    const possibleUserId = String(messages[0].senderId);
+                    log('result2', `💡 Suggested USERID: ${possibleUserId}`, 'warning');
+                    log('result2', `💡 Copy this and paste in "Update USERID" section below.`, 'warning');
+                }
+                
+            } catch (error) {
+                log('result2', `❌ Error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function updateUserId() {
+            clearLog('result3');
+            
+            const newUserId = document.getElementById('newUserId').value.trim();
+            
+            if (!newUserId) {
+                log('result3', '❌ Please enter a User ID', 'error');
+                return;
+            }
+            
+            try {
+                log('result3', `🔄 Updating USERID to: ${newUserId}`, 'info');
+                
+                await AsyncStorage.setItem('USERID', newUserId);
+                
+                log('result3', '✅ USERID updated successfully!', 'success');
+                log('result3', '🔄 Reloading page in 2 seconds...', 'warning');
+                
+                setTimeout(() => {
+                    location.reload();
+                }, 2000);
+                
+            } catch (error) {
+                log('result3', `❌ Error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function fullDebug() {
+            clearLog('result4');
+            
+            try {
+                log('result4', '🔍 === FULL SYSTEM DEBUG ===', 'info');
+                log('result4', '', 'info');
+                
+                // Check all AsyncStorage keys
+                log('result4', '📦 AsyncStorage Contents:', 'info');
+                log('result4', '─────────────────────────', 'info');
+                
+                const allKeys = await AsyncStorage.getAllKeys();
+                
+                for (const key of allKeys) {
+                    const value = await AsyncStorage.getItem(key);
+                    const displayValue = value ? (value.length > 50 ? value.substring(0, 50) + '...' : value) : 'null';
+                    log('result4', `   ${key}: ${displayValue}`, 'info');
+                }
+                
+                log('result4', '', 'info');
+                log('result4', '🔍 Diagnostics:', 'info');
+                log('result4', '─────────────────────────', 'info');
+                
+                const userId = await AsyncStorage.getItem('USERID');
+                const adminToken = await AsyncStorage.getItem('ADMINTOKEN');
+                const facultyToken = await AsyncStorage.getItem('FACULTYTOKEN');
+                const studentToken = await AsyncStorage.getItem('STUDENTTOKEN');
+                
+                // Check USERID
+                if (!userId) {
+                    log('result4', '❌ USERID is missing!', 'error');
+                    log('result4', '   → This is why sent messages appear on LEFT side', 'error');
+                    log('result4', '   → Solution: Login again to save USERID', 'warning');
+                } else {
+                    log('result4', `✅ USERID found: ${userId}`, 'success');
+                }
+                
+                // Check Token
+                if (!adminToken && !facultyToken && !studentToken) {
+                    log('result4', '❌ No auth token found!', 'error');
+                    log('result4', '   → Please login first', 'error');
+                } else {
+                    log('result4', '✅ Auth token present', 'success');
+                }
+                
+                log('result4', '', 'info');
+                log('result4', '✅ Debug complete!', 'success');
+                
+            } catch (error) {
+                log('result4', `❌ Error: ${error.message}`, 'error');
+            }
+        }
+    </script>
+</body>
+</html>
+

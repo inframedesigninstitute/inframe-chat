@@ -135,20 +135,26 @@ const AdminLoginScreen = () => {
             if (email !== 'admin@inframe.edu' || password !== 'Admin@123') {
                 return showCustomError('Admin Login Failed', 'Invalid credentials.');
             }
-            console.log('Admin login successful, navigating to AdminDashboard...');
+            console.log('Admin login successful, navigating to AdminChats...');
 
             // For the hardcoded admin, let's manually set a dummy token for Redux/AsyncStorage
             const DUMMY_ADMIN_TOKEN = 'hardcoded_admin_token_12345';
+            const DUMMY_ADMIN_ID = 'admin_hardcoded_001';
             try {
                 await AsyncStorage.setItem('ADMINTOKEN', DUMMY_ADMIN_TOKEN);
+                await AsyncStorage.setItem('USERID', DUMMY_ADMIN_ID);
+                
+                console.log('💡 Using hardcoded admin ID:', DUMMY_ADMIN_ID);
+                console.log('⚠️ Note: Backend messages must use this same ID as senderId');
+                
                 dispatch(setToken({ token: DUMMY_ADMIN_TOKEN }));
-                navigation.navigate('AdminDashboard' as never);
-                console.log('Direct admin navigation successful with token set');
+                navigation.navigate('AdminChats' as never);
+                console.log('✅ Direct admin navigation successful with token and user ID set');
             } catch (error) {
                 console.error('Error setting admin token or navigating:', error);
                 navigation.reset({
                     index: 0,
-                    routes: [{ name: 'AdminDashboard' as never }],
+                    routes: [{ name: 'AdminChats' as never }],
                 });
             }
             return;
@@ -231,13 +237,25 @@ const AdminLoginScreen = () => {
 
             if (response.data?.success || response.status === 200) {
                 // TOKEN FIX: Save the token received from the backend
-                const token = response.data.token; // Assuming the token is returned in response.data.token
+                const token = response.data.token;
+                const userId = response.data.userId || response.data.mainAdminId || response.data._id;
+                
                 if (token) {
                     await AsyncStorage.setItem('ADMINTOKEN', token);
                     dispatch(setToken({ token: token }));
                     console.log('✅ Token saved and set in Redux.');
                 } else {
                     console.warn('Backend verification successful but no token received.');
+                }
+
+                // ✅ Save User ID for RTM
+                if (userId) {
+                    await AsyncStorage.setItem('USERID', userId);
+                    console.log('✅ User ID saved:', userId);
+                } else {
+                    console.warn('⚠️ User ID not found in response. Using fallback.');
+                    // Fallback: Save email as ID for now
+                    await AsyncStorage.setItem('USERID', email);
                 }
 
                 console.log('✅ OTP verification successful, navigating to AdminChats...');

@@ -116,10 +116,9 @@ const TeacherLoginScreen = () => {
     // ✅ FIXED Logout Function
     const handleLogout = async () => {
         try {
-            await AsyncStorage.removeItem('TOKEN');
+            await AsyncStorage.removeItem('FACULTYTOKEN');
 
-            // ⭐️ FIX: Changed 'null' to '' (empty string) to satisfy the 'string' type expectation 
-            // of the Redux slice action, resolving the TypeScript error 2322.
+            // Clear Redux token state
             dispatch(setToken({ token: "" }));
 
             console.log("User logged out. Token cleared.");
@@ -185,8 +184,21 @@ const TeacherLoginScreen = () => {
 
             // Checking for both success flag and token to ensure navigation
             if ((response.data?.success || response.status === 200) && response.data?.token) {
-                dispatch(setToken({ token: response.data.token }));
-                await AsyncStorage.setItem("FACULTYTOKEN", response.data.token);
+                const token = response.data.token;
+                const userId = response.data.userId || response.data.facultyId || response.data._id;
+                
+                dispatch(setToken({ token: token }));
+                await AsyncStorage.setItem("FACULTYTOKEN", token);
+
+                // ✅ Save User ID for RTM
+                if (userId) {
+                    await AsyncStorage.setItem('USERID', userId);
+                    console.log('✅ Faculty User ID saved:', userId);
+                } else {
+                    console.warn('⚠️ User ID not found in response. Using fallback.');
+                    // Fallback: Save email as ID for now
+                    await AsyncStorage.setItem('USERID', email);
+                }
 
                 console.log("✅ OTP verified successfully. Navigating to FacultyChats...");
 
